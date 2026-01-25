@@ -17,6 +17,7 @@ import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import ProfessionalAssessments from "./pages/professional/ProfessionalAssessments";
 import ProfessionalLearning from "./pages/professional/ProfessionalLearning";
+import ProfessionalProfile from "./pages/professional/ProfessionalProfile";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentOrientation from "./pages/student/StudentOrientation";
 import StudentProfessions from "./pages/student/StudentProfessions";
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/professional/cases" element={<ProfessionalDashboard />} />
           <Route path="/professional/assessments" element={<ProfessionalAssessments />} />
           <Route path="/professional/learning" element={<ProfessionalLearning />} />
+          <Route path="/professional/profile" element={<ProfessionalProfile />} />
           <Route path="/professional/analytics" element={<ProfessionalDashboard />} />
           
           {/* Student routes */}
