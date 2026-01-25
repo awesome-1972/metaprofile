@@ -4,7 +4,8 @@ import { CandidateCard } from "@/components/ui/CandidateCard";
 import { CaseCard } from "@/components/ui/CaseCard";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
 import { CompetencyModelBuilder } from "@/components/company/CompetencyModelBuilder";
-import { Briefcase, Users, FileText, TrendingUp, Plus, Settings2 } from "lucide-react";
+import { AssignAssessment } from "@/components/company/AssignAssessment";
+import { Briefcase, Users, FileText, TrendingUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -20,6 +21,7 @@ const CompanyDashboard = () => {
           </div>
           <div className="flex flex-wrap gap-3">
             <CompetencyModelBuilder />
+            <AssignAssessment />
             <Button variant="outline" asChild>
               <Link to="/company/cases/create">
                 <Plus className="h-4 w-4 mr-2" />

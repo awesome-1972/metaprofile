@@ -35,12 +35,12 @@ import {
   Target,
   Save,
   Eye,
-  ChevronRight,
   Info,
   Layers,
   BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AIModelGenerator } from "./AIModelGenerator";
 
 interface Criterion {
   level: number;
@@ -97,6 +97,30 @@ export const CompetencyModelBuilder = () => {
 
   const [editingCompetency, setEditingCompetency] = useState<Competency | null>(null);
   const [isCompetencyDialogOpen, setIsCompetencyDialogOpen] = useState(false);
+
+  const handleAIModelGenerated = (generatedModel: {
+    name: string;
+    description: string;
+    competencies: Array<{
+      name: string;
+      description: string;
+      category: string;
+      weight: number;
+      criteria: Criterion[];
+    }>;
+  }) => {
+    setModel({
+      id: generateId(),
+      name: generatedModel.name,
+      description: generatedModel.description,
+      positionTitle: generatedModel.name.replace(/Assessment|Evaluation|Model|Модель/gi, "").trim(),
+      competencies: generatedModel.competencies.map((c) => ({
+        ...c,
+        id: generateId(),
+      })),
+    });
+    setIsOpen(true);
+  };
 
   const addCompetency = () => {
     const newCompetency: Competency = {
@@ -203,13 +227,15 @@ export const CompetencyModelBuilder = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Створити модель компетенцій
-        </Button>
-      </DialogTrigger>
+    <>
+      <div className="flex gap-2">
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Створити модель
+            </Button>
+          </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -561,5 +587,8 @@ export const CompetencyModelBuilder = () => {
         </DialogContent>
       </Dialog>
     </Dialog>
+        <AIModelGenerator onModelGenerated={handleAIModelGenerated} />
+      </div>
+    </>
   );
 };
