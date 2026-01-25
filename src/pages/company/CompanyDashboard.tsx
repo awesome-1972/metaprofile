@@ -3,7 +3,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { CandidateCard } from "@/components/ui/CandidateCard";
 import { CaseCard } from "@/components/ui/CaseCard";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
-import { Briefcase, Users, FileText, TrendingUp, Plus } from "lucide-react";
+import { CompetencyModelBuilder } from "@/components/company/CompetencyModelBuilder";
+import { Briefcase, Users, FileText, TrendingUp, Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -17,7 +18,8 @@ const CompanyDashboard = () => {
             <h1 className="text-2xl font-semibold text-foreground">Дашборд компанії</h1>
             <p className="text-muted-foreground mt-1">Огляд активності та аналітика</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <CompetencyModelBuilder />
             <Button variant="outline" asChild>
               <Link to="/company/cases/create">
                 <Plus className="h-4 w-4 mr-2" />

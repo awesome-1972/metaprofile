@@ -14,7 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      competencies: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          model_id: string
+          name: string
+          sort_order: number | null
+          weight: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          model_id: string
+          name: string
+          sort_order?: number | null
+          weight?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          model_id?: string
+          name?: string
+          sort_order?: number | null
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competencies_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "competency_models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competency_criteria: {
+        Row: {
+          competency_id: string
+          created_at: string | null
+          description: string
+          id: string
+          indicators: string[] | null
+          level: number
+        }
+        Insert: {
+          competency_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          indicators?: string[] | null
+          level: number
+        }
+        Update: {
+          competency_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          indicators?: string[] | null
+          level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competency_criteria_competency_id_fkey"
+            columns: ["competency_id"]
+            isOneToOne: false
+            referencedRelation: "competencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competency_models: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          position_title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          position_title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          position_title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
