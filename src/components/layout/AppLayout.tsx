@@ -33,6 +33,7 @@ const roleConfig = {
       { path: "/company", label: "Дашборд", icon: LayoutDashboard },
       { path: "/company/vacancies", label: "Вакансії", icon: Briefcase },
       { path: "/company/cases", label: "Кейси", icon: FileText },
+      { path: "/company/interns", label: "Запроси стажера", icon: GraduationCap },
       { path: "/company/candidates", label: "Кандидати", icon: Users },
       { path: "/company/analytics", label: "Аналітика", icon: BarChart3 },
     ],
