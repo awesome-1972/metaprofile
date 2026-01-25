@@ -613,7 +613,7 @@ const StudentProfile = () => {
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
-                    Пройти тест орієнтації
+                    Пройти профорієнтування
                   </li>
                 </ul>
               </CardContent>
@@ -655,7 +655,7 @@ const StudentProfile = () => {
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <a href="/student/orientation">
                     <Target className="h-4 w-4 mr-2" />
-                    Пройти тест орієнтації
+                    Профорієнтування
                   </a>
                 </Button>
                 <Button variant="outline" className="w-full justify-start" asChild>

@@ -25,7 +25,7 @@ const StudentDashboard = () => {
           </div>
           <Button asChild>
             <Link to="/student/orientation">
-              Пройти тест орієнтації
+              Профорієнтування
               <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>
