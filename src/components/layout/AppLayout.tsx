@@ -43,10 +43,10 @@ const roleConfig = {
     color: "text-primary",
     navItems: [
       { path: "/professional", label: "Дашборд", icon: LayoutDashboard },
-      { path: "/professional/assessments", label: "Оцінювання", icon: Target },
       { path: "/professional/cases", label: "Відкриті кейси", icon: FileText },
+      { path: "/professional/assessments", label: "Оцінювання", icon: Target },
       { path: "/professional/learning", label: "Навчання", icon: BookOpen },
-      { path: "/professional/analytics", label: "Мій профіль", icon: BarChart3 },
+      { path: "/professional/profile", label: "Мій профіль", icon: User },
     ],
   },
   student: {

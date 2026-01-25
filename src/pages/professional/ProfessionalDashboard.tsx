@@ -392,17 +392,6 @@ const ProfessionalDashboard = () => {
           </div>
         </div>
 
-        {/* AI Detection Warning */}
-        <Alert className="mb-6 border-amber-500/50 bg-amber-500/5">
-          <ShieldAlert className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-700">Перевірка автентичності рішень</AlertTitle>
-          <AlertDescription className="text-amber-600/90">
-            Усі кейси проходять автоматичну перевірку на використання штучного інтелекту. 
-            Якщо система виявить високий рівень AI-генерованого контенту, оцінка може бути знижена 
-            або кандидат дискваліфікований. Використовуйте AI лише як допоміжний інструмент для досліджень.
-          </AlertDescription>
-        </Alert>
-
         {/* Profile completeness */}
         <div className="rounded-lg border border-border bg-card p-5 mb-8">
           <div className="flex items-center justify-between mb-4">
