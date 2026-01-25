@@ -58,6 +58,7 @@ const roleConfig = {
       { path: "/student/orientation", label: "Профорієнтація", icon: Compass },
       { path: "/student/professions", label: "Професії", icon: Briefcase },
       { path: "/student/internship", label: "Міні-стажування", icon: Target },
+      { path: "/student/profile", label: "Мій профіль", icon: User },
       { path: "/student/feedback", label: "Зворотний зв'язок", icon: BarChart3 },
     ],
   },
