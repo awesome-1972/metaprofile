@@ -11,6 +11,7 @@ import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyCaseCreate from "./pages/company/CompanyCaseCreate";
 import CompanyCandidates from "./pages/company/CompanyCandidates";
 import CompanyAnalytics from "./pages/company/CompanyAnalytics";
+import CompanyVacancies from "./pages/company/CompanyVacancies";
 import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -38,7 +39,7 @@ const App = () => (
           <Route path="/company" element={<CompanyDashboard />} />
           <Route path="/company/cases/create" element={<CompanyCaseCreate />} />
           <Route path="/company/candidates" element={<CompanyCandidates />} />
-          <Route path="/company/vacancies" element={<CompanyDashboard />} />
+          <Route path="/company/vacancies" element={<CompanyVacancies />} />
           <Route path="/company/cases" element={<CompanyDashboard />} />
           <Route path="/company/analytics" element={<CompanyAnalytics />} />
           
