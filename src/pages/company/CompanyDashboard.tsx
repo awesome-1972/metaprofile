@@ -1,11 +1,11 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { StatCard } from "@/components/ui/StatCard";
 import { CandidateCard } from "@/components/ui/CandidateCard";
 import { CaseCard } from "@/components/ui/CaseCard";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
 import { CompetencyModelBuilder } from "@/components/company/CompetencyModelBuilder";
 import { AssignAssessment } from "@/components/company/AssignAssessment";
-import { Briefcase, Users, FileText, TrendingUp, Plus } from "lucide-react";
+import { CompanyStatsDashboard } from "@/components/company/CompanyStatsDashboard";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
@@ -17,7 +17,7 @@ const CompanyDashboard = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Дашборд компанії</h1>
-            <p className="text-muted-foreground mt-1">Огляд активності та аналітика</p>
+            <p className="text-muted-foreground mt-1">Зведена статистика та аналітика</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <CompetencyModelBuilder />
@@ -37,35 +37,11 @@ const CompanyDashboard = () => {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            title="Активні вакансії"
-            value={12}
-            icon={Briefcase}
-            trend={{ value: 8, label: "за місяць" }}
-          />
-          <StatCard
-            title="Кандидати на розгляді"
-            value={47}
-            icon={Users}
-            trend={{ value: 23, label: "за тиждень" }}
-          />
-          <StatCard
-            title="Активні кейси"
-            value={8}
-            icon={FileText}
-            subtitle="3 очікують публікації"
-          />
-          <StatCard
-            title="Середній час найму"
-            value="18 днів"
-            icon={TrendingUp}
-            trend={{ value: -12, label: "покращення" }}
-          />
-        </div>
+        {/* Stats Dashboard */}
+        <CompanyStatsDashboard />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Candidates & AI section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
           {/* Recent candidates */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
@@ -107,7 +83,7 @@ const CompanyDashboard = () => {
 
           {/* AI Insights */}
           <div className="space-y-4">
-            <h2 className="text-lg font-medium text-foreground">Аналітика</h2>
+            <h2 className="text-lg font-medium text-foreground">AI-аналітика</h2>
             
             <AIInsightCard
               title="Рекомендація щодо найму"
