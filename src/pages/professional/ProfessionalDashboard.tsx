@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/StatCard";
 import { CaseCard } from "@/components/ui/CaseCard";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
+import { MetaprogramsAnalysis } from "@/components/professional/MetaprogramsAnalysis";
 import { Target, BookOpen, Award, TrendingUp, CheckCircle2, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -165,37 +166,9 @@ const ProfessionalDashboard = () => {
           </div>
         </div>
 
-        {/* Metaprograms summary */}
-        <div className="mt-8 rounded-lg border border-border bg-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-foreground">Ваші метапрограми</h2>
-            <Link to="/professional/assessments" className="text-sm text-primary hover:underline">
-              Детальний аналіз
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[
-              { name: "Мотивація", value: "До цілі", score: 78 },
-              { name: "Референція", value: "Внутрішня", score: 65 },
-              { name: "Масштаб", value: "Деталі", score: 82 },
-              { name: "Час", value: "Майбутнє", score: 70 },
-              { name: "Стиль", value: "Проактивний", score: 88 },
-              { name: "Рішення", value: "Варіанти", score: 75 },
-            ].map((item, index) => (
-              <div key={index} className="text-center p-3 rounded-md bg-accent/50">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                  {item.name}
-                </p>
-                <p className="text-sm font-medium text-foreground mb-2">{item.value}</p>
-                <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${item.score}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Metaprograms Analysis */}
+        <div className="mt-8">
+          <MetaprogramsAnalysis />
         </div>
       </div>
     </AppLayout>
