@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "react-router-dom";
 import { 
   Target, 
@@ -25,8 +26,21 @@ import {
   Trophy,
   Zap,
   Eye,
-  MessageSquare
+  MessageSquare,
+  Upload,
+  FileText,
+  AlertTriangle,
+  ShieldAlert,
+  XCircle,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
+import { useState } from "react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface Invitation {
   id: string;
@@ -45,7 +59,24 @@ interface CompletedCase {
   completedAt: string;
   score: number;
   rank: string;
+  status: "passed" | "failed" | "pending_review";
   feedback?: string;
+  strengths?: string[];
+  improvements?: string[];
+  aiDetectionScore?: number;
+}
+
+interface OpenCase {
+  id: string;
+  title: string;
+  company: string;
+  description: string;
+  deadline: string;
+  duration: string;
+  competencies: string[];
+  reward?: string;
+  status: "saved" | "in_progress" | "not_started";
+  progress?: number;
 }
 
 interface ActiveCourse {
@@ -95,7 +126,11 @@ const completedCases: CompletedCase[] = [
     completedAt: "2025-01-20",
     score: 87,
     rank: "Топ 10%",
-    feedback: "Відмінне рішення з чистою архітектурою"
+    status: "passed",
+    feedback: "Відмінне рішення з чистою архітектурою та добре структурованим кодом.",
+    strengths: ["Чиста архітектура", "Оптимізація продуктивності", "Документація"],
+    improvements: ["Тестове покриття", "Обробка помилок"],
+    aiDetectionScore: 12
   },
   {
     id: "2",
@@ -104,15 +139,22 @@ const completedCases: CompletedCase[] = [
     completedAt: "2025-01-15",
     score: 92,
     rank: "Топ 5%",
-    feedback: "Креативний підхід до кешування"
+    status: "passed",
+    feedback: "Креативний підхід до кешування та відмінне розуміння патернів.",
+    strengths: ["Інноваційне рішення", "Глибоке розуміння проблеми", "Ефективність"],
+    aiDetectionScore: 8
   },
   {
     id: "3",
     title: "Dashboard UI",
     company: "DesignStudio",
     completedAt: "2025-01-10",
-    score: 78,
-    rank: "Топ 25%"
+    score: 58,
+    rank: "Топ 60%",
+    status: "failed",
+    feedback: "Рішення не відповідає вимогам доступності та має проблеми з UX.",
+    improvements: ["Доступність (a11y)", "Консистентність UI", "Адаптивний дизайн"],
+    aiDetectionScore: 15
   },
   {
     id: "4",
@@ -120,15 +162,56 @@ const completedCases: CompletedCase[] = [
     company: "DataFlow",
     completedAt: "2025-01-05",
     score: 85,
-    rank: "Топ 15%"
+    rank: "Топ 15%",
+    status: "passed",
+    feedback: "Добре структуроване рішення з ефективною обробкою даних.",
+    strengths: ["Ефективність", "Масштабованість"],
+    aiDetectionScore: 5
   },
   {
     id: "5",
     title: "Mobile App MVP",
     company: "StartupHub",
     completedAt: "2024-12-28",
-    score: 81,
-    rank: "Топ 20%"
+    score: 0,
+    rank: "-",
+    status: "pending_review",
+    aiDetectionScore: 0
+  }
+];
+
+const openCases: OpenCase[] = [
+  {
+    id: "1",
+    title: "Мікросервісна архітектура",
+    company: "FinTech Solutions",
+    description: "Проєктування системи обробки платежів з урахуванням масштабованості.",
+    deadline: "2025-01-30",
+    duration: "4-5 годин",
+    competencies: ["Архітектура", "Node.js", "Docker", "Kubernetes"],
+    reward: "Запрошення на співбесіду",
+    status: "in_progress",
+    progress: 35
+  },
+  {
+    id: "2",
+    title: "Оптимізація бази даних",
+    company: "TechCorp Ukraine",
+    description: "Аналіз та оптимізація запитів PostgreSQL для високонавантаженого додатку.",
+    deadline: "2025-02-05",
+    duration: "3-4 години",
+    competencies: ["SQL", "PostgreSQL", "Оптимізація"],
+    status: "saved"
+  },
+  {
+    id: "3",
+    title: "Frontend Performance Audit",
+    company: "WebAgency",
+    description: "Аудит та оптимізація продуктивності React-додатку з мільйонами користувачів.",
+    deadline: "2025-02-10",
+    duration: "2-3 години",
+    competencies: ["React", "Performance", "Lighthouse"],
+    status: "not_started"
   }
 ];
 
@@ -164,26 +247,161 @@ const getInvitationTypeConfig = (type: Invitation["type"]) => {
   }
 };
 
+const getCaseStatusConfig = (status: CompletedCase["status"]) => {
+  switch (status) {
+    case "passed":
+      return { label: "Успішно", icon: CheckCircle2, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" };
+    case "failed":
+      return { label: "Не пройдено", icon: XCircle, className: "bg-red-500/10 text-red-600 border-red-500/20" };
+    case "pending_review":
+      return { label: "На перевірці", icon: Clock, className: "bg-amber-500/10 text-amber-600 border-amber-500/20" };
+  }
+};
+
+const getOpenCaseStatusConfig = (status: OpenCase["status"]) => {
+  switch (status) {
+    case "in_progress":
+      return { label: "В процесі", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" };
+    case "saved":
+      return { label: "Збережено", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" };
+    case "not_started":
+      return { label: "Не розпочато", className: "bg-muted text-muted-foreground" };
+  }
+};
+
+const CompletedCaseCard = ({ caseItem }: { caseItem: CompletedCase }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const statusConfig = getCaseStatusConfig(caseItem.status);
+  const StatusIcon = statusConfig.icon;
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="p-3 rounded-lg border">
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between cursor-pointer hover:bg-accent/50 -m-3 p-3 rounded-lg transition-colors">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <StatusIcon className={`h-4 w-4 ${caseItem.status === 'passed' ? 'text-emerald-600' : caseItem.status === 'failed' ? 'text-red-600' : 'text-amber-600'}`} />
+                <p className="font-medium text-foreground">{caseItem.title}</p>
+                <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {caseItem.company}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {new Date(caseItem.completedAt).toLocaleDateString('uk-UA')}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {caseItem.status !== "pending_review" && (
+                <div className="text-right">
+                  <p className="text-lg font-semibold text-foreground">{caseItem.score}</p>
+                  <p className="text-xs text-muted-foreground">балів</p>
+                </div>
+              )}
+              {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <div className="pt-4 mt-3 border-t space-y-3">
+            {caseItem.feedback && (
+              <div className="p-3 rounded-lg bg-accent/50">
+                <p className="text-sm font-medium text-foreground mb-1">Зворотній зв'язок</p>
+                <p className="text-sm text-muted-foreground">{caseItem.feedback}</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-3">
+              {caseItem.strengths && caseItem.strengths.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-emerald-600 mb-1.5">Сильні сторони</p>
+                  <ul className="space-y-1">
+                    {caseItem.strengths.map((s, i) => (
+                      <li key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {caseItem.improvements && caseItem.improvements.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-amber-600 mb-1.5">Зони росту</p>
+                  <ul className="space-y-1">
+                    {caseItem.improvements.map((s, i) => (
+                      <li key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-amber-600" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {caseItem.rank !== "-" && (
+              <div className="flex items-center justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">Ваш результат серед учасників:</span>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  {caseItem.rank}
+                </Badge>
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+};
+
 const ProfessionalDashboard = () => {
-  const avgScore = Math.round(completedCases.reduce((sum, c) => sum + c.score, 0) / completedCases.length);
+  const passedCases = completedCases.filter(c => c.status === "passed").length;
+  const avgScore = Math.round(
+    completedCases.filter(c => c.status !== "pending_review").reduce((sum, c) => sum + c.score, 0) / 
+    completedCases.filter(c => c.status !== "pending_review").length
+  );
   const pendingInvitations = invitations.filter(i => i.status === "pending").length;
 
   return (
     <AppLayout role="professional">
       <div className="p-6 lg:p-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Вітаємо, Максиме</h1>
             <p className="text-muted-foreground mt-1">Ваш професійний профіль та можливості</p>
           </div>
-          <Button asChild>
-            <Link to="/professional/cases">
-              Знайти кейси
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Завантажити резюме
+            </Button>
+            <Button asChild>
+              <Link to="/professional/cases">
+                Знайти кейси
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
         </div>
+
+        {/* AI Detection Warning */}
+        <Alert className="mb-6 border-amber-500/50 bg-amber-500/5">
+          <ShieldAlert className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-700">Перевірка автентичності рішень</AlertTitle>
+          <AlertDescription className="text-amber-600/90">
+            Усі кейси проходять автоматичну перевірку на використання штучного інтелекту. 
+            Якщо система виявить високий рівень AI-генерованого контенту, оцінка може бути знижена 
+            або кандидат дискваліфікований. Використовуйте AI лише як допоміжний інструмент для досліджень.
+          </AlertDescription>
+        </Alert>
 
         {/* Profile completeness */}
         <div className="rounded-lg border border-border bg-card p-5 mb-8">
@@ -195,7 +413,7 @@ const ProfessionalDashboard = () => {
             <span className="text-2xl font-semibold text-primary">68%</span>
           </div>
           <Progress value={68} className="h-2 mb-4" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="flex items-center gap-3 p-3 rounded-md bg-accent/50">
               <CheckCircle2 className="h-5 w-5 text-primary" />
               <div>
@@ -208,6 +426,13 @@ const ProfessionalDashboard = () => {
               <div>
                 <p className="text-sm font-medium text-foreground">Метапрограми</p>
                 <p className="text-xs text-muted-foreground">Пройдено</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-md bg-accent/50 border-2 border-dashed border-muted-foreground/30">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Резюме</p>
+                <p className="text-xs text-muted-foreground">Не завантажено</p>
               </div>
             </div>
             <CompetencyAssessment 
@@ -227,16 +452,16 @@ const ProfessionalDashboard = () => {
             trend={{ value: 2, label: "цього місяця" }}
           />
           <StatCard
+            title="Успішних кейсів"
+            value={passedCases}
+            icon={CheckCircle2}
+            subtitle={`${Math.round((passedCases / completedCases.filter(c => c.status !== 'pending_review').length) * 100)}% успішність`}
+          />
+          <StatCard
             title="Активних запрошень"
             value={pendingInvitations}
             icon={Mail}
             subtitle="Очікують відповіді"
-          />
-          <StatCard
-            title="Середній бал"
-            value={`${avgScore}/100`}
-            icon={Award}
-            subtitle="За всі кейси"
           />
           <StatCard
             title="Рейтинг профілю"
@@ -248,8 +473,123 @@ const ProfessionalDashboard = () => {
 
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Invitations & Cases */}
+          {/* Left column - Open Cases & Completed Cases */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Open/Active Cases */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Відкриті кейси
+                  </CardTitle>
+                  <Badge variant="secondary">{openCases.length} активних</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {openCases.map((caseItem) => {
+                  const statusConfig = getOpenCaseStatusConfig(caseItem.status);
+                  const daysLeft = Math.ceil((new Date(caseItem.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  
+                  return (
+                    <div key={caseItem.id} className="p-4 rounded-lg border hover:bg-accent/30 transition-colors">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">{caseItem.title}</h3>
+                            <Badge className={statusConfig.className}>{statusConfig.label}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <Building2 className="h-3.5 w-3.5" />
+                            <span>{caseItem.company}</span>
+                          </div>
+                        </div>
+                        {caseItem.reward && (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                            <Trophy className="h-3 w-3 mr-1" />
+                            {caseItem.reward}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground mb-3">{caseItem.description}</p>
+                      
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {caseItem.competencies.map((comp) => (
+                          <Badge key={comp} variant="outline" className="text-xs">
+                            {comp}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {caseItem.status === "in_progress" && caseItem.progress && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-muted-foreground">Прогрес</span>
+                            <span className="font-medium">{caseItem.progress}%</span>
+                          </div>
+                          <Progress value={caseItem.progress} className="h-2" />
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {caseItem.duration}
+                          </span>
+                          <span className={`flex items-center gap-1 ${daysLeft <= 3 ? 'text-amber-600 font-medium' : ''}`}>
+                            <Calendar className="h-4 w-4" />
+                            {daysLeft} днів
+                          </span>
+                        </div>
+                        <Button size="sm" variant={caseItem.status === "in_progress" ? "default" : "outline"}>
+                          {caseItem.status === "in_progress" ? (
+                            <>
+                              <Play className="h-4 w-4 mr-1" />
+                              Продовжити
+                            </>
+                          ) : (
+                            <>
+                              <ArrowRight className="h-4 w-4 mr-1" />
+                              Розпочати
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Completed Cases with Feedback */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    Пройдені кейси
+                  </CardTitle>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1 text-emerald-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {passedCases}
+                    </span>
+                    <span className="flex items-center gap-1 text-red-600">
+                      <XCircle className="h-4 w-4" />
+                      {completedCases.filter(c => c.status === "failed").length}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {completedCases.map((caseItem) => (
+                  <CompletedCaseCard key={caseItem.id} caseItem={caseItem} />
+                ))}
+              </CardContent>
+            </Card>
+
             {/* Invitations */}
             <Card>
               <CardHeader className="pb-3">
@@ -301,98 +641,6 @@ const ProfessionalDashboard = () => {
                 })}
               </CardContent>
             </Card>
-
-            {/* Completed Cases */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                    Виконані кейси
-                  </CardTitle>
-                  <Link to="/professional/cases/history" className="text-sm text-primary hover:underline">
-                    Усі кейси
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {completedCases.slice(0, 4).map((caseItem) => (
-                    <div 
-                      key={caseItem.id}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-foreground">{caseItem.title}</p>
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                            {caseItem.rank}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-3.5 w-3.5" />
-                            {caseItem.company}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {new Date(caseItem.completedAt).toLocaleDateString('uk-UA')}
-                          </span>
-                        </div>
-                        {caseItem.feedback && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">
-                            "{caseItem.feedback}"
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-foreground">{caseItem.score}</p>
-                          <p className="text-xs text-muted-foreground">балів</p>
-                        </div>
-                        <div className={`w-2 h-10 rounded-full ${
-                          caseItem.score >= 85 ? 'bg-emerald-500' : 
-                          caseItem.score >= 70 ? 'bg-amber-500' : 'bg-red-500'
-                        }`} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recommended cases */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-foreground">Рекомендовані кейси</h2>
-                <Link to="/professional/cases" className="text-sm text-primary hover:underline">
-                  Переглянути всі
-                </Link>
-              </div>
-              
-              <div className="grid gap-4">
-                <CaseCard
-                  title="Оптимізація бази даних"
-                  company="TechCorp Ukraine"
-                  description="Аналіз та оптимізація запитів PostgreSQL для високонавантаженого додатку з мільйонами записів."
-                  duration="3-4 години"
-                  participants={12}
-                  competencies={["SQL", "PostgreSQL", "Оптимізація"]}
-                  status="open"
-                  link="/professional/cases/1"
-                />
-                <CaseCard
-                  title="Архітектура мікросервісів"
-                  company="FinTech Solutions"
-                  description="Проєктування системи обробки платежів з урахуванням масштабованості та відмовостійкості."
-                  duration="4-5 годин"
-                  participants={8}
-                  competencies={["Архітектура", "Node.js", "Docker"]}
-                  status="open"
-                  link="/professional/cases/2"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Right column - Rating, Learning, AI */}
@@ -445,7 +693,7 @@ const ProfessionalDashboard = () => {
                 </div>
 
                 <div className="pt-3 border-t flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Загальний бал</span>
+                  <span className="text-muted-foreground">Середній бал</span>
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                     <span className="font-semibold">{avgScore}/100</span>
