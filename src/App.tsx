@@ -18,6 +18,7 @@ import StudentOrientation from "./pages/student/StudentOrientation";
 import StudentProfessions from "./pages/student/StudentProfessions";
 import VeteranDashboard from "./pages/veteran/VeteranDashboard";
 import VeteranSkills from "./pages/veteran/VeteranSkills";
+import VeteranAdaptation from "./pages/veteran/VeteranAdaptation";
 
 const queryClient = new QueryClient();
 
@@ -59,7 +60,7 @@ const App = () => (
           <Route path="/veteran" element={<VeteranDashboard />} />
           <Route path="/veteran/skills" element={<VeteranSkills />} />
           <Route path="/veteran/matching" element={<VeteranDashboard />} />
-          <Route path="/veteran/adaptation" element={<VeteranDashboard />} />
+          <Route path="/veteran/adaptation" element={<VeteranAdaptation />} />
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
           
           <Route path="*" element={<NotFound />} />
