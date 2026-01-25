@@ -369,8 +369,8 @@ const StudentProfessions = () => {
               <div className="rounded-lg border border-border bg-card p-4">
                 <h3 className="font-medium text-foreground mb-3">Наступні кроки</h3>
                 <div className="space-y-3">
-                  <Button variant="default" className="w-full justify-start" asChild>
-                    <Link to="/student/internship">
+                <Button variant="default" className="w-full justify-start" asChild>
+                    <Link to={`/student/internship?role=${encodeURIComponent(currentRole?.title || "")}`}>
                       Спробувати міні-стажування
                     </Link>
                   </Button>
