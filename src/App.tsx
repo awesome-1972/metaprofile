@@ -13,6 +13,7 @@ import CompanyCandidates from "./pages/company/CompanyCandidates";
 import CompanyAnalytics from "./pages/company/CompanyAnalytics";
 import CompanyVacancies from "./pages/company/CompanyVacancies";
 import CompanyCases from "./pages/company/CompanyCases";
+import CompanyInternRequests from "./pages/company/CompanyInternRequests";
 import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import ProfessionalAssessments from "./pages/professional/ProfessionalAssessments";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/company/candidates" element={<CompanyCandidates />} />
           <Route path="/company/vacancies" element={<CompanyVacancies />} />
           <Route path="/company/cases" element={<CompanyCases />} />
+          <Route path="/company/interns" element={<CompanyInternRequests />} />
           <Route path="/company/analytics" element={<CompanyAnalytics />} />
           
           {/* Professional routes */}
