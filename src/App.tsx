@@ -10,6 +10,7 @@ import MethodologyPage from "./pages/MethodologyPage";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyCaseCreate from "./pages/company/CompanyCaseCreate";
 import CompanyCandidates from "./pages/company/CompanyCandidates";
+import CompanyAnalytics from "./pages/company/CompanyAnalytics";
 import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -36,7 +37,7 @@ const App = () => (
           <Route path="/company/candidates" element={<CompanyCandidates />} />
           <Route path="/company/vacancies" element={<CompanyDashboard />} />
           <Route path="/company/cases" element={<CompanyDashboard />} />
-          <Route path="/company/analytics" element={<CompanyDashboard />} />
+          <Route path="/company/analytics" element={<CompanyAnalytics />} />
           
           {/* Professional routes */}
           <Route path="/professional" element={<ProfessionalDashboard />} />
