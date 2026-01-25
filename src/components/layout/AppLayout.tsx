@@ -71,6 +71,7 @@ const roleConfig = {
       { path: "/veteran/skills", label: "Оцінка навичок", icon: Target },
       { path: "/veteran/matching", label: "Підбір професій", icon: Compass },
       { path: "/veteran/adaptation", label: "Адаптація", icon: BookOpen },
+      { path: "/veteran/profile", label: "Мій профіль", icon: User },
       { path: "/veteran/internship", label: "Стажування", icon: Briefcase },
     ],
   },
