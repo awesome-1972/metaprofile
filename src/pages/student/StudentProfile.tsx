@@ -32,7 +32,7 @@ import {
   X
 } from "lucide-react";
 import { useState } from "react";
-import profileAvatar from "@/assets/profile-avatar.png";
+import studentAvatar from "@/assets/student-avatar.png";
 
 interface SocialLink {
   id: string;
@@ -201,7 +201,7 @@ const StudentProfile = () => {
                   <div className="flex flex-col items-center gap-3">
                     <div className="relative">
                       <img 
-                        src={profileAvatar} 
+                        src={studentAvatar} 
                         alt="Фото профілю" 
                         className="w-32 h-32 rounded-full object-cover border-4 border-background shadow-lg"
                       />
