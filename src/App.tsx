@@ -15,6 +15,7 @@ import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentOrientation from "./pages/student/StudentOrientation";
+import StudentProfessions from "./pages/student/StudentProfessions";
 import VeteranDashboard from "./pages/veteran/VeteranDashboard";
 import VeteranSkills from "./pages/veteran/VeteranSkills";
 
@@ -50,7 +51,7 @@ const App = () => (
           {/* Student routes */}
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/student/orientation" element={<StudentOrientation />} />
-          <Route path="/student/professions" element={<StudentDashboard />} />
+          <Route path="/student/professions" element={<StudentProfessions />} />
           <Route path="/student/internship" element={<StudentDashboard />} />
           <Route path="/student/feedback" element={<StudentDashboard />} />
           
