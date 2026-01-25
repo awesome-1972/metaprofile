@@ -3,7 +3,8 @@ import { StatCard } from "@/components/ui/StatCard";
 import { CaseCard } from "@/components/ui/CaseCard";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
 import { MetaprogramsAnalysis } from "@/components/professional/MetaprogramsAnalysis";
-import { Target, BookOpen, Award, TrendingUp, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { CompetencyAssessment } from "@/components/professional/CompetencyAssessment";
+import { Target, BookOpen, Award, TrendingUp, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -51,16 +52,12 @@ const ProfessionalDashboard = () => {
                 <p className="text-xs text-muted-foreground">Пройдено</p>
               </div>
             </div>
-            <Link 
-              to="/professional/assessments"
-              className="flex items-center gap-3 p-3 rounded-md border border-dashed border-border hover:border-primary transition-colors"
-            >
-              <Clock className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Оцінка компетенцій</p>
-                <p className="text-xs text-primary">Розпочати →</p>
-              </div>
-            </Link>
+            <CompetencyAssessment 
+              onStartAssessment={(modelId) => {
+                console.log("Starting assessment:", modelId);
+                // Navigate to assessment page
+              }}
+            />
           </div>
         </div>
 
