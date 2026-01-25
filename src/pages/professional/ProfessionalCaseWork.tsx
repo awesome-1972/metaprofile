@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AIInsightCard } from "@/components/ui/AIInsightCard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { 
   ArrowLeft, 
   Clock, 
   CheckCircle2,
   FileText,
   Send,
-  HelpCircle
+  HelpCircle,
+  ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +60,19 @@ const ProfessionalCaseWork = () => {
             <span className="text-sm text-muted-foreground">залишилось</span>
           </div>
         </div>
+
+        {/* AI Detection Warning */}
+        <Alert className="mb-6 border-chart-4/50 bg-chart-4/10">
+          <ShieldAlert className="h-4 w-4 text-chart-4" />
+          <AlertTitle className="text-chart-5">
+            Перевірка автентичності рішень
+          </AlertTitle>
+          <AlertDescription className="text-chart-4">
+            Усі відповіді перевіряються на рівень втручання штучного інтелекту. 
+            Високий рівень AI-генерації може призвести до зниження оцінки або дискваліфікації. 
+            Використовуйте AI як допоміжний інструмент, але відповідь має бути вашою власною.
+          </AlertDescription>
+        </Alert>
 
         {/* Progress */}
         <div className="rounded-lg border border-border bg-card p-4 mb-6">
