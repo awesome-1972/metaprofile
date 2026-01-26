@@ -191,6 +191,23 @@ All colors MUST be HSL.
   50% { height: 100%; }
 }
 
+@keyframes blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes head-movement {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(1deg) translateX(2px); }
+  50% { transform: rotate(-0.5deg) translateX(-1px); }
+  75% { transform: rotate(0.5deg) translateX(1px); }
+}
+
+@keyframes idle-movement {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  50% { transform: rotate(0.3deg) translateY(1px); }
+}
+
 .animate-mouth-1 {
   animation: mouth-1 0.3s ease-in-out infinite;
 }
@@ -209,4 +226,16 @@ All colors MUST be HSL.
 
 .animate-audio-wave {
   animation: audio-wave 0.5s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 4s ease-in-out infinite;
+}
+
+.animate-head-movement {
+  animation: head-movement 2s ease-in-out infinite;
+}
+
+.animate-idle-movement {
+  animation: idle-movement 6s ease-in-out infinite;
 }
