@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
 import MethodologyPage from "./pages/MethodologyPage";
+import UniquenessPage from "./pages/UniquenessPage";
 import CompanyDashboard from "./pages/company/CompanyDashboard";
 import CompanyCaseCreate from "./pages/company/CompanyCaseCreate";
 import CompanyCandidates from "./pages/company/CompanyCandidates";
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
+          <Route path="/uniqueness" element={<UniquenessPage />} />
           
           {/* Company routes */}
           <Route path="/company" element={<CompanyDashboard />} />

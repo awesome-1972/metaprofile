@@ -78,6 +78,12 @@ const Index = () => {
               Методологія
             </Link>
             <Link 
+              to="/uniqueness" 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Унікальність
+            </Link>
+            <Link 
               to="/pricing" 
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
