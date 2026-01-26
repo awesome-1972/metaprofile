@@ -73,6 +73,7 @@ const roleConfig = {
     navItems: [
       { path: "/veteran", label: "Дашборд", icon: LayoutDashboard },
       { path: "/veteran/skills", label: "Оцінка навичок", icon: Target },
+      { path: "/veteran/simulation", label: "Симуляції", icon: Target },
       { path: "/veteran/matching", label: "Підбір професій", icon: Compass },
       { path: "/veteran/adaptation", label: "Адаптація", icon: BookOpen },
       { path: "/veteran/support", label: "Підтримка", icon: User },

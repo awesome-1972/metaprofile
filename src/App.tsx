@@ -31,6 +31,7 @@ import VeteranSkills from "./pages/veteran/VeteranSkills";
 import VeteranAdaptation from "./pages/veteran/VeteranAdaptation";
 import VeteranProfile from "./pages/veteran/VeteranProfile";
 import VeteranSupport from "./pages/veteran/VeteranSupport";
+import VeteranSimulation from "./pages/veteran/VeteranSimulation";
 import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => (
           <Route path="/veteran/matching" element={<VeteranDashboard />} />
           <Route path="/veteran/adaptation" element={<VeteranAdaptation />} />
           <Route path="/veteran/support" element={<VeteranSupport />} />
+          <Route path="/veteran/simulation" element={<VeteranSimulation />} />
           <Route path="/veteran/profile" element={<VeteranProfile />} />
           <Route path="/veteran/interview" element={<CandidateInterviewPage role="veteran" />} />
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
