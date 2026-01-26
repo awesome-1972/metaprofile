@@ -1,6 +1,32 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Target, 
+  Users, 
+  Wallet, 
+  Layers,
+  FileText,
+  Filter,
+  UserCheck,
+  MessageSquare,
+  ClipboardCheck,
+  HelpCircle,
+  Briefcase,
+  GraduationCap,
+  TrendingUp,
+  Compass,
+  Award,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
+  Settings,
+  Building2,
+  BookOpen,
+  UserCog,
+  Network
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 const UniquenessPage = () => {
   return (
@@ -40,7 +66,7 @@ const UniquenessPage = () => {
       </header>
 
       {/* Main content */}
-      <main className="container py-12 max-w-4xl">
+      <main className="container py-12 max-w-5xl">
         {/* Back link */}
         <Link 
           to="/" 
@@ -51,157 +77,372 @@ const UniquenessPage = () => {
         </Link>
 
         {/* Page title */}
-        <div className="mb-12">
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
+            <Target className="h-8 w-8 text-primary" />
+          </div>
           <h1 className="text-3xl font-bold text-foreground mb-3">
             Унікальність платформи Metaprofile
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Чому ця платформа змінює логіку підбору, оцінки та розвитку, а не просто автоматизує старі підходи.
           </p>
         </div>
 
         {/* Section 1 */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            1. Розрив зі стереотипною моделлю підбору
-          </h2>
+        <section className="mb-16">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-destructive/10">
+              <XCircle className="h-5 w-5 text-destructive" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">
+              1. Розрив зі стереотипною моделлю підбору
+            </h2>
+          </div>
           
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              Традиційний ланцюг найму складається з послідовних етапів, кожен із яких несе ризик втрати якісних кандидатів або прийняття помилкових рішень:
-            </p>
-            
-            <div className="bg-muted/50 rounded-lg p-4 border border-border">
-              <p className="text-sm font-medium text-foreground">
-                вакансія → резюме → відсів → відбір → співбесіда → технічне завдання → непрозорий вибір → формальний або відсутній зворотний зв'язок
-              </p>
+          {/* Traditional hiring flow - visual */}
+          <div className="mb-8">
+            <p className="text-sm text-muted-foreground mb-4">Традиційний ланцюг найму:</p>
+            <div className="flex flex-wrap items-center gap-2 p-4 bg-muted/30 rounded-lg border border-border">
+              {[
+                { icon: FileText, label: "Вакансія" },
+                { icon: Filter, label: "Резюме" },
+                { icon: XCircle, label: "Відсів" },
+                { icon: UserCheck, label: "Відбір" },
+                { icon: MessageSquare, label: "Співбесіда" },
+                { icon: ClipboardCheck, label: "Тех. завдання" },
+                { icon: HelpCircle, label: "Непрозорий вибір" },
+              ].map((step, index, arr) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-card rounded-md border border-border">
+                    <step.icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{step.label}</span>
+                  </div>
+                  {index < arr.length - 1 && (
+                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  )}
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="space-y-3 mt-6">
-              <h3 className="font-medium text-foreground">Проблеми традиційної моделі:</h3>
-              <ul className="list-disc list-inside space-y-2 pl-2">
-                <li>Цей процес довгий, виснажливий і для компаній, і для кандидатів.</li>
-                <li>Більшість рішень ухвалюються суб'єктивно, на основі вражень та інтуїції.</li>
-                <li>Якість рішення погано перевіряється — немає об'єктивних критеріїв успішності найму.</li>
-              </ul>
-            </div>
+          {/* Problems grid */}
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            <Card className="border-destructive/20 bg-destructive/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-destructive/10">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-sm mb-1">Довгий процес</p>
+                    <p className="text-xs text-muted-foreground">Виснажливий і для компаній, і для кандидатів</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-destructive/20 bg-destructive/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-destructive/10">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-sm mb-1">Суб'єктивність</p>
+                    <p className="text-xs text-muted-foreground">Рішення на основі вражень та інтуїції</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-destructive/20 bg-destructive/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-destructive/10">
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground text-sm mb-1">Неперевіряємість</p>
+                    <p className="text-xs text-muted-foreground">Немає об'єктивних критеріїв успішності</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            <Separator className="my-6" />
-
-            <div className="space-y-3">
-              <h3 className="font-medium text-foreground">Як Metaprofile змінює цю логіку:</h3>
-              <ul className="list-disc list-inside space-y-2 pl-2">
-                <li>Переносить фокус з описів і вражень на реальні дії — кандидат демонструє компетенції через виконання практичних завдань.</li>
-                <li>Використовує кейс-орієнтовану оцінку замість фільтрації резюме — оцінюється результат роботи, а не самопрезентація.</li>
-                <li>Робить вибір порівнюваним і пояснюваним — кожна оцінка базується на чітких критеріях та є прозорою для всіх сторін.</li>
-              </ul>
+          {/* Metaprofile solution */}
+          <div className="bg-primary/5 rounded-lg p-6 border border-primary/20">
+            <p className="text-sm font-medium text-primary mb-4">Як Metaprofile змінює логіку:</p>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Фокус на діях</p>
+                  <p className="text-xs text-muted-foreground">Реальні дії замість описів і вражень</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Кейс-оцінка</p>
+                  <p className="text-xs text-muted-foreground">Результат роботи замість самопрезентації</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Прозорий вибір</p>
+                  <p className="text-xs text-muted-foreground">Чіткі критерії для всіх сторін</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Section 2 */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            2. Цінність не лише для рекрутера, а й для кандидата
-          </h2>
+        <section className="mb-16">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">
+              2. Цінність не лише для рекрутера, а й для кандидата
+            </h2>
+          </div>
           
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              Платформа створює двосторонню цінність. Це не просто інструмент відбору для компаній — це середовище, де кандидати отримують реальні можливості для зростання.
-            </p>
+          <p className="text-muted-foreground mb-6">
+            Платформа створює двосторонню цінність — це не просто інструмент відбору для компаній, а середовище розвитку для кандидатів.
+          </p>
 
-            <div className="space-y-3 mt-6">
-              <h3 className="font-medium text-foreground">Що Metaprofile надає кандидатам:</h3>
-              <ul className="list-disc list-inside space-y-2 pl-2">
-                <li>Можливість розвитку, а не лише оцінки — кожен кейс стає джерелом навчання та зворотного зв'язку.</li>
-                <li>Профайлінг, у тому числі метапрограмний — розуміння власних сильних сторін та стилю роботи.</li>
-                <li>Профорієнтацію для тих, хто ще не визначився — особливо для студентів та молодих спеціалістів.</li>
-                <li>Можливість першої роботи або стажування для студентів — доступ до реальних завдань від компаній.</li>
-                <li>Можливість показати професіоналізм, вирішуючи реальні кейси, а не «продаючи себе» у резюме.</li>
-              </ul>
-            </div>
-
-            <div className="bg-accent/50 rounded-lg p-4 border border-border mt-6">
-              <p className="text-sm text-foreground">
-                <span className="font-medium">Ключовий принцип:</span> кандидат перестає бути пасивним об'єктом відбору. Він стає активним учасником процесу, здатним впливати на результат через власні дії та демонстрацію реальних компетенцій.
-              </p>
-            </div>
+          {/* Benefits grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Розвиток</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Кожен кейс — джерело навчання та зворотного зв'язку, а не лише оцінки</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <UserCog className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Профайлінг</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Метапрограмний аналіз для розуміння власних сильних сторін та стилю роботи</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <Compass className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Профорієнтація</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Для тих, хто ще не визначився — особливо студентів та молодих спеціалістів</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <GraduationCap className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Стажування</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Доступ до реальних завдань від компаній для першої роботи</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <Award className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Професіоналізм</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Демонстрація через реальні кейси, а не «продаж себе» у резюме</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-accent/50 border-accent">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-md bg-primary/10">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="font-medium text-foreground">Активна роль</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Кандидат — активний учасник, а не пасивний об'єкт відбору</p>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
         {/* Section 3 */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            3. Прозора і гнучка логіка ціноутворення
-          </h2>
-          
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              Metaprofile не використовує заплутані тарифні сітки та не продає «пакети заради пакетів». Логіка ціноутворення побудована на принципі реальної потреби.
-            </p>
-
-            <div className="space-y-3 mt-6">
-              <h3 className="font-medium text-foreground">Концептуальна логіка цін:</h3>
-              <ul className="list-disc list-inside space-y-2 pl-2">
-                <li>Компанії платять лише за ті модулі, які їм потрібні — без зайвих функцій у пакеті.</li>
-                <li>Можливі різні моделі оплати: підписка, оплата за кейс, внутрішні модулі.</li>
-                <li>Ціна гнучко адаптується під масштаб компанії — від стартапу до корпорації.</li>
-              </ul>
+        <section className="mb-16">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+              <Wallet className="h-5 w-5 text-primary" />
             </div>
+            <h2 className="text-xl font-semibold text-foreground">
+              3. Прозора і гнучка логіка ціноутворення
+            </h2>
+          </div>
+          
+          <p className="text-muted-foreground mb-6">
+            Жодних заплутаних тарифів та «пакетів заради пакетів». Логіка ціноутворення побудована на принципі реальної потреби.
+          </p>
 
-            <div className="bg-muted/50 rounded-lg p-4 border border-border mt-6">
-              <p className="text-sm text-foreground">
-                <span className="font-medium">Важливо:</span> платформа не змушує компанії змінювати фінансову поведінку. Вона замінює існуючі витрати на рекрутинг, навчання та оцінку більш ефективним і вимірюваним рішенням.
-              </p>
+          {/* Pricing features */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-card rounded-lg border border-border">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <Settings className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Модульна оплата</p>
+                  <p className="text-xs text-muted-foreground mt-1">Платіть лише за потрібні модулі — без зайвих функцій</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-4 bg-card rounded-lg border border-border">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <CreditCard className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Гнучкі моделі</p>
+                  <p className="text-xs text-muted-foreground mt-1">Підписка, оплата за кейс або внутрішні модулі</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-4 bg-card rounded-lg border border-border">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">Адаптація під масштаб</p>
+                  <p className="text-xs text-muted-foreground mt-1">Від стартапу до корпорації — ціна відповідає розміру</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-center p-6 bg-muted/30 rounded-lg border border-border">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4">
+                  <CheckCircle2 className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground mb-2">Заміна, а не додаткові витрати</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Платформа замінює існуючі витрати на рекрутинг, навчання та оцінку більш ефективним рішенням
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Section 4 */}
-        <section className="mb-12">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            4. Масштабування від підбору до повноцінної платформи розвитку
-          </h2>
-          
-          <div className="space-y-4 text-muted-foreground">
-            <p>
-              Metaprofile не обмежується рекрутингом. Архітектура платформи дозволяє розширювати функціональність без втрати цілісності.
-            </p>
-
-            <div className="space-y-3 mt-6">
-              <h3 className="font-medium text-foreground">Можливості масштабування:</h3>
-              <ul className="list-disc list-inside space-y-2 pl-2">
-                <li>Розширення до LMS (навчального модуля) — інтеграція кейсів з навчальними програмами.</li>
-                <li>Використання як внутрішнього порталу оцінки — для поточних співробітників, а не лише кандидатів.</li>
-                <li>Внутрішні assessment-centers — регулярна оцінка компетенцій команди.</li>
-                <li>Розвиток talent pools і внутрішньої мобільності — управління кар'єрними траєкторіями всередині організації.</li>
-              </ul>
+        <section className="mb-16">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+              <Layers className="h-5 w-5 text-primary" />
             </div>
+            <h2 className="text-xl font-semibold text-foreground">
+              4. Масштабування від підбору до платформи розвитку
+            </h2>
+          </div>
+          
+          <p className="text-muted-foreground mb-6">
+            Metaprofile не обмежується рекрутингом. Архітектура дозволяє розширювати функціональність без втрати цілісності.
+          </p>
 
-            <div className="bg-accent/50 rounded-lg p-4 border border-border mt-6">
-              <p className="text-sm text-foreground">
-                <span className="font-medium">Це єдина архітектура</span>, а не набір розрізнених інструментів. Усі модулі працюють на спільній методології оцінки та спільній базі даних про компетенції.
-              </p>
+          {/* Scalability diagram */}
+          <div className="grid md:grid-cols-4 gap-4 mb-8">
+            <Card className="text-center">
+              <CardContent className="p-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground text-sm mb-1">LMS</p>
+                <p className="text-xs text-muted-foreground">Навчальний модуль з інтеграцією кейсів</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center">
+              <CardContent className="p-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                  <ClipboardCheck className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground text-sm mb-1">Оцінка</p>
+                <p className="text-xs text-muted-foreground">Внутрішній портал для співробітників</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center">
+              <CardContent className="p-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground text-sm mb-1">Assessment</p>
+                <p className="text-xs text-muted-foreground">Регулярна оцінка компетенцій команди</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center">
+              <CardContent className="p-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+                  <Network className="h-6 w-6 text-primary" />
+                </div>
+                <p className="font-medium text-foreground text-sm mb-1">Talent Pools</p>
+                <p className="text-xs text-muted-foreground">Внутрішня мобільність та кар'єра</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="bg-accent/50 rounded-lg p-5 border border-border">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-primary/10">
+                <Layers className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Єдина архітектура</p>
+                <p className="text-sm text-muted-foreground">Усі модулі працюють на спільній методології та базі даних про компетенції — не набір розрізнених інструментів</p>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Final section */}
         <section className="mb-8">
-          <Separator className="mb-8" />
-          
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            Ключовий підсумок
-          </h2>
-          
-          <div className="bg-card border border-border rounded-lg p-6">
-            <p className="text-foreground text-lg leading-relaxed">
-              Metaprofile змінює логіку ринку:
-              <br />
-              <span className="text-muted-foreground">від підбору за резюме і враженням —</span>
-              <br />
-              <span className="font-medium">до оцінки за реальними діями, розвитком і доказами.</span>
-            </p>
+          <div className="bg-card border-2 border-primary/20 rounded-xl p-8 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 mb-6">
+              <Target className="h-7 w-7 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-4">
+              Ключовий підсумок
+            </h2>
+            <div className="max-w-lg mx-auto">
+              <p className="text-lg text-foreground leading-relaxed">
+                <span className="font-semibold">Metaprofile змінює логіку ринку:</span>
+              </p>
+              <div className="flex items-center justify-center gap-4 mt-4">
+                <div className="text-right">
+                  <p className="text-muted-foreground">від підбору за резюме</p>
+                  <p className="text-muted-foreground">і враженням</p>
+                </div>
+                <ArrowRight className="h-6 w-6 text-primary flex-shrink-0" />
+                <div className="text-left">
+                  <p className="font-medium text-foreground">до оцінки за</p>
+                  <p className="font-medium text-foreground">реальними діями</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
