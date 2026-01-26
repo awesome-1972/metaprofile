@@ -158,3 +158,55 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Speaking avatar animations */
+@keyframes mouth-1 {
+  0%, 100% { height: 40%; }
+  25% { height: 70%; }
+  50% { height: 30%; }
+  75% { height: 60%; }
+}
+
+@keyframes mouth-2 {
+  0%, 100% { height: 60%; }
+  25% { height: 40%; }
+  50% { height: 80%; }
+  75% { height: 50%; }
+}
+
+@keyframes mouth-3 {
+  0%, 100% { height: 80%; }
+  25% { height: 50%; }
+  50% { height: 90%; }
+  75% { height: 40%; }
+}
+
+@keyframes speaking-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.7; }
+}
+
+@keyframes audio-wave {
+  0%, 100% { height: 20%; }
+  50% { height: 100%; }
+}
+
+.animate-mouth-1 {
+  animation: mouth-1 0.3s ease-in-out infinite;
+}
+
+.animate-mouth-2 {
+  animation: mouth-2 0.25s ease-in-out infinite;
+}
+
+.animate-mouth-3 {
+  animation: mouth-3 0.35s ease-in-out infinite;
+}
+
+.animate-speaking-ring {
+  animation: speaking-ring 1s ease-in-out infinite;
+}
+
+.animate-audio-wave {
+  animation: audio-wave 0.5s ease-in-out infinite;
+}
