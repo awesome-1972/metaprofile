@@ -42,20 +42,18 @@ interface SocialLink {
   label?: string;
 }
 
-interface MilitaryExperience {
+interface ProfessionalExperience {
   id: string;
-  unit: string;
   position: string;
-  rank: string;
   startDate: string;
   endDate: string;
   description: string;
 }
 
-interface TransferableSkill {
+interface CivilianSkill {
   id: string;
-  militarySkill: string;
-  civilianApplication: string;
+  skillName: string;
+  description: string;
   proficiencyLevel: number;
 }
 
@@ -67,13 +65,10 @@ interface VeteranProfileData {
   location: string;
   bio: string;
   serviceYears: string;
-  branch: string;
-  highestRank: string;
-  dischargeDate: string;
   availableFrom: string;
   preferredIndustries: string[];
-  militaryExperience: MilitaryExperience[];
-  transferableSkills: TransferableSkill[];
+  professionalExperience: ProfessionalExperience[];
+  civilianSkills: CivilianSkill[];
   civilianEducation: string;
   certifications: string[];
   socialLinks: SocialLink[];
@@ -85,42 +80,35 @@ const initialProfile: VeteranProfileData = {
   email: "andrii.shevchenko@email.com",
   phone: "+380 67 890 1234",
   location: "Дніпро, Україна",
-  bio: "Ветеран ЗСУ з досвідом командування та управління операціями. Шукаю можливості застосувати набуті навички у сфері менеджменту або безпеки. Готовий до навчання та розвитку у цивільних професіях.",
+  bio: "Ветеран ЗСУ з досвідом управління та організації процесів. Шукаю можливості застосувати набуті навички у сфері менеджменту або безпеки. Готовий до навчання та розвитку у цивільних професіях.",
   serviceYears: "8 років",
-  branch: "Сухопутні війська ЗСУ",
-  highestRank: "Капітан",
-  dischargeDate: "2024",
   availableFrom: "Одразу",
   preferredIndustries: ["Менеджмент", "Безпека", "IT", "Логістика"],
-  militaryExperience: [
+  professionalExperience: [
     {
       id: "1",
-      unit: "93-тя окрема механізована бригада",
-      position: "Командир роти",
-      rank: "Капітан",
+      position: "Керівник команди",
       startDate: "2020",
       endDate: "2024",
-      description: "Командування підрозділом з 120+ особового складу, планування та проведення операцій, управління логістикою та забезпеченням"
+      description: "Управління командою з 120+ осіб, планування та координація проєктів, забезпечення логістичних процесів"
     },
     {
       id: "2",
-      unit: "Навчальний центр",
-      position: "Інструктор тактичної підготовки",
-      rank: "Старший лейтенант",
+      position: "Інструктор з підготовки персоналу",
       startDate: "2018",
       endDate: "2020",
-      description: "Підготовка особового складу, розробка навчальних програм, проведення тактичних навчань"
+      description: "Навчання та розвиток персоналу, розробка навчальних програм, проведення тренінгів"
     }
   ],
-  transferableSkills: [
-    { id: "1", militarySkill: "Командування підрозділом", civilianApplication: "Управління командою / People Management", proficiencyLevel: 95 },
-    { id: "2", militarySkill: "Планування операцій", civilianApplication: "Проєктний менеджмент", proficiencyLevel: 90 },
-    { id: "3", militarySkill: "Кризове управління", civilianApplication: "Антикризовий менеджмент", proficiencyLevel: 98 },
-    { id: "4", militarySkill: "Логістика та забезпечення", civilianApplication: "Supply Chain Management", proficiencyLevel: 85 },
-    { id: "5", militarySkill: "Робота з технікою", civilianApplication: "Технічне управління / IT", proficiencyLevel: 70 },
+  civilianSkills: [
+    { id: "1", skillName: "Управління командою", description: "People Management, лідерство", proficiencyLevel: 95 },
+    { id: "2", skillName: "Проєктний менеджмент", description: "Планування та координація проєктів", proficiencyLevel: 90 },
+    { id: "3", skillName: "Антикризовий менеджмент", description: "Прийняття рішень у складних ситуаціях", proficiencyLevel: 98 },
+    { id: "4", skillName: "Операційний менеджмент", description: "Supply Chain, логістика", proficiencyLevel: 85 },
+    { id: "5", skillName: "Технічне управління", description: "IT-інфраструктура, технічні системи", proficiencyLevel: 70 },
   ],
-  civilianEducation: "Національний університет оборони України, магістр військового управління",
-  certifications: ["Тактична медицина (TCCC)", "Управління проєктами (базовий курс)"],
+  civilianEducation: "Вища освіта, магістр управління",
+  certifications: ["Перша медична допомога", "Управління проєктами (базовий курс)"],
   socialLinks: [
     { id: "1", type: "linkedin", url: "https://linkedin.com/in/andrii-shevchenko" },
   ]
@@ -313,7 +301,7 @@ const VeteranProfile = () => {
                           <h2 className="text-2xl font-semibold text-foreground">
                             {profile.firstName} {profile.lastName}
                           </h2>
-                          <p className="text-lg text-muted-foreground">{profile.highestRank}, {profile.branch}</p>
+                          <p className="text-lg text-muted-foreground">Ветеран ЗСУ</p>
                         </div>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
@@ -322,7 +310,7 @@ const VeteranProfile = () => {
                           </span>
                           <span className="flex items-center gap-1">
                             <Medal className="h-4 w-4" />
-                            {profile.serviceYears} служби
+                            {profile.serviceYears} досвіду
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
@@ -336,12 +324,12 @@ const VeteranProfile = () => {
               </CardContent>
             </Card>
 
-            {/* Military Service */}
+            {/* Professional Experience */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Swords className="h-5 w-5 text-primary" />
-                  Військовий досвід
+                  <Briefcase className="h-5 w-5 text-primary" />
+                  Професійний досвід
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -349,23 +337,7 @@ const VeteranProfile = () => {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Рід військ / Підрозділ</Label>
-                        <Input 
-                          value={editedProfile.branch}
-                          onChange={(e) => setEditedProfile({...editedProfile, branch: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Найвище звання</Label>
-                        <Input 
-                          value={editedProfile.highestRank}
-                          onChange={(e) => setEditedProfile({...editedProfile, highestRank: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Загальний стаж служби</Label>
+                        <Label>Загальний стаж</Label>
                         <Input 
                           value={editedProfile.serviceYears}
                           onChange={(e) => setEditedProfile({...editedProfile, serviceYears: e.target.value})}
@@ -373,44 +345,35 @@ const VeteranProfile = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Рік звільнення</Label>
+                        <Label>Доступний з</Label>
                         <Input 
-                          value={editedProfile.dischargeDate}
-                          onChange={(e) => setEditedProfile({...editedProfile, dischargeDate: e.target.value})}
+                          value={editedProfile.availableFrom}
+                          onChange={(e) => setEditedProfile({...editedProfile, availableFrom: e.target.value})}
                         />
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="p-3 rounded-lg bg-accent/30 text-center">
-                        <p className="text-xs text-muted-foreground">Рід військ</p>
-                        <p className="text-sm font-medium text-foreground">{profile.branch}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-accent/30 text-center">
-                        <p className="text-xs text-muted-foreground">Звання</p>
-                        <p className="text-sm font-medium text-foreground">{profile.highestRank}</p>
-                      </div>
-                      <div className="p-3 rounded-lg bg-accent/30 text-center">
-                        <p className="text-xs text-muted-foreground">Стаж</p>
+                        <p className="text-xs text-muted-foreground">Загальний стаж</p>
                         <p className="text-sm font-medium text-foreground">{profile.serviceYears}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-accent/30 text-center">
-                        <p className="text-xs text-muted-foreground">Звільнення</p>
-                        <p className="text-sm font-medium text-foreground">{profile.dischargeDate}</p>
+                        <p className="text-xs text-muted-foreground">Доступність</p>
+                        <p className="text-sm font-medium text-foreground">{profile.availableFrom}</p>
                       </div>
                     </div>
 
                     <Separator />
 
                     <div className="space-y-4">
-                      {profile.militaryExperience.map((exp) => (
+                      {profile.professionalExperience.map((exp) => (
                         <div key={exp.id} className="p-4 rounded-lg bg-accent/50">
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <p className="font-medium text-foreground">{exp.position}</p>
-                              <p className="text-sm text-muted-foreground">{exp.unit}</p>
                             </div>
                             <Badge variant="secondary">{exp.startDate} - {exp.endDate}</Badge>
                           </div>
@@ -423,28 +386,25 @@ const VeteranProfile = () => {
               </CardContent>
             </Card>
 
-            {/* Transferable Skills */}
+            {/* Civilian Skills */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Переносимі навички
+                  Цивільні навички
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {profile.transferableSkills.map((skill) => (
+                  {profile.civilianSkills.map((skill) => (
                     <div key={skill.id} className="p-4 rounded-lg bg-accent/30">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Shield className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{skill.militarySkill}</span>
-                          </div>
                           <div className="flex items-center gap-2">
                             <Briefcase className="h-4 w-4 text-primary" />
-                            <span className="font-medium text-foreground">{skill.civilianApplication}</span>
+                            <span className="font-medium text-foreground">{skill.skillName}</span>
                           </div>
+                          <p className="text-sm text-muted-foreground mt-1">{skill.description}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-lg font-semibold text-primary">{skill.proficiencyLevel}%</span>
@@ -742,11 +702,11 @@ const VeteranProfile = () => {
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
-                    Військовий досвід
+                    Професійний досвід
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
-                    Переносимі навички
+                    Цивільні навички
                   </li>
                   <li className="flex items-center gap-2 text-muted-foreground">
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
