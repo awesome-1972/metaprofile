@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { InterviewerAvatar, InterviewQuestion } from "@/data/interviewData";
 import { useVirtualInterview } from "@/hooks/useVirtualInterview";
+import { InterviewReport } from "./InterviewReport";
 
 interface InterviewScreenProps {
   interviewer: InterviewerAvatar;
@@ -85,9 +86,18 @@ export const InterviewScreen = ({
     askQuestion();
   };
 
+  // Show report when interview is complete
   if (isInterviewComplete && finalReport) {
-    onComplete({ report: finalReport, messages });
-    return null;
+    return (
+      <InterviewReport
+        report={finalReport}
+        positionTitle={positionTitle}
+        companyName={companyName}
+        interviewType={interviewType}
+        onClose={onExit}
+        onSendToCompany={interviewType === "real" ? () => onComplete({ report: finalReport, messages }) : undefined}
+      />
+    );
   }
 
   return (
