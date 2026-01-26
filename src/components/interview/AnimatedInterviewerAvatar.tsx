@@ -16,7 +16,7 @@ export const AnimatedInterviewerAvatar = ({
 }: AnimatedInterviewerAvatarProps) => {
   return (
     <div className={cn("relative", className)}>
-      {/* Main avatar container */}
+      {/* Main avatar container with head movement */}
       <div className="relative w-64 h-64 mx-auto">
         {/* Glow effect when speaking */}
         <div
@@ -26,8 +26,13 @@ export const AnimatedInterviewerAvatar = ({
           )}
         />
         
-        {/* Avatar image */}
-        <div className="relative w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5">
+        {/* Avatar with head movement animation */}
+        <div 
+          className={cn(
+            "relative w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5",
+            isSpeaking ? "animate-head-movement" : "animate-idle-movement"
+          )}
+        >
           <Avatar className="w-full h-full">
             <AvatarImage 
               src={photo} 
@@ -38,6 +43,18 @@ export const AnimatedInterviewerAvatar = ({
               {name.charAt(0)}
             </AvatarFallback>
           </Avatar>
+          
+          {/* Eyes overlay with blinking */}
+          <div className="absolute top-[35%] left-1/2 -translate-x-1/2 flex gap-8">
+            {/* Left eye */}
+            <div className="relative w-6 h-3">
+              <div className="absolute inset-0 bg-foreground/10 rounded-full animate-blink" />
+            </div>
+            {/* Right eye */}
+            <div className="relative w-6 h-3">
+              <div className="absolute inset-0 bg-foreground/10 rounded-full animate-blink" style={{ animationDelay: '0.1s' }} />
+            </div>
+          </div>
           
           {/* Animated mouth overlay */}
           {isSpeaking && (
