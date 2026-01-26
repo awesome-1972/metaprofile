@@ -10,7 +10,6 @@ import {
   Mic, 
   MicOff, 
   User, 
-  Clock,
   MessageSquare,
   Loader2
 } from "lucide-react";
@@ -18,6 +17,7 @@ import { cn } from "@/lib/utils";
 import type { InterviewerAvatar, InterviewQuestion } from "@/data/interviewData";
 import { useVirtualInterview } from "@/hooks/useVirtualInterview";
 import { InterviewReport } from "./InterviewReport";
+import { AnimatedInterviewerAvatar } from "./AnimatedInterviewerAvatar";
 
 interface InterviewScreenProps {
   interviewer: InterviewerAvatar;
@@ -140,27 +140,16 @@ export const InterviewScreen = ({
 
       {/* Main interview area */}
       <div className="flex-1 flex">
-        {/* Interviewer video placeholder */}
+        {/* Interviewer video area with animated avatar */}
         <div className="w-1/2 bg-muted/30 flex items-center justify-center relative border-r border-border">
           <div className="text-center">
-            {/* Large avatar as video placeholder */}
-            <div className="w-64 h-64 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4 relative">
-              <Avatar className="h-48 w-48">
-                <AvatarImage src={interviewer.photo} alt={interviewer.name} />
-                <AvatarFallback className="text-6xl">{interviewer.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              
-              {/* Speaking indicator */}
-              {isLoading && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Animated AI Avatar */}
+            <AnimatedInterviewerAvatar
+              photo={interviewer.photo}
+              name={interviewer.name}
+              isSpeaking={isLoading}
+              className="mb-4"
+            />
 
             <h3 className="text-lg font-medium text-foreground">{interviewer.name}</h3>
             <p className="text-sm text-muted-foreground">{interviewer.role}</p>
