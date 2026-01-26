@@ -14,6 +14,7 @@ import CompanyAnalytics from "./pages/company/CompanyAnalytics";
 import CompanyVacancies from "./pages/company/CompanyVacancies";
 import CompanyCases from "./pages/company/CompanyCases";
 import CompanyInternRequests from "./pages/company/CompanyInternRequests";
+import CompanyVirtualInterview from "./pages/company/CompanyVirtualInterview";
 import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
 import ProfessionalCaseWork from "./pages/professional/ProfessionalCaseWork";
 import ProfessionalAssessments from "./pages/professional/ProfessionalAssessments";
@@ -28,6 +29,7 @@ import VeteranDashboard from "./pages/veteran/VeteranDashboard";
 import VeteranSkills from "./pages/veteran/VeteranSkills";
 import VeteranAdaptation from "./pages/veteran/VeteranAdaptation";
 import VeteranProfile from "./pages/veteran/VeteranProfile";
+import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,7 @@ const App = () => (
           <Route path="/company/vacancies" element={<CompanyVacancies />} />
           <Route path="/company/cases" element={<CompanyCases />} />
           <Route path="/company/interns" element={<CompanyInternRequests />} />
+          <Route path="/company/interviews" element={<CompanyVirtualInterview />} />
           <Route path="/company/analytics" element={<CompanyAnalytics />} />
           
           {/* Professional routes */}
@@ -58,6 +61,7 @@ const App = () => (
           <Route path="/professional/assessments" element={<ProfessionalAssessments />} />
           <Route path="/professional/learning" element={<ProfessionalLearning />} />
           <Route path="/professional/profile" element={<ProfessionalProfile />} />
+          <Route path="/professional/interview" element={<CandidateInterviewPage role="professional" />} />
           <Route path="/professional/analytics" element={<ProfessionalDashboard />} />
           
           {/* Student routes */}
@@ -65,6 +69,7 @@ const App = () => (
           <Route path="/student/orientation" element={<StudentOrientation />} />
           <Route path="/student/professions" element={<StudentProfessions />} />
           <Route path="/student/internship" element={<StudentInternship />} />
+          <Route path="/student/interview" element={<CandidateInterviewPage role="student" />} />
           <Route path="/student/profile" element={<StudentProfile />} />
           <Route path="/student/feedback" element={<StudentDashboard />} />
           
@@ -74,6 +79,7 @@ const App = () => (
           <Route path="/veteran/matching" element={<VeteranDashboard />} />
           <Route path="/veteran/adaptation" element={<VeteranAdaptation />} />
           <Route path="/veteran/profile" element={<VeteranProfile />} />
+          <Route path="/veteran/interview" element={<CandidateInterviewPage role="veteran" />} />
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
           
           <Route path="*" element={<NotFound />} />
