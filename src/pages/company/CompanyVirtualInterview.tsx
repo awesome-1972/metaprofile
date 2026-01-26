@@ -43,6 +43,7 @@ import {
   mockCompetencyModels,
   mockInterviewQuestions,
 } from "@/data/interviewData";
+import { InterviewReport } from "@/components/interview/InterviewReport";
 
 interface CreatedInterview {
   id: string;
@@ -55,8 +56,29 @@ interface CreatedInterview {
   candidatesCompleted: number;
 }
 
+interface CandidateResult {
+  name: string;
+  position: string;
+  score: number;
+  recommendation: string;
+  report: {
+    overallScore: number;
+    recommendation: string;
+    recommendationRationale: string;
+    strengths: string[];
+    weaknesses: string[];
+    technicalFit: number;
+    softSkillsFit: number;
+    cultureFit: number;
+    developmentSuggestions: string[];
+    summary: string;
+  };
+}
+
 const CompanyVirtualInterview = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [selectedCandidateReport, setSelectedCandidateReport] = useState<CandidateResult | null>(null);
   const [activeTab, setActiveTab] = useState("interviews");
 
   // Form state
@@ -452,11 +474,62 @@ const CompanyVirtualInterview = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: "Олена Коваленко", position: "Frontend Developer", score: 87, recommendation: "hire" },
-                    { name: "Андрій Мельник", position: "Frontend Developer", score: 72, recommendation: "maybe" },
-                    { name: "Марія Іванова", position: "Product Manager", score: 91, recommendation: "strong_hire" },
-                  ].map((candidate, index) => (
+                  {([
+                    { 
+                      name: "Олена Коваленко", 
+                      position: "Frontend Developer", 
+                      score: 87, 
+                      recommendation: "hire",
+                      report: {
+                        overallScore: 87,
+                        recommendation: "hire",
+                        recommendationRationale: "Кандидат продемонстрував високий рівень технічних знань та хорошу культурну відповідність.",
+                        strengths: ["React/TypeScript експертиза", "Комунікабельність", "Швидке навчання"],
+                        weaknesses: ["Потребує більше досвіду з великими проєктами"],
+                        technicalFit: 89,
+                        softSkillsFit: 85,
+                        cultureFit: 88,
+                        developmentSuggestions: ["Розвивати лідерські навички", "Поглибити знання архітектури"],
+                        summary: "Сильний кандидат з технічним фокусом, рекомендований до найму."
+                      }
+                    },
+                    { 
+                      name: "Андрій Мельник", 
+                      position: "Frontend Developer", 
+                      score: 72, 
+                      recommendation: "maybe",
+                      report: {
+                        overallScore: 72,
+                        recommendation: "maybe",
+                        recommendationRationale: "Кандидат має потенціал, але потребує додаткового розвитку технічних навичок.",
+                        strengths: ["Ентузіазм", "Бажання вчитися", "Командна робота"],
+                        weaknesses: ["Недостатній досвід з TypeScript", "Потребує структурованості"],
+                        technicalFit: 68,
+                        softSkillsFit: 78,
+                        cultureFit: 75,
+                        developmentSuggestions: ["Пройти курс з TypeScript", "Практикувати STAR-відповіді"],
+                        summary: "Кандидат з потенціалом, рекомендується додаткова технічна оцінка."
+                      }
+                    },
+                    { 
+                      name: "Марія Іванова", 
+                      position: "Product Manager", 
+                      score: 91, 
+                      recommendation: "strong_hire",
+                      report: {
+                        overallScore: 91,
+                        recommendation: "strong_hire",
+                        recommendationRationale: "Видатний кандидат з сильними лідерськими якостями та стратегічним мисленням.",
+                        strengths: ["Стратегічне мислення", "Лідерство", "Аналітичні навички", "Комунікація"],
+                        weaknesses: ["Може бути надто детальною в плануванні"],
+                        technicalFit: 88,
+                        softSkillsFit: 94,
+                        cultureFit: 92,
+                        developmentSuggestions: ["Делегування задач", "Баланс між деталями та загальною картиною"],
+                        summary: "Виключний кандидат, сильно рекомендований до найму на позицію PM."
+                      }
+                    },
+                  ] as CandidateResult[]).map((candidate, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-4 rounded-lg border border-border"
@@ -487,7 +560,14 @@ const CompanyVirtualInterview = () => {
                               : "Maybe"}
                           </Badge>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCandidateReport(candidate);
+                            setIsReportDialogOpen(true);
+                          }}
+                        >
                           <FileText className="h-4 w-4 mr-2" />
                           Звіт
                         </Button>
@@ -524,6 +604,21 @@ const CompanyVirtualInterview = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Report Dialog */}
+        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+            {selectedCandidateReport && (
+              <InterviewReport
+                report={selectedCandidateReport.report}
+                positionTitle={selectedCandidateReport.position}
+                companyName="TechCorp Ukraine"
+                interviewType="real"
+                onClose={() => setIsReportDialogOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
