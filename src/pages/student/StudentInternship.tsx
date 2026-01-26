@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { internshipCases, getInternshipByRole, InternshipCase } from "@/data/internshipCases";
 import { virtualCompanies, industryCategories, VirtualCompany, VirtualMeeting, VirtualTask } from "@/data/virtualCompanies";
+import { ColleagueChat } from "@/components/internship/ColleagueChat";
 
 type InternshipStage = "map" | "company" | "office" | "intro" | "working" | "meeting" | "submitted" | "feedback";
 
@@ -693,31 +694,14 @@ const StudentInternship = () => {
               </Card>
             </div>
 
-            {/* Sidebar - Team Chat */}
+            {/* Sidebar - AI-Powered Team Chat */}
             <div className="space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Чат з командою
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {currentOffice.employees.map((emp) => (
-                    <div key={emp.id} className="flex items-start gap-2">
-                      <span className="text-lg">{emp.avatar}</span>
-                      <div className="flex-1 p-2 rounded-lg bg-accent/50">
-                        <p className="text-xs font-medium text-foreground mb-1">{emp.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {emp.role === "manager" && "Перегляньте завдання та розпочніть з найтерміновішого. Якщо будуть питання — звертайтесь."}
-                          {emp.role === "buddy" && "Привіт! Я тут, щоб допомогти. Не соромся питати будь-що! 😊"}
-                          {emp.role === "colleague" && "Ласкаво просимо до команди! Якщо потрібна допомога з технічними питаннями — пиши."}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <ColleagueChat
+                company={selectedCompany}
+                office={currentOffice}
+                completedTasks={completedTasks}
+                currentTask={currentOffice.tasks.find(t => !completedTasks.includes(t.id))?.title}
+              />
 
               <Card>
                 <CardHeader className="pb-3">
