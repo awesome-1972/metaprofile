@@ -5,6 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_STRING_LENGTH = 200;
+const MAX_MESSAGE_LENGTH = 2000;
+const MAX_CONVERSATION_HISTORY = 50;
+const VALID_ACTIONS = ["ask_question", "respond_to_answer", "evaluate_star", "generate_report"];
+
 interface InterviewMessage {
   role: "interviewer" | "candidate";
   content: string;
@@ -25,16 +31,103 @@ interface InterviewContext {
   isFollowUp?: boolean;
 }
 
+// Validate and sanitize string input
+function validateString(input: unknown, maxLength: number, fieldName: string): string {
+  if (typeof input !== "string") {
+    throw new Error(`${fieldName} must be a string`);
+  }
+  const trimmed = input.trim();
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength);
+  }
+  return trimmed;
+}
+
+// Validate context object
+function validateContext(ctx: unknown): InterviewContext {
+  if (!ctx || typeof ctx !== "object") {
+    throw new Error("Context is required");
+  }
+
+  const context = ctx as Record<string, unknown>;
+
+  // Validate and limit conversation history
+  let conversationHistory: InterviewMessage[] = [];
+  if (Array.isArray(context.conversationHistory)) {
+    conversationHistory = context.conversationHistory
+      .slice(-MAX_CONVERSATION_HISTORY)
+      .filter((msg): msg is InterviewMessage => 
+        msg && typeof msg === "object" && 
+        (msg.role === "interviewer" || msg.role === "candidate") && 
+        typeof msg.content === "string"
+      )
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content.substring(0, MAX_MESSAGE_LENGTH),
+        timestamp: typeof msg.timestamp === "string" ? msg.timestamp : new Date().toISOString()
+      }));
+  }
+
+  return {
+    interviewerName: validateString(context.interviewerName || "Interviewer", MAX_STRING_LENGTH, "interviewerName"),
+    interviewerRole: validateString(context.interviewerRole || "", MAX_STRING_LENGTH, "interviewerRole"),
+    interviewerPersonality: validateString(context.interviewerPersonality || "", MAX_STRING_LENGTH, "interviewerPersonality"),
+    companyName: validateString(context.companyName || "", MAX_STRING_LENGTH, "companyName"),
+    positionTitle: validateString(context.positionTitle || "", MAX_STRING_LENGTH, "positionTitle"),
+    currentQuestion: validateString(context.currentQuestion || "", MAX_MESSAGE_LENGTH, "currentQuestion"),
+    questionType: validateString(context.questionType || "", MAX_STRING_LENGTH, "questionType"),
+    competencyTargeted: validateString(context.competencyTargeted || "", MAX_STRING_LENGTH, "competencyTargeted"),
+    conversationHistory,
+    candidateAnswer: context.candidateAnswer ? validateString(context.candidateAnswer, MAX_MESSAGE_LENGTH, "candidateAnswer") : undefined,
+    isFollowUp: Boolean(context.isFollowUp),
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { context, action } = await req.json() as { 
-      context: InterviewContext; 
-      action: "ask_question" | "respond_to_answer" | "evaluate_star" | "generate_report";
-    };
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!rawBody || typeof rawBody !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = rawBody as Record<string, unknown>;
+
+    // Validate action
+    const action = validateString(body.action, 50, "action");
+    if (!VALID_ACTIONS.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(", ")}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate context
+    let context: InterviewContext;
+    try {
+      context = validateContext(body.context);
+    } catch (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Context validation failed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -201,7 +294,7 @@ ${context.conversationHistory.map(m => `${m.role === 'interviewer' ? 'Інтер
   } catch (error) {
     console.error("Error in interview function:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

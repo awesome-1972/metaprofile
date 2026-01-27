@@ -5,19 +5,75 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_POSITION_LENGTH = 100;
+const MAX_INDUSTRY_LENGTH = 100;
+const MAX_LEVEL_LENGTH = 50;
+const VALID_LEVELS = ["junior", "middle", "senior", "lead", "entry", "intern", "expert"];
+
+// Validate and sanitize string input
+function validateString(input: unknown, maxLength: number, fieldName: string): string {
+  if (typeof input !== "string") {
+    throw new Error(`${fieldName} must be a string`);
+  }
+  const trimmed = input.trim();
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength);
+  }
+  return trimmed;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { position, industry, level } = await req.json();
-
-    if (!position) {
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ error: "Position is required" }),
+        JSON.stringify({ error: "Invalid JSON in request body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    if (!rawBody || typeof rawBody !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = rawBody as Record<string, unknown>;
+
+    // Validate position (required)
+    let position: string;
+    try {
+      position = validateString(body.position, MAX_POSITION_LENGTH, "position");
+      if (position.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Position is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } catch (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Position validation failed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate optional fields
+    const industry = body.industry ? validateString(body.industry, MAX_INDUSTRY_LENGTH, "industry") : "";
+    const level = body.level ? validateString(body.level, MAX_LEVEL_LENGTH, "level") : "mid";
+
+    // Validate level is reasonable
+    const normalizedLevel = level.toLowerCase();
+    if (level && !VALID_LEVELS.includes(normalizedLevel)) {
+      console.log(`Custom level provided: ${level}`);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -25,7 +81,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log(`Generating competency model for: ${position}, ${industry || 'general'}, ${level || 'mid'}`);
+    console.log(`Generating competency model for: ${position}, ${industry || 'general'}, ${level}`);
 
     const systemPrompt = `Ти експерт з HR та оцінки персоналу. Створюєш моделі компетенцій для різних позицій.
 Відповідай ТІЛЬКИ валідним JSON без додаткового тексту.
@@ -139,7 +195,7 @@ ${level ? `Рівень: ${level}` : 'Рівень: Middle'}
   } catch (error) {
     console.error("Error generating competency model:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
