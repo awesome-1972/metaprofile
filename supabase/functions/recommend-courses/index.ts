@@ -5,13 +5,74 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_STRING_LENGTH = 100;
+const VALID_LEVELS = ["Junior", "Middle", "Senior", "Lead", "Entry", "Intern"];
+
+// Validate and sanitize string input
+function validateString(input: unknown, maxLength: number, fieldName: string): string {
+  if (typeof input !== "string") {
+    throw new Error(`${fieldName} must be a string`);
+  }
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${fieldName} cannot be empty`);
+  }
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength);
+  }
+  return trimmed;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { role, level, area } = await req.json();
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!rawBody || typeof rawBody !== "object") {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = rawBody as Record<string, unknown>;
+
+    // Validate inputs
+    let role: string;
+    let level: string;
+    let area: string;
+
+    try {
+      role = validateString(body.role, MAX_STRING_LENGTH, "role");
+      level = validateString(body.level, MAX_STRING_LENGTH, "level");
+      area = validateString(body.area, MAX_STRING_LENGTH, "area");
+    } catch (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Validation failed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate level is one of expected values (case-insensitive)
+    const normalizedLevel = level.charAt(0).toUpperCase() + level.slice(1).toLowerCase();
+    if (!VALID_LEVELS.includes(normalizedLevel)) {
+      // Allow custom levels but log them
+      console.log(`Custom level provided: ${level}`);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -104,7 +165,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in recommend-courses:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

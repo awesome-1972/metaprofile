@@ -5,6 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation constants
+const MAX_MESSAGE_LENGTH = 1000;
+const MAX_CONVERSATION_HISTORY = 10;
+const MAX_STRING_LENGTH = 200;
+const VALID_ROLES = ["manager", "buddy", "colleague"];
+
 interface ChatRequest {
   message: string;
   employee: {
@@ -32,13 +38,120 @@ interface ChatRequest {
   conversationHistory?: { role: "user" | "assistant"; content: string }[];
 }
 
+// Validate and sanitize string input
+function validateString(input: unknown, maxLength: number, fieldName: string): string {
+  if (typeof input !== "string") {
+    throw new Error(`${fieldName} must be a string`);
+  }
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    throw new Error(`${fieldName} cannot be empty`);
+  }
+  if (trimmed.length > maxLength) {
+    return trimmed.substring(0, maxLength);
+  }
+  return trimmed;
+}
+
+// Validate request body
+function validateRequest(body: unknown): ChatRequest {
+  if (!body || typeof body !== "object") {
+    throw new Error("Invalid request body");
+  }
+
+  const req = body as Record<string, unknown>;
+
+  // Validate message
+  const message = validateString(req.message, MAX_MESSAGE_LENGTH, "message");
+
+  // Validate employee
+  if (!req.employee || typeof req.employee !== "object") {
+    throw new Error("Employee information is required");
+  }
+  const employee = req.employee as Record<string, unknown>;
+  const employeeRole = validateString(employee.role, 20, "employee.role");
+  if (!VALID_ROLES.includes(employeeRole)) {
+    throw new Error(`Invalid employee role. Must be one of: ${VALID_ROLES.join(", ")}`);
+  }
+
+  // Validate company
+  if (!req.company || typeof req.company !== "object") {
+    throw new Error("Company information is required");
+  }
+
+  // Validate and limit conversation history
+  let conversationHistory: { role: "user" | "assistant"; content: string }[] = [];
+  if (Array.isArray(req.conversationHistory)) {
+    conversationHistory = req.conversationHistory
+      .slice(-MAX_CONVERSATION_HISTORY)
+      .filter((msg): msg is { role: "user" | "assistant"; content: string } => 
+        msg && typeof msg === "object" && 
+        (msg.role === "user" || msg.role === "assistant") && 
+        typeof msg.content === "string"
+      )
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content.substring(0, MAX_MESSAGE_LENGTH)
+      }));
+  }
+
+  const companyData = req.company as Record<string, unknown>;
+  const cultureData = companyData.culture as Record<string, unknown> | undefined;
+  const cultureValues = cultureData?.values;
+  
+  return {
+    message,
+    employee: {
+      name: validateString(employee.name, MAX_STRING_LENGTH, "employee.name"),
+      position: validateString(employee.position, MAX_STRING_LENGTH, "employee.position"),
+      role: employeeRole as "manager" | "buddy" | "colleague",
+      personality: validateString(employee.personality, MAX_STRING_LENGTH, "employee.personality"),
+      communicationStyle: validateString(employee.communicationStyle, MAX_STRING_LENGTH, "employee.communicationStyle"),
+    },
+    company: {
+      name: validateString(companyData.name, MAX_STRING_LENGTH, "company.name"),
+      industry: validateString(companyData.industry, MAX_STRING_LENGTH, "company.industry"),
+      culture: {
+        values: Array.isArray(cultureValues) 
+          ? cultureValues.slice(0, 10).map((v: unknown) => String(v).substring(0, 100))
+          : [],
+        mission: String(cultureData?.mission || "").substring(0, MAX_STRING_LENGTH),
+        atmosphere: String(cultureData?.atmosphere || "").substring(0, MAX_STRING_LENGTH),
+      },
+    },
+    context: req.context as ChatRequest["context"],
+    conversationHistory,
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, employee, company, context, conversationHistory = [] }: ChatRequest = await req.json();
+    // Parse and validate input
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let validatedRequest: ChatRequest;
+    try {
+      validatedRequest = validateRequest(rawBody);
+    } catch (validationError) {
+      return new Response(
+        JSON.stringify({ error: validationError instanceof Error ? validationError.message : "Validation failed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { message, employee, company, context, conversationHistory } = validatedRequest;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -86,7 +199,7 @@ ${contextInfo}
 
     const messages = [
       { role: "system", content: systemPrompt },
-      ...conversationHistory.map(msg => ({ role: msg.role, content: msg.content })),
+      ...(conversationHistory || []).map(msg => ({ role: msg.role, content: msg.content })),
       { role: "user", content: message }
     ];
 
@@ -136,7 +249,7 @@ ${contextInfo}
   } catch (error) {
     console.error("Error in chat-with-colleague:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
