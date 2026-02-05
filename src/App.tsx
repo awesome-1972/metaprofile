@@ -33,6 +33,13 @@ import VeteranProfile from "./pages/veteran/VeteranProfile";
 import VeteranSupport from "./pages/veteran/VeteranSupport";
 import VeteranSimulation from "./pages/veteran/VeteranSimulation";
 import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
+ 
+ // V2 imports
+ import AuthPageV2 from "./pages/v2/AuthPage";
+ import CompanyDashboardV2 from "./pages/v2/CompanyDashboard";
+ import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
+ import AdminDashboardV2 from "./pages/v2/AdminDashboard";
+ import { ProtectedRoute } from "./components/v2/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +95,34 @@ const App = () => (
           <Route path="/veteran/interview" element={<CandidateInterviewPage role="veteran" />} />
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
           
+         {/* V2 Routes */}
+         <Route path="/v2/auth" element={<AuthPageV2 />} />
+         <Route path="/v2/auth/callback" element={<AuthPageV2 />} />
+         <Route 
+           path="/v2/company" 
+           element={
+             <ProtectedRoute allowedRoles={["company", "admin"]}>
+               <CompanyDashboardV2 />
+             </ProtectedRoute>
+           } 
+         />
+         <Route 
+           path="/v2/candidate" 
+           element={
+             <ProtectedRoute allowedRoles={["candidate", "admin"]}>
+               <CandidateDashboardV2 />
+             </ProtectedRoute>
+           } 
+         />
+         <Route 
+           path="/v2/admin" 
+           element={
+             <ProtectedRoute allowedRoles={["admin"]}>
+               <AdminDashboardV2 />
+             </ProtectedRoute>
+           } 
+         />
+ 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
