@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -44,12 +44,22 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
 
 const queryClient = new QueryClient();
 
+const DemoGate = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isRegistered = localStorage.getItem("demo_registered") === "true";
+  if (!isRegistered && location.pathname !== "/demo") {
+    return <Navigate to="/demo" replace />;
+  }
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <DemoGate>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
@@ -127,6 +137,7 @@ const App = () => (
  
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </DemoGate>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
