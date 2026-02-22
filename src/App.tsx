@@ -36,6 +36,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  
  // V2 imports
  import AuthPageV2 from "./pages/v2/AuthPage";
+ import DemoRegistrationPage from "./pages/v2/DemoRegistrationPage";
  import CompanyDashboardV2 from "./pages/v2/CompanyDashboard";
  import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
@@ -96,7 +97,8 @@ const App = () => (
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
           
          {/* V2 Routes */}
-         <Route path="/v2/auth" element={<AuthPageV2 />} />
+          <Route path="/demo" element={<DemoRegistrationPage />} />
+          <Route path="/v2/auth" element={<AuthPageV2 />} />
          <Route path="/v2/auth/callback" element={<AuthPageV2 />} />
          <Route 
            path="/v2/company" 
