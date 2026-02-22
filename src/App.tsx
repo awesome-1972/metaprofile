@@ -44,12 +44,22 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
 
 const queryClient = new QueryClient();
 
+const DemoGate = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isRegistered = localStorage.getItem("demo_registered") === "true";
+  if (!isRegistered && location.pathname !== "/demo") {
+    return <Navigate to="/demo" replace />;
+  }
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <DemoGate>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
