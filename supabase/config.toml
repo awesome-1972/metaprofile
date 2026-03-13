@@ -1,9 +1,6 @@
-project_id = "qzmjeftxpaseobkexekg"
+project_id = "mnpcevhzqgcrllymdmil"
 
 [api]
-enabled = true
-
-[ai]
 enabled = true
 
 [functions.recommend-courses]
