@@ -24,6 +24,7 @@ export interface CaseRow {
 
 export interface AssignmentRow {
   id: string;
+  candidate_id: string;
   status: string;
   deadline: string | null;
   message: string | null;
@@ -40,6 +41,19 @@ export interface AssignmentRow {
     position_title: string | null;
     companies: { id: string; name: string } | null;
   } | null;
+}
+
+export interface AIAnalysisResult {
+  overallScore: number;
+  recommendation: "strong_hire" | "hire" | "maybe" | "no_hire";
+  recommendationRationale: string;
+  strengths: string[];
+  weaknesses: string[];
+  cultureFit: number;
+  technicalFit: number;
+  softSkillsFit: number;
+  developmentSuggestions: string[];
+  summary: string;
 }
 
 // ── Company: manage cases ──────────────────────────────────────
@@ -228,7 +242,7 @@ export const useCandidateAssignments = (userId: string | null) => {
     const { data, error } = await supabase
       .from("case_assignments")
       .select(`
-        id, status, deadline, message, created_at, case_id,
+        id, candidate_id, status, deadline, message, created_at, case_id,
         cases (
           id, title, description, context, tasks,
           difficulty, duration_minutes, position_title,
@@ -313,4 +327,112 @@ export const useCandidateAssignments = (userId: string | null) => {
   };
 
   return { assignments, isLoading, submitCase, markInProgress, refetch: fetchAssignments };
+};
+
+// ── AI analysis after submission ──────────────────────────────
+
+export const analyzeSubmission = async (params: {
+  assignmentId: string;
+  caseId: string;
+  candidateId: string;
+  companyId: string | null;
+  companyName: string;
+  positionTitle: string;
+  tasks: CaseTask[];
+  answers: { task_id: string; answer: string }[];
+}): Promise<AIAnalysisResult | null> => {
+  // Build conversationHistory: task = interviewer, answer = candidate
+  const conversationHistory = params.tasks.flatMap((task) => {
+    const found = params.answers.find((a) => a.task_id === task.id);
+    return [
+      {
+        role: "interviewer" as const,
+        content: task.description
+          ? `${task.title}\n\n${task.description}`
+          : task.title,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        role: "candidate" as const,
+        content: found?.answer?.trim() || "(без відповіді)",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  });
+
+  // Create interview_session record (in_progress)
+  const { data: session, error: sessionError } = await supabase
+    .from("interview_sessions")
+    .insert({
+      candidate_id: params.candidateId,
+      company_id: params.companyId,
+      case_id: params.caseId,
+      assignment_id: params.assignmentId,
+      messages: conversationHistory as unknown as never,
+      status: "in_progress",
+    })
+    .select("id")
+    .single();
+
+  if (sessionError || !session) {
+    console.error("Failed to create interview session:", sessionError);
+    return null;
+  }
+
+  // Call conduct-interview edge function
+  let result: AIAnalysisResult | null = null;
+  try {
+    const { data, error } = await supabase.functions.invoke("conduct-interview", {
+      body: {
+        action: "generate_report",
+        context: {
+          interviewerName: "AI Аналітик",
+          interviewerRole: "HR Аналітик",
+          interviewerPersonality: "Об'єктивний, детальний, конструктивний",
+          companyName: params.companyName || "Компанія",
+          positionTitle: params.positionTitle || "Позиція",
+          currentQuestion: "",
+          questionType: "case",
+          competencyTargeted: "Загальні компетенції",
+          conversationHistory,
+        },
+      },
+    });
+
+    if (!error && data?.result) {
+      result = data.result as AIAnalysisResult;
+
+      // Save result and mark completed
+      await supabase
+        .from("interview_sessions")
+        .update({
+          result: result as unknown as never,
+          star_evaluations: null,
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", session.id);
+
+      // Mark assignment as evaluated
+      await supabase
+        .from("case_assignments")
+        .update({ status: "evaluated" })
+        .eq("id", params.assignmentId);
+    } else {
+      // AI failed — mark session cancelled, keep submission
+      await supabase
+        .from("interview_sessions")
+        .update({ status: "cancelled" })
+        .eq("id", session.id);
+      console.error("AI analysis error:", error);
+    }
+  } catch (err) {
+    await supabase
+      .from("interview_sessions")
+      .update({ status: "cancelled" })
+      .eq("id", session.id);
+    console.error("analyzeSubmission error:", err);
+  }
+
+  return result;
 };
