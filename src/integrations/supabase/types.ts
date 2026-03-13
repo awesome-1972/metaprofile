@@ -273,6 +273,223 @@ export type Database = {
         }
         Relationships: []
       }
+      cases: {
+        Row: {
+          id: string
+          company_id: string
+          created_by: string
+          title: string
+          description: string
+          context: string | null
+          tasks: Json
+          competency_model_id: string | null
+          position_title: string | null
+          difficulty: string
+          duration_minutes: number | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          created_by: string
+          title: string
+          description: string
+          context?: string | null
+          tasks?: Json
+          competency_model_id?: string | null
+          position_title?: string | null
+          difficulty?: string
+          duration_minutes?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          created_by?: string
+          title?: string
+          description?: string
+          context?: string | null
+          tasks?: Json
+          competency_model_id?: string | null
+          position_title?: string | null
+          difficulty?: string
+          duration_minutes?: number | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      case_assignments: {
+        Row: {
+          id: string
+          case_id: string
+          candidate_id: string
+          assigned_by: string
+          status: string
+          deadline: string | null
+          message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          case_id: string
+          candidate_id: string
+          assigned_by: string
+          status?: string
+          deadline?: string | null
+          message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          case_id?: string
+          candidate_id?: string
+          assigned_by?: string
+          status?: string
+          deadline?: string | null
+          message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_assignments_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_assignments_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      case_submissions: {
+        Row: {
+          id: string
+          assignment_id: string
+          case_id: string
+          candidate_id: string
+          answers: Json
+          time_spent_minutes: number | null
+          submitted_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          assignment_id: string
+          case_id: string
+          candidate_id: string
+          answers?: Json
+          time_spent_minutes?: number | null
+          submitted_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          assignment_id?: string
+          case_id?: string
+          candidate_id?: string
+          answers?: Json
+          time_spent_minutes?: number | null
+          submitted_at?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "case_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_submissions_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      interview_sessions: {
+        Row: {
+          id: string
+          candidate_id: string
+          company_id: string | null
+          case_id: string | null
+          assignment_id: string | null
+          competency_model_id: string | null
+          interviewer_config: Json | null
+          messages: Json
+          star_evaluations: Json | null
+          result: Json | null
+          status: string
+          started_at: string
+          completed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          candidate_id: string
+          company_id?: string | null
+          case_id?: string | null
+          assignment_id?: string | null
+          competency_model_id?: string | null
+          interviewer_config?: Json | null
+          messages?: Json
+          star_evaluations?: Json | null
+          result?: Json | null
+          status?: string
+          started_at?: string
+          completed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          candidate_id?: string
+          company_id?: string | null
+          case_id?: string | null
+          assignment_id?: string | null
+          competency_model_id?: string | null
+          interviewer_config?: Json | null
+          messages?: Json
+          star_evaluations?: Json | null
+          result?: Json | null
+          status?: string
+          started_at?: string
+          completed_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_sessions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

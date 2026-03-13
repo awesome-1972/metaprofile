@@ -40,6 +40,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CompanyDashboardV2 from "./pages/v2/CompanyDashboard";
  import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
+ import CaseWorkPage from "./pages/v2/CaseWorkPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -118,13 +119,21 @@ const App = () => (
              </ProtectedRoute>
            } 
          />
-         <Route 
-           path="/v2/candidate" 
+         <Route
+           path="/v2/candidate"
            element={
              <ProtectedRoute allowedRoles={["candidate", "admin"]}>
                <CandidateDashboardV2 />
              </ProtectedRoute>
-           } 
+           }
+         />
+         <Route
+           path="/v2/candidate/cases/:id"
+           element={
+             <ProtectedRoute allowedRoles={["candidate", "admin"]}>
+               <CaseWorkPage />
+             </ProtectedRoute>
+           }
          />
          <Route 
            path="/v2/admin" 

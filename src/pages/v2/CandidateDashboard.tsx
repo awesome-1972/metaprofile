@@ -1,138 +1,212 @@
- import { V2AppLayout } from "@/components/layout/V2AppLayout";
- import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
- import { Button } from "@/components/ui/button";
- import { FileText, ClipboardList, FolderOpen, User } from "lucide-react";
- import { Link } from "react-router-dom";
- import { useAuthV2 } from "@/hooks/useAuthV2";
- 
- const CandidateDashboard = () => {
-   const { profile } = useAuthV2();
- 
-   return (
-     <V2AppLayout role="candidate">
-       <div className="p-6 lg:p-8">
-         {/* Header */}
-         <div className="mb-8">
-           <h1 className="text-2xl font-semibold text-foreground">
-             Вітаємо, {profile?.full_name || "Кандидат"}!
-           </h1>
-           <p className="text-muted-foreground mt-1">
-             Ваш особистий кабінет кандидата
-           </p>
-         </div>
- 
-         {/* Stats */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-           <Card>
-             <CardHeader className="pb-2">
-               <CardDescription>Призначені кейси</CardDescription>
-               <CardTitle className="text-3xl">0</CardTitle>
-             </CardHeader>
-             <CardContent>
-               <p className="text-xs text-muted-foreground">Очікують виконання</p>
-             </CardContent>
-           </Card>
-           <Card>
-             <CardHeader className="pb-2">
-               <CardDescription>Виконано</CardDescription>
-               <CardTitle className="text-3xl">0</CardTitle>
-             </CardHeader>
-             <CardContent>
-               <p className="text-xs text-muted-foreground">Всього кейсів</p>
-             </CardContent>
-           </Card>
-           <Card>
-             <CardHeader className="pb-2">
-               <CardDescription>Звіти</CardDescription>
-               <CardTitle className="text-3xl">0</CardTitle>
-             </CardHeader>
-             <CardContent>
-               <p className="text-xs text-muted-foreground">Готові результати</p>
-             </CardContent>
-           </Card>
-         </div>
- 
-         {/* Main sections */}
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <FileText className="h-5 w-5" />
-                 Активні кейси
-               </CardTitle>
-               <CardDescription>
-                 Кейси, призначені вам для виконання
-               </CardDescription>
-             </CardHeader>
-             <CardContent>
-               <div className="text-center py-8 text-muted-foreground">
-                 <p>Вам поки не призначено жодного кейсу</p>
-                 <p className="text-sm mt-2">
-                   Коли компанія запросить вас на оцінку, кейс з'явиться тут
-                 </p>
-               </div>
-             </CardContent>
-           </Card>
- 
-           <Card>
-             <CardHeader>
-               <CardTitle className="flex items-center gap-2">
-                 <FolderOpen className="h-5 w-5" />
-                 Моє портфоліо
-               </CardTitle>
-               <CardDescription>
-                 Історія виконаних кейсів та ваші досягнення
-               </CardDescription>
-             </CardHeader>
-             <CardContent>
-               <div className="text-center py-8 text-muted-foreground">
-                 <p>Портфоліо поки порожнє</p>
-                 <Button variant="outline" className="mt-4" asChild>
-                   <Link to="/v2/candidate/profile">
-                     Заповнити профіль
-                   </Link>
-                 </Button>
-               </div>
-             </CardContent>
-           </Card>
-         </div>
- 
-         {/* Profile completion prompt */}
-         <Card className="mt-6">
-           <CardHeader>
-             <CardTitle className="flex items-center gap-2">
-               <User className="h-5 w-5" />
-               Заповніть свій профіль
-             </CardTitle>
-             <CardDescription>
-               Повний профіль підвищує ваші шанси на успішну оцінку
-             </CardDescription>
-           </CardHeader>
-           <CardContent>
-             <div className="flex items-center justify-between">
-               <div className="space-y-1">
-                 <p className="text-sm">Профіль заповнено на 20%</p>
-                 <div className="w-48 h-2 bg-accent rounded-full overflow-hidden">
-                   <div className="h-full w-1/5 bg-primary rounded-full" />
-                 </div>
-               </div>
-               <Button variant="outline" asChild>
-                 <Link to="/v2/candidate/profile">Редагувати</Link>
-               </Button>
-             </div>
-           </CardContent>
-         </Card>
- 
-         {/* AI Disclaimer */}
-         <div className="mt-8 p-4 bg-accent/50 rounded-lg border border-border">
-           <p className="text-sm text-muted-foreground">
-             <strong>AI-аналітика:</strong> Платформа використовує AI для аналізу відповідей. 
-             Рівень AI-втручання відображається у звітах.
-           </p>
-         </div>
-       </div>
-     </V2AppLayout>
-   );
- };
- 
- export default CandidateDashboard;
+import { V2AppLayout } from "@/components/layout/V2AppLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, Clock, Building2, CheckCircle2, Hourglass, CircleDot } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuthV2 } from "@/hooks/useAuthV2";
+import { useCandidateAssignments } from "@/hooks/useCases";
+
+// ── Status helpers ─────────────────────────────────────────────────────────────
+const statusLabel: Record<string, string> = {
+  pending: "Очікує",
+  in_progress: "В роботі",
+  submitted: "Здано",
+  evaluated: "Оцінено",
+  expired: "Прострочено",
+};
+
+const statusColor: Record<string, string> = {
+  pending: "bg-blue-100 text-blue-800",
+  in_progress: "bg-yellow-100 text-yellow-800",
+  submitted: "bg-green-100 text-green-800",
+  evaluated: "bg-purple-100 text-purple-800",
+  expired: "bg-red-100 text-red-700",
+};
+
+const StatusIcon = ({ status }: { status: string }) => {
+  if (status === "submitted" || status === "evaluated")
+    return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "in_progress")
+    return <Hourglass className="h-4 w-4 text-yellow-600" />;
+  return <CircleDot className="h-4 w-4 text-blue-600" />;
+};
+
+// ── Component ──────────────────────────────────────────────────────────────────
+const CandidateDashboard = () => {
+  const { profile, user } = useAuthV2();
+  const { assignments, isLoading } = useCandidateAssignments(user?.id ?? null);
+
+  const pending = assignments.filter((a) => a.status === "pending").length;
+  const inProgress = assignments.filter((a) => a.status === "in_progress").length;
+  const submitted = assignments.filter((a) => ["submitted", "evaluated"].includes(a.status)).length;
+
+  const activeAssignments = assignments.filter(
+    (a) => a.status === "pending" || a.status === "in_progress"
+  );
+  const completedAssignments = assignments.filter(
+    (a) => a.status === "submitted" || a.status === "evaluated"
+  );
+
+  return (
+    <V2AppLayout role="candidate">
+      <div className="p-6 lg:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-foreground">
+            Вітаємо, {profile?.full_name || "Кандидат"}!
+          </h1>
+          <p className="text-muted-foreground mt-1">Ваш особистий кабінет кандидата</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Нових кейсів</CardDescription>
+              <CardTitle className="text-3xl">{pending + inProgress}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Очікують виконання</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Виконано</CardDescription>
+              <CardTitle className="text-3xl">{submitted}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Здано на оцінку</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Всього</CardDescription>
+              <CardTitle className="text-3xl">{assignments.length}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Призначених кейсів</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Active cases */}
+        <div className="mb-8">
+          <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Активні кейси
+          </h2>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
+            </div>
+          ) : activeAssignments.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p>Вам поки не призначено жодного кейсу</p>
+                <p className="text-sm mt-1">Коли компанія запросить вас — кейс з'явиться тут</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {activeAssignments.map((a) => (
+                <Card key={a.id} className="hover:border-primary/50 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <StatusIcon status={a.status} />
+                          <span className="font-medium text-foreground truncate">
+                            {a.cases?.title || "Кейс"}
+                          </span>
+                          <Badge className={statusColor[a.status] || ""}>
+                            {statusLabel[a.status] || a.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {a.cases?.companies?.name && (
+                            <span className="flex items-center gap-1">
+                              <Building2 className="h-3.5 w-3.5" />
+                              {a.cases.companies.name}
+                            </span>
+                          )}
+                          {a.cases?.duration_minutes && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              ~{a.cases.duration_minutes} хв
+                            </span>
+                          )}
+                          {a.cases?.difficulty && (
+                            <span className="capitalize">{a.cases.difficulty}</span>
+                          )}
+                        </div>
+                        {a.deadline && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Дедлайн: {new Date(a.deadline).toLocaleDateString("uk-UA")}
+                          </p>
+                        )}
+                      </div>
+                      <Button size="sm" asChild>
+                        <Link to={`/v2/candidate/cases/${a.id}`}>
+                          {a.status === "in_progress" ? "Продовжити" : "Виконати"}
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Completed cases */}
+        {completedAssignments.length > 0 && (
+          <div>
+            <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Виконані кейси
+            </h2>
+            <div className="space-y-3">
+              {completedAssignments.map((a) => (
+                <Card key={a.id} className="opacity-80">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="font-medium truncate">{a.cases?.title || "Кейс"}</span>
+                          <Badge className={statusColor[a.status] || ""}>
+                            {statusLabel[a.status] || a.status}
+                          </Badge>
+                        </div>
+                        {a.cases?.companies?.name && (
+                          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Building2 className="h-3.5 w-3.5" />
+                            {a.cases.companies.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AI Disclaimer */}
+        <div className="mt-8 p-4 bg-accent/50 rounded-lg border border-border">
+          <p className="text-sm text-muted-foreground">
+            <strong>AI-аналітика:</strong> Платформа використовує AI для аналізу відповідей.
+            Рівень AI-втручання відображається у звітах.
+          </p>
+        </div>
+      </div>
+    </V2AppLayout>
+  );
+};
+
+export default CandidateDashboard;
