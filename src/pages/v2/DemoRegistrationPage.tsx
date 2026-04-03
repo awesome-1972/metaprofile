@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-
-const ENDPOINT = "https://mnpcevhzqgcrllymdmil.supabase.co/functions/v1/append-to-sheet";
-const API_KEY = "sb_publishable_1AzzY5OU8wtetrDFsVRVCw_CZGGT-EB";
+import { supabase } from "@/integrations/supabase/client";
 
 const DemoRegistrationPage = () => {
   const navigate = useNavigate();
@@ -34,22 +32,20 @@ const DemoRegistrationPage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: API_KEY,
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          company: company.trim(),
-          phone: phone.trim(),
-        }),
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      const { error } = await supabase.from("demo_registrations").insert({
+        first_name: firstName,
+        last_name: lastName,
+        email: email.trim(),
+        company: company.trim() || null,
+        phone: phone.trim() || null,
       });
 
-      if (!response.ok) {
-        throw new Error("Request failed");
+      if (error) {
+        throw error;
       }
 
       toast.success("Thank you! Your registration has been received.");
@@ -58,7 +54,6 @@ const DemoRegistrationPage = () => {
       setCompany("");
       setPhone("");
 
-      // Store registration flag and redirect to portal
       localStorage.setItem("demo_registered", "true");
       navigate("/");
     } catch {
