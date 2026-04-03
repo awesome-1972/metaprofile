@@ -56,6 +56,9 @@ export interface AIAnalysisResult {
   summary: string;
 }
 
+// Helper: typed-bypass for tables not yet in generated types
+const db = supabase as any;
+
 // ── Company: manage cases ──────────────────────────────────────
 
 export const useCompanyCases = (companyId: string | null) => {
@@ -65,7 +68,7 @@ export const useCompanyCases = (companyId: string | null) => {
   const fetchCases = useCallback(async () => {
     if (!companyId) return;
     setIsLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("cases")
       .select("*")
       .eq("company_id", companyId)
@@ -75,9 +78,9 @@ export const useCompanyCases = (companyId: string | null) => {
       toast.error("Помилка завантаження кейсів");
     } else {
       setCases(
-        (data || []).map((c) => ({
+        (data || []).map((c: any) => ({
           ...c,
-          tasks: (c.tasks as unknown as CaseTask[]) || [],
+          tasks: (c.tasks as CaseTask[]) || [],
         }))
       );
     }
@@ -99,7 +102,7 @@ export const useCompanyCases = (companyId: string | null) => {
     userId: string;
   }) => {
     if (!companyId) return null;
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("cases")
       .insert({
         company_id: companyId,
@@ -110,7 +113,7 @@ export const useCompanyCases = (companyId: string | null) => {
         position_title: payload.position_title || null,
         difficulty: payload.difficulty,
         duration_minutes: payload.duration_minutes,
-        tasks: payload.tasks as unknown as never,
+        tasks: payload.tasks,
         status: "draft",
       })
       .select()
@@ -126,7 +129,7 @@ export const useCompanyCases = (companyId: string | null) => {
   };
 
   const publishCase = async (caseId: string) => {
-    const { error } = await supabase
+    const { error } = await db
       .from("cases")
       .update({ status: "active" })
       .eq("id", caseId);
@@ -139,7 +142,7 @@ export const useCompanyCases = (companyId: string | null) => {
   };
 
   const archiveCase = async (caseId: string) => {
-    const { error } = await supabase
+    const { error } = await db
       .from("cases")
       .update({ status: "archived" })
       .eq("id", caseId);
@@ -157,7 +160,6 @@ export const useCompanyCases = (companyId: string | null) => {
     message?: string,
     deadline?: string
   ) => {
-    // 1. Find profile by email
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("user_id")
@@ -169,7 +171,6 @@ export const useCompanyCases = (companyId: string | null) => {
       return false;
     }
 
-    // 2. Find candidate record
     const { data: candidate, error: candidateError } = await supabase
       .from("candidates")
       .select("id")
@@ -181,8 +182,7 @@ export const useCompanyCases = (companyId: string | null) => {
       return false;
     }
 
-    // 3. Create assignment
-    const { error: assignError } = await supabase
+    const { error: assignError } = await db
       .from("case_assignments")
       .insert({
         case_id: caseId,
@@ -202,8 +202,7 @@ export const useCompanyCases = (companyId: string | null) => {
       return false;
     }
 
-    // 4. Auto-publish case if it was a draft
-    await supabase
+    await db
       .from("cases")
       .update({ status: "active" })
       .eq("id", caseId)
@@ -227,7 +226,6 @@ export const useCandidateAssignments = (userId: string | null) => {
     if (!userId) return;
     setIsLoading(true);
 
-    // Get candidate id first
     const { data: candidate } = await supabase
       .from("candidates")
       .select("id")
@@ -239,7 +237,7 @@ export const useCandidateAssignments = (userId: string | null) => {
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("case_assignments")
       .select(`
         id, candidate_id, status, deadline, message, created_at, case_id,
@@ -256,12 +254,12 @@ export const useCandidateAssignments = (userId: string | null) => {
       toast.error("Помилка завантаження кейсів");
     } else {
       setAssignments(
-        (data || []).map((a) => ({
+        (data || []).map((a: any) => ({
           ...a,
           cases: a.cases
             ? {
                 ...a.cases,
-                tasks: (a.cases.tasks as unknown as CaseTask[]) || [],
+                tasks: (a.cases.tasks as CaseTask[]) || [],
                 companies: Array.isArray(a.cases.companies)
                   ? a.cases.companies[0] ?? null
                   : (a.cases.companies as { id: string; name: string } | null),
@@ -295,11 +293,11 @@ export const useCandidateAssignments = (userId: string | null) => {
       return false;
     }
 
-    const { error: subError } = await supabase.from("case_submissions").insert({
+    const { error: subError } = await db.from("case_submissions").insert({
       assignment_id: assignmentId,
       case_id: caseId,
       candidate_id: candidate.id,
-      answers: answers as unknown as never,
+      answers: answers,
       time_spent_minutes: timeSpentMinutes,
     });
 
@@ -308,7 +306,7 @@ export const useCandidateAssignments = (userId: string | null) => {
       return false;
     }
 
-    await supabase
+    await db
       .from("case_assignments")
       .update({ status: "submitted" })
       .eq("id", assignmentId);
@@ -319,7 +317,7 @@ export const useCandidateAssignments = (userId: string | null) => {
   };
 
   const markInProgress = async (assignmentId: string) => {
-    await supabase
+    await db
       .from("case_assignments")
       .update({ status: "in_progress" })
       .eq("id", assignmentId)
@@ -341,7 +339,6 @@ export const analyzeSubmission = async (params: {
   tasks: CaseTask[];
   answers: { task_id: string; answer: string }[];
 }): Promise<AIAnalysisResult | null> => {
-  // Build conversationHistory: task = interviewer, answer = candidate
   const conversationHistory = params.tasks.flatMap((task) => {
     const found = params.answers.find((a) => a.task_id === task.id);
     return [
@@ -360,15 +357,14 @@ export const analyzeSubmission = async (params: {
     ];
   });
 
-  // Create interview_session record (in_progress)
-  const { data: session, error: sessionError } = await supabase
+  const { data: session, error: sessionError } = await db
     .from("interview_sessions")
     .insert({
       candidate_id: params.candidateId,
       company_id: params.companyId,
       case_id: params.caseId,
       assignment_id: params.assignmentId,
-      messages: conversationHistory as unknown as never,
+      messages: conversationHistory,
       status: "in_progress",
     })
     .select("id")
@@ -379,7 +375,6 @@ export const analyzeSubmission = async (params: {
     return null;
   }
 
-  // Call conduct-interview edge function
   let result: AIAnalysisResult | null = null;
   try {
     const { data, error } = await supabase.functions.invoke("conduct-interview", {
@@ -402,32 +397,29 @@ export const analyzeSubmission = async (params: {
     if (!error && data?.result) {
       result = data.result as AIAnalysisResult;
 
-      // Save result and mark completed
-      await supabase
+      await db
         .from("interview_sessions")
         .update({
-          result: result as unknown as never,
+          result: result,
           star_evaluations: null,
           status: "completed",
           completed_at: new Date().toISOString(),
         })
         .eq("id", session.id);
 
-      // Mark assignment as evaluated
-      await supabase
+      await db
         .from("case_assignments")
         .update({ status: "evaluated" })
         .eq("id", params.assignmentId);
     } else {
-      // AI failed — mark session cancelled, keep submission
-      await supabase
+      await db
         .from("interview_sessions")
         .update({ status: "cancelled" })
         .eq("id", session.id);
       console.error("AI analysis error:", error);
     }
   } catch (err) {
-    await supabase
+    await db
       .from("interview_sessions")
       .update({ status: "cancelled" })
       .eq("id", session.id);

@@ -14,6 +14,8 @@ import {
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useCandidateAssignments, analyzeSubmission, type AssignmentRow, type AIAnalysisResult } from "@/hooks/useCases";
 import { supabase } from "@/integrations/supabase/client";
+
+const db = supabase as any;
 import { toast } from "sonner";
 
 const difficultyLabel: Record<string, string> = {
@@ -53,7 +55,7 @@ const CaseWorkPage = () => {
 
   const fetchAssignment = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("case_assignments")
       .select(`
         id, candidate_id, status, deadline, message, created_at, case_id,
