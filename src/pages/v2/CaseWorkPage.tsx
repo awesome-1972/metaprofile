@@ -14,6 +14,8 @@ import {
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useCandidateAssignments, analyzeSubmission, type AssignmentRow, type AIAnalysisResult } from "@/hooks/useCases";
 import { supabase } from "@/integrations/supabase/client";
+
+const db = supabase as any;
 import { toast } from "sonner";
 
 const difficultyLabel: Record<string, string> = {
