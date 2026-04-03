@@ -55,7 +55,7 @@ const CaseWorkPage = () => {
 
   const fetchAssignment = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("case_assignments")
       .select(`
         id, candidate_id, status, deadline, message, created_at, case_id,
