@@ -129,9 +129,9 @@ serve(async (req) => {
       );
     }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     let systemPrompt = "";
@@ -225,18 +225,16 @@ ${context.conversationHistory.map(m => `${m.role === 'interviewer' ? 'Інтер
 Створи детальний звіт.`;
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        system: systemPrompt,
+        model: "google/gemini-2.5-flash",
         messages: [
+          { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
       }),
@@ -249,19 +247,19 @@ ${context.conversationHistory.map(m => `${m.role === 'interviewer' ? 'Інтер
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402 || response.status === 529) {
+      if (response.status === 402) {
         return new Response(
           JSON.stringify({ error: "Необхідно поповнити баланс." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
-      throw new Error("Anthropic API error");
+      console.error("AI Gateway error:", response.status, errorText);
+      throw new Error("AI Gateway error");
     }
 
     const data = await response.json();
-    const content = data.content?.[0]?.text;
+    const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
       throw new Error("No content in AI response");
