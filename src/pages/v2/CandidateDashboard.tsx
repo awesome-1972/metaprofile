@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { V2AppLayout } from "@/components/layout/V2AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Clock, Building2, CheckCircle2, Hourglass, CircleDot } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuthV2 } from "@/hooks/useAuthV2";
-import { useCandidateAssignments } from "@/hooks/useCases";
+import { getCandidateAssignments } from "@/lib/candidateApi";
+import { type CandidateAssignment } from "@/lib/api";
+import { toast } from "sonner";
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 const statusLabel: Record<string, string> = {
@@ -35,8 +38,16 @@ const StatusIcon = ({ status }: { status: string }) => {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 const CandidateDashboard = () => {
-  const { profile, user } = useAuthV2();
-  const { assignments, isLoading } = useCandidateAssignments(user?.id ?? null);
+  const { profile } = useAuthV2();
+  const [assignments, setAssignments] = useState<CandidateAssignment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getCandidateAssignments()
+      .then(data => setAssignments(data))
+      .catch(() => toast.error("Помилка завантаження кейсів"))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const pending = assignments.filter((a) => a.status === "pending").length;
   const inProgress = assignments.filter((a) => a.status === "in_progress").length;
@@ -120,27 +131,27 @@ const CandidateDashboard = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <StatusIcon status={a.status} />
                           <span className="font-medium text-foreground truncate">
-                            {a.cases?.title || "Кейс"}
+                            {a.case?.title || "Кейс"}
                           </span>
                           <Badge className={statusColor[a.status] || ""}>
                             {statusLabel[a.status] || a.status}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          {a.cases?.companies?.name && (
+                          {a.case?.company?.name && (
                             <span className="flex items-center gap-1">
                               <Building2 className="h-3.5 w-3.5" />
-                              {a.cases.companies.name}
+                              {a.case.company.name}
                             </span>
                           )}
-                          {a.cases?.duration_minutes && (
+                          {a.case?.duration_minutes && (
                             <span className="flex items-center gap-1">
                               <Clock className="h-3.5 w-3.5" />
-                              ~{a.cases.duration_minutes} хв
+                              ~{a.case.duration_minutes} хв
                             </span>
                           )}
-                          {a.cases?.difficulty && (
-                            <span className="capitalize">{a.cases.difficulty}</span>
+                          {a.case?.difficulty_level && (
+                            <span className="capitalize">{a.case.difficulty_level}</span>
                           )}
                         </div>
                         {a.deadline && (
@@ -177,15 +188,20 @@ const CandidateDashboard = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <span className="font-medium truncate">{a.cases?.title || "Кейс"}</span>
+                          <span className="font-medium truncate">{a.case?.title || "Кейс"}</span>
                           <Badge className={statusColor[a.status] || ""}>
                             {statusLabel[a.status] || a.status}
                           </Badge>
                         </div>
-                        {a.cases?.companies?.name && (
+                        {a.case?.company?.name && (
                           <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
                             <Building2 className="h-3.5 w-3.5" />
-                            {a.cases.companies.name}
+                            {a.case.company.name}
+                          </p>
+                        )}
+                        {a.submitted_at && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Здано: {new Date(a.submitted_at).toLocaleDateString("uk-UA")}
                           </p>
                         )}
                       </div>

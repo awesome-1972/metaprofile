@@ -108,6 +108,52 @@ export interface RegisterPayload {
   role?: "company" | "candidate";
 }
 
+export interface CaseTask {
+  id?: string | number;
+  title: string;
+  description?: string;
+}
+
+export interface DjangoCaseCompany {
+  id: number;
+  name: string;
+}
+
+export interface DjangoCase {
+  id: number;
+  title: string;
+  description: string;
+  context: string | null;
+  tasks: CaseTask[];
+  position_title: string | null;
+  role_title: string | null;
+  difficulty_level: string;
+  duration_minutes: number | null;
+  situation_description: string | null;
+  details: string | null;
+  problem_statement: string | null;
+  goal: string | null;
+  available_resources: string | null;
+  status: string;
+  company: DjangoCaseCompany | null;
+}
+
+export interface CandidateAssignment {
+  id: number;
+  status: string;
+  message: string | null;
+  deadline: string | null;
+  assigned_at: string;
+  submitted_at: string | null;
+  case: DjangoCase;
+}
+
+export interface CaseSubmissionPayload {
+  answers: { task_id: string; answer: string }[];
+  time_spent_minutes?: number | null;
+}
+
+// Legacy types kept for company-side Supabase flow (not modified in this step)
 export interface CompanyCase {
   id: number;
   title: string;
@@ -122,17 +168,4 @@ export interface CaseAssignment {
   candidate_email: string;
   status: "pending" | "in_progress" | "submitted" | "reviewed";
   created_at?: string;
-}
-
-export interface CandidateAssignment {
-  id: number;
-  case: CompanyCase;
-  status: "pending" | "in_progress" | "submitted" | "reviewed";
-  answers?: Record<string, unknown>;
-  submitted_at?: string;
-  created_at?: string;
-}
-
-export interface CaseSubmissionPayload {
-  answers: Record<string, unknown>;
 }

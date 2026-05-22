@@ -48,7 +48,7 @@ const queryClient = new QueryClient();
 const DemoGate = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isRegistered = localStorage.getItem("demo_registered") === "true";
-  if (!isRegistered && location.pathname !== "/demo") {
+  if (!isRegistered && location.pathname !== "/demo" && !location.pathname.startsWith("/v2")) {
     return <Navigate to="/demo" replace />;
   }
   return <>{children}</>;
