@@ -41,6 +41,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
  import CaseWorkPage from "./pages/v2/CaseWorkPage";
+ import ReportPreviewPage from "./pages/v2/ReportPreviewPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -135,13 +136,21 @@ const App = () => (
              </ProtectedRoute>
            }
          />
-         <Route 
-           path="/v2/admin" 
+         <Route
+           path="/v2/candidate/reports/:reportId"
+           element={
+             <ProtectedRoute allowedRoles={["candidate", "admin"]}>
+               <ReportPreviewPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/v2/admin"
            element={
              <ProtectedRoute allowedRoles={["admin"]}>
                <AdminDashboardV2 />
              </ProtectedRoute>
-           } 
+           }
          />
  
           <Route path="*" element={<NotFound />} />

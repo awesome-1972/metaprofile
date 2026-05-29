@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Building2, ChevronLeft, Send, CheckCircle2, Loader2 } from "lucide-react";
+import { Clock, Building2, ChevronLeft, Send, CheckCircle2, Loader2, FileText } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { getCandidateAssignment, submitCandidateAssignment } from "@/lib/candidateApi";
+import { generateReport } from "@/lib/reportApi";
 import { type CandidateAssignment, type CaseTask } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -36,6 +37,7 @@ const CaseWorkPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [stage, setStage] = useState<Stage>("filling");
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const startTimeRef = useRef(Date.now());
 
   useEffect(() => {
@@ -109,6 +111,19 @@ const CaseWorkPage = () => {
 
   // ── Submitted success screen ─────────────────────────────────
   if (stage === "submitted") {
+    const handleGenerateReport = async () => {
+      if (!assignment) return;
+      setIsGeneratingReport(true);
+      try {
+        const report = await generateReport(assignment.id);
+        navigate(`/v2/candidate/reports/${report.id}`);
+      } catch (error: any) {
+        toast.error(error.message || "Помилка генерації звіту");
+      } finally {
+        setIsGeneratingReport(false);
+      }
+    };
+
     return (
       <V2AppLayout role="candidate">
         <div className="p-6 lg:p-8 max-w-2xl mx-auto">
@@ -127,7 +142,20 @@ const CaseWorkPage = () => {
             </CardContent>
           </Card>
 
-          <Button className="w-full mt-6" onClick={() => navigate("/v2/candidate")}>
+          <Button
+            className="w-full mt-4"
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport}
+            variant="default"
+          >
+            {isGeneratingReport ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Генерація звіту...</>
+            ) : (
+              <><FileText className="h-4 w-4 mr-2" />Згенерувати звіт</>
+            )}
+          </Button>
+
+          <Button className="w-full mt-3" variant="outline" onClick={() => navigate("/v2/candidate")}>
             До кабінету кандидата
           </Button>
         </div>

@@ -153,6 +153,59 @@ export interface CaseSubmissionPayload {
   time_spent_minutes?: number | null;
 }
 
+// Report types
+export interface ReportMetadata {
+  candidate_name: string;
+  candidate_email: string;
+  company_name: string;
+  case_title: string;
+  position_title: string | null;
+  difficulty_level: string;
+  submitted_at: string | null;
+  language: string;
+  time_spent_minutes: number | null;
+}
+
+export interface ReportData {
+  _mock?: boolean;
+  _note?: string;
+  metadata: ReportMetadata;
+  executive_summary: string;
+  overall_score: number;
+  key_findings: string[];
+  competency_profile: { competency: string; mock_score: number; note?: string }[];
+  answer_analysis: { task: string; answer_length: number; note?: string }[];
+  strengths: string[];
+  risks: string[];
+  recommendations: string[];
+  development_plan: string[];
+}
+
+export interface AssessmentReport {
+  id: number;
+  assignment: number;
+  submission: number | null;
+  candidate: number;
+  assessment_case: number;
+  company: number;
+  report_type: string;
+  language: string;
+  status: string;
+  overall_score: string | null;
+  summary: string;
+  strengths: string[];
+  risks: string[];
+  competency_scores: { competency: string; score: number }[];
+  competency_insights: { competency: string; insight: string }[];
+  gap_analysis: { competency: string; gap: string }[];
+  recommendations: string[];
+  development_plan: string[];
+  report_data: ReportData;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Legacy types kept for company-side Supabase flow (not modified in this step)
 export interface CompanyCase {
   id: number;
