@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft, AlertTriangle } from "lucide-react";
-import { getReport } from "@/lib/reportApi";
+import { ChevronLeft, AlertTriangle, FileText, Download } from "lucide-react";
+import { getReport, getReportHtmlBlob, getReportPdfBlob } from "@/lib/reportApi";
 import { type AssessmentReport } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -61,6 +61,42 @@ const ReportPreviewPage = () => {
   const [report, setReport] = useState<AssessmentReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isHtmlLoading, setIsHtmlLoading] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+
+  const handleOpenHtml = async () => {
+    if (!reportId) return;
+    setIsHtmlLoading(true);
+    try {
+      const blob = await getReportHtmlBlob(parseInt(reportId, 10));
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (err: any) {
+      toast.error("Не вдалося відкрити HTML звіт: " + (err.message || "Помилка"));
+    } finally {
+      setIsHtmlLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!reportId) return;
+    setIsPdfLoading(true);
+    try {
+      const blob = await getReportPdfBlob(parseInt(reportId, 10));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `metaprofile_report_${reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error("Не вдалося завантажити PDF: " + (err.message || "Помилка"));
+    } finally {
+      setIsPdfLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!reportId) return;
@@ -190,6 +226,28 @@ const ReportPreviewPage = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Export buttons */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenHtml}
+            disabled={isHtmlLoading}
+          >
+            <FileText className="h-4 w-4 mr-1.5" />
+            {isHtmlLoading ? "Завантаження…" : "Відкрити HTML"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={isPdfLoading}
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            {isPdfLoading ? "Завантаження…" : "Завантажити PDF"}
+          </Button>
+        </div>
 
         {/* Executive summary */}
         {report.summary && (
