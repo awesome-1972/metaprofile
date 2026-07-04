@@ -1,7 +1,6 @@
  import { useState } from "react";
  import { useNavigate } from "react-router-dom";
  import { supabase } from "@/integrations/supabase/client";
- import { login, getMe } from "@/lib/authApi";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Label } from "@/components/ui/label";
@@ -129,34 +128,49 @@
  
    const handleSignIn = async (e: React.FormEvent) => {
      e.preventDefault();
-
+     
      if (!email || !password) {
        toast.error("Введіть email та пароль");
        return;
      }
-
+ 
      setIsLoading(true);
-
+ 
      try {
-       await login(email, password);
-       const user = await getMe();
-
-       toast.success("Вхід успішний!");
-
-       if (user.role === "admin") {
-         navigate("/v2/admin");
-       } else if (user.role === "company") {
-         navigate("/v2/company");
-       } else {
-         navigate("/v2/candidate");
+       const { data, error } = await supabase.auth.signInWithPassword({
+         email,
+         password,
+       });
+ 
+       if (error) throw error;
+ 
+       if (data.user) {
+         // Get user role and redirect
+         const { data: roles } = await supabase
+           .from("user_roles")
+           .select("role")
+           .eq("user_id", data.user.id);
+ 
+         const userRole = roles?.[0]?.role;
+ 
+         toast.success("Вхід успішний!");
+ 
+         if (userRole === "admin") {
+           navigate("/v2/admin");
+         } else if (userRole === "company") {
+           navigate("/v2/company");
+         } else {
+           navigate("/v2/candidate");
+         }
        }
      } catch (error: any) {
        console.error("Sign in error:", error);
-       const msg: string = error.message || "";
-       if (msg.includes("401") || msg.includes("400") || msg.includes("credentials")) {
+       if (error.message?.includes("Invalid login credentials")) {
          toast.error("Невірний email або пароль");
+       } else if (error.message?.includes("Email not confirmed")) {
+         toast.error("Підтвердіть email перед входом");
        } else {
-         toast.error(msg || "Помилка входу");
+         toast.error(error.message || "Помилка входу");
        }
      } finally {
        setIsLoading(false);
