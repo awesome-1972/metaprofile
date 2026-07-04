@@ -14,3 +14,18 @@ verify_jwt = false
 
 [functions.conduct-interview]
 verify_jwt = false
+
+[functions.grant-management]
+verify_jwt = true
+
+[functions.ref-replicator]
+verify_jwt = false
+
+[functions.log-application-event]
+verify_jwt = true
+
+[functions.erase-candidate]
+verify_jwt = true
+
+[functions.seed-vacancy-stages]
+verify_jwt = true
