@@ -25,6 +25,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   MapPin,
   Plus,
   Users,
@@ -38,6 +39,10 @@ import {
   type ApplicationWithCandidate,
 } from "@/hooks/ats/use-applications";
 import { useCandidates, useCandidateSources, useCreateCandidate, useSearchCandidates } from "@/hooks/ats/use-candidates";
+import { BriefTab } from "@/components/ats/BriefTab";
+import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
+import { ReportsTab } from "@/components/ats/ReportsTab";
+import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type VacancyStatus = Database["public"]["Enums"]["vacancy_status"];
@@ -102,6 +107,8 @@ const VacancyDetailPage = () => {
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [draggedApplicationId, setDraggedApplicationId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("pipeline");
+  const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
 
   const { data: allCandidates } = useCandidates();
   const { data: searchResults } = useSearchCandidates(search);
@@ -114,10 +121,14 @@ const VacancyDetailPage = () => {
 
   const sortedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.position - b.position), [stages]);
 
+  const allApplicationsFlat = useMemo(
+    () => Object.values(applicationsByStage).flat(),
+    [applicationsByStage],
+  );
+
   const existingCandidateIds = useMemo(() => {
-    const all: ApplicationWithCandidate[] = Object.values(applicationsByStage).flat();
-    return new Set(all.map((a) => a.candidate_id));
-  }, [applicationsByStage]);
+    return new Set(allApplicationsFlat.map((a) => a.candidate_id));
+  }, [allApplicationsFlat]);
 
   const resetAddDialog = () => {
     setMode("existing");
@@ -287,125 +298,171 @@ const VacancyDetailPage = () => {
               </span>
             </div>
           </div>
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Додати кандидата
-          </Button>
+          {activeTab === "pipeline" && (
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Додати кандидата
+            </Button>
+          )}
         </div>
 
-        {stagesLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Завантаження воронки...</div>
-        ) : sortedStages.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>У вакансії ще немає стадій воронки</p>
-              <Button
-                className="mt-4"
-                variant="outline"
-                onClick={() => id && seedStages.mutate({ vacancyId: id })}
-                disabled={seedStages.isPending}
-              >
-                {seedStages.isPending ? "Створення..." : "Створити стадії за замовчуванням"}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="overflow-x-auto pb-4">
-            <div className="flex gap-4 min-w-max">
-              {sortedStages.map((stage, stageIndex) => {
-                const cards = applicationsByStage[stage.id] ?? [];
-                return (
-                  <div key={stage.id} className="w-72 flex-shrink-0">
-                    <div className="flex items-center justify-between mb-2 px-1">
-                      <h3 className="font-medium text-sm text-foreground">{stage.name}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        {cards.length}
-                      </Badge>
-                    </div>
-                    <div
-                      className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${
-                        dragOverStageId === stage.id ? "bg-accent ring-2 ring-primary" : "bg-muted/30"
-                      }`}
-                      onDragOver={(e) => handleColumnDragOver(e, stage.id)}
-                      onDragLeave={(e) => handleColumnDragLeave(e, stage.id)}
-                      onDrop={(e) => handleColumnDrop(e, stage.id)}
-                    >
-                      {applicationsLoading ? (
-                        <div className="text-xs text-muted-foreground text-center py-4">Завантаження...</div>
-                      ) : cards.length === 0 ? (
-                        <div className="text-xs text-muted-foreground text-center py-4">Порожньо</div>
-                      ) : (
-                        cards.map((application) => (
-                          <Card
-                            key={application.id}
-                            draggable
-                            onDragStart={(e) => handleCardDragStart(e, application)}
-                            onDragEnd={handleCardDragEnd}
-                            className={`shadow-sm cursor-grab active:cursor-grabbing transition-opacity ${
-                              draggedApplicationId === application.id ? "opacity-50 ring-2 ring-primary" : ""
-                            }`}
-                          >
-                            <CardContent className="p-3 space-y-2">
-                              <Link
-                                to={`/ats/candidates/${application.candidate_id}`}
-                                className="font-medium text-sm hover:underline block truncate"
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="pipeline">Воронка</TabsTrigger>
+            <TabsTrigger value="brief">Бріф</TabsTrigger>
+            <TabsTrigger value="competencies">Компетенції</TabsTrigger>
+            <TabsTrigger value="reports">Звіти</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pipeline" className="pt-4">
+            {stagesLoading ? (
+              <div className="text-center py-12 text-muted-foreground">Завантаження воронки...</div>
+            ) : sortedStages.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>У вакансії ще немає стадій воронки</p>
+                  <Button
+                    className="mt-4"
+                    variant="outline"
+                    onClick={() => id && seedStages.mutate({ vacancyId: id })}
+                    disabled={seedStages.isPending}
+                  >
+                    {seedStages.isPending ? "Створення..." : "Створити стадії за замовчуванням"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="overflow-x-auto pb-4">
+                <div className="flex gap-4 min-w-max">
+                  {sortedStages.map((stage, stageIndex) => {
+                    const cards = applicationsByStage[stage.id] ?? [];
+                    return (
+                      <div key={stage.id} className="w-72 flex-shrink-0">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <h3 className="font-medium text-sm text-foreground">{stage.name}</h3>
+                          <Badge variant="outline" className="text-xs">
+                            {cards.length}
+                          </Badge>
+                        </div>
+                        <div
+                          className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${
+                            dragOverStageId === stage.id ? "bg-accent ring-2 ring-primary" : "bg-muted/30"
+                          }`}
+                          onDragOver={(e) => handleColumnDragOver(e, stage.id)}
+                          onDragLeave={(e) => handleColumnDragLeave(e, stage.id)}
+                          onDrop={(e) => handleColumnDrop(e, stage.id)}
+                        >
+                          {applicationsLoading ? (
+                            <div className="text-xs text-muted-foreground text-center py-4">Завантаження...</div>
+                          ) : cards.length === 0 ? (
+                            <div className="text-xs text-muted-foreground text-center py-4">Порожньо</div>
+                          ) : (
+                            cards.map((application) => (
+                              <Card
+                                key={application.id}
+                                draggable
+                                onDragStart={(e) => handleCardDragStart(e, application)}
+                                onDragEnd={handleCardDragEnd}
+                                className={`shadow-sm cursor-grab active:cursor-grabbing transition-opacity ${
+                                  draggedApplicationId === application.id ? "opacity-50 ring-2 ring-primary" : ""
+                                }`}
                               >
-                                {application.candidate?.full_name ?? "Без імені"}
-                              </Link>
-                              <div className="text-xs text-muted-foreground space-y-0.5">
-                                <div>{application.candidate?.source?.name ?? "Джерело невідоме"}</div>
-                                <div>{daysSince(application.applied_at)} дн. на стадії/у процесі</div>
-                              </div>
-                              <div className="flex items-center justify-between gap-1 pt-1">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7"
-                                  disabled={stageIndex === 0 || moveApplicationMutation.isPending}
-                                  onClick={() => handleMoveTo(application, "prev")}
-                                  title="Попередня стадія"
-                                >
-                                  <ChevronLeft className="h-4 w-4" />
-                                </Button>
-                                <Select
-                                  value={application.current_stage_id ?? undefined}
-                                  onValueChange={(stageId) => handleMoveToStage(application, stageId)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs flex-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {sortedStages.map((s) => (
-                                      <SelectItem key={s.id} value={s.id} className="text-xs">
-                                        {s.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7"
-                                  disabled={stageIndex === sortedStages.length - 1 || moveApplicationMutation.isPending}
-                                  onClick={() => handleMoveTo(application, "next")}
-                                  title="Наступна стадія"
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                                <CardContent className="p-3 space-y-2">
+                                  <Link
+                                    to={`/ats/candidates/${application.candidate_id}`}
+                                    className="font-medium text-sm hover:underline block truncate"
+                                  >
+                                    {application.candidate?.full_name ?? "Без імені"}
+                                  </Link>
+                                  <div className="text-xs text-muted-foreground space-y-0.5">
+                                    <div>{application.candidate?.source?.name ?? "Джерело невідоме"}</div>
+                                    <div>{daysSince(application.applied_at)} дн. на стадії/у процесі</div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full h-7 text-xs"
+                                    onClick={() => setScoreDialogApplication(application)}
+                                  >
+                                    <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+                                    Оцінка компетенцій
+                                  </Button>
+                                  <div className="flex items-center justify-between gap-1 pt-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      disabled={stageIndex === 0 || moveApplicationMutation.isPending}
+                                      onClick={() => handleMoveTo(application, "prev")}
+                                      title="Попередня стадія"
+                                    >
+                                      <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Select
+                                      value={application.current_stage_id ?? undefined}
+                                      onValueChange={(stageId) => handleMoveToStage(application, stageId)}
+                                    >
+                                      <SelectTrigger className="h-7 text-xs flex-1">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {sortedStages.map((s) => (
+                                          <SelectItem key={s.id} value={s.id} className="text-xs">
+                                            {s.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      disabled={stageIndex === sortedStages.length - 1 || moveApplicationMutation.isPending}
+                                      onClick={() => handleMoveTo(application, "next")}
+                                      title="Наступна стадія"
+                                    >
+                                      <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="brief" className="pt-4">
+            {id && <BriefTab vacancyId={id} />}
+          </TabsContent>
+
+          <TabsContent value="competencies" className="pt-4">
+            {id && <CompetenciesTab vacancyId={id} />}
+          </TabsContent>
+
+          <TabsContent value="reports" className="pt-4">
+            {id && <ReportsTab vacancyId={id} applications={allApplicationsFlat} />}
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {scoreDialogApplication && id && (
+        <CompetencyScoreDialog
+          open={!!scoreDialogApplication}
+          onOpenChange={(open) => {
+            if (!open) setScoreDialogApplication(null);
+          }}
+          vacancyId={id}
+          applicationId={scoreDialogApplication.id}
+          candidateName={scoreDialogApplication.candidate?.full_name ?? "Без імені"}
+        />
+      )}
 
       <Dialog
         open={addDialogOpen}
