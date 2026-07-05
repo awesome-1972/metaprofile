@@ -24,6 +24,9 @@ export interface BriefSection {
   questions: BriefQuestion[];
 }
 
+/** Секція «Умови» — містить фінансові питання (BriefTab рендерить для неї фін-блок). */
+export const CONDITIONS_SECTION_KEY = "conditions";
+
 export const BRIEF_SECTIONS: BriefSection[] = [
   {
     sectionKey: "intro",
