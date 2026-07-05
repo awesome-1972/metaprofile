@@ -1,6 +1,8 @@
+ import { Link } from "react-router-dom";
  import { V2AppLayout } from "@/components/layout/V2AppLayout";
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
- import { Users, Building2, FileText, Shield } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Users, Building2, FileText, Shield, Briefcase, ArrowRight } from "lucide-react";
  import { useAuthV2 } from "@/hooks/useAuthV2";
  
  const AdminDashboard = () => {
@@ -18,7 +20,30 @@
              Управління платформою Metaprofile v2
            </p>
          </div>
- 
+
+         {/* ATS entry point */}
+         <Card className="mb-8 border-primary/30 bg-primary/5">
+           <CardContent className="p-6 flex items-center justify-between gap-4 flex-wrap">
+             <div className="flex items-center gap-4">
+               <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+                 <Briefcase className="h-6 w-6 text-primary-foreground" />
+               </div>
+               <div>
+                 <h2 className="text-lg font-semibold text-foreground">ATS — Рекрутинг</h2>
+                 <p className="text-sm text-muted-foreground">
+                   Клієнти, проекти найму, вакансії, кандидати та воронка підбору
+                 </p>
+               </div>
+             </div>
+             <Button asChild>
+               <Link to="/ats/clients">
+                 Перейти до ATS
+                 <ArrowRight className="h-4 w-4 ml-2" />
+               </Link>
+             </Button>
+           </CardContent>
+         </Card>
+
          {/* Stats */}
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
            <Card>

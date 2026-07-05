@@ -43,12 +43,27 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CaseWorkPage from "./pages/v2/CaseWorkPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
 
+ // ATS imports
+ import ClientsListPage from "./pages/ats/ClientsListPage";
+ import ClientDetailPage from "./pages/ats/ClientDetailPage";
+ import ProjectsListPage from "./pages/ats/ProjectsListPage";
+ import ProjectDetailPage from "./pages/ats/ProjectDetailPage";
+ import VacanciesListPage from "./pages/ats/VacanciesListPage";
+ import VacancyDetailPage from "./pages/ats/VacancyDetailPage";
+ import CandidatesListPage from "./pages/ats/CandidatesListPage";
+ import CandidateDetailPage from "./pages/ats/CandidateDetailPage";
+
 const queryClient = new QueryClient();
 
 const DemoGate = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const isRegistered = localStorage.getItem("demo_registered") === "true";
-  if (!isRegistered && location.pathname !== "/demo" && !location.pathname.startsWith("/v2")) {
+  if (
+    !isRegistered &&
+    location.pathname !== "/demo" &&
+    !location.pathname.startsWith("/v2") &&
+    !location.pathname.startsWith("/ats")
+  ) {
     return <Navigate to="/demo" replace />;
   }
   return <>{children}</>;
@@ -143,7 +158,73 @@ const App = () => (
              </ProtectedRoute>
            }
          />
- 
+
+         {/* ATS Routes */}
+         <Route
+           path="/ats/clients"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <ClientsListPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/clients/:id"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <ClientDetailPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/projects"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <ProjectsListPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/projects/:id"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <ProjectDetailPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/vacancies"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <VacanciesListPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/vacancies/:id"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <VacancyDetailPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/candidates"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <CandidatesListPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/candidates/:id"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <CandidateDetailPage />
+             </ProtectedRoute>
+           }
+         />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
         </DemoGate>

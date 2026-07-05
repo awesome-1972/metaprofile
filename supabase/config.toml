@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.seed-vacancy-stages]
 verify_jwt = true
+
+[functions.generate-candidate-report]
+verify_jwt = true
