@@ -46,12 +46,21 @@
 //     200 { ok: true, user_id, banned }
 //     403 { error: "self_lockout" }              — деактивує самого себе
 //
+//   POST { action: "update_profile", user_id, full_name }
+//     → update profiles.full_name where user_id; якщо рядка ще нема —
+//       insert(user_id, email з auth.users, full_name)
+//     full_name: trim(), довжина 1..120 символів
+//     200 { ok: true }
+//     404 { error: "user_not_found" }      — user_id не існує
+//     422 { error: "invalid_user_id" | "invalid_full_name" }
+//
 //   401 { error: "unauthorized" }        — немає/невалідний JWT
 //   403 { error: "forbidden" }           — викликач не owner/admin
-//   404 { error: "user_not_found" }      — user_id не існує (set_role/de|activate)
+//   404 { error: "user_not_found" }      — user_id не існує (set_role/de|activate/update_profile)
 //   409 { error: "user_exists" }         — email вже зайнятий (invite)
 //   422 { error: "invalid_action" | "invalid_body" | "invalid_email" |
-//                 "invalid_role" | "invalid_user_id" | "invalid_enabled" }
+//                 "invalid_role" | "invalid_user_id" | "invalid_enabled" |
+//                 "invalid_full_name" }
 //   429 { error: "rate_limited" }        — забагато запитів (проста in-memory throttle)
 //   500 { error: "server_error" }
 //
@@ -353,6 +362,52 @@ Deno.serve(async (req) => {
       }
 
       return json({ ok: true, user_id: userId, banned: action === "deactivate" });
+    }
+
+    // ------------------------------------------------------------------
+    // action: update_profile
+    // ------------------------------------------------------------------
+    if (action === "update_profile") {
+      const userId = body.user_id;
+      if (!isUuid(userId)) return json({ error: "invalid_user_id" }, 422);
+
+      const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
+      if (fullName.length < 1 || fullName.length > 120) {
+        return json({ error: "invalid_full_name" }, 422);
+      }
+
+      const { data: targetUser, error: getUserErr } = await supabase.auth.admin.getUserById(userId);
+      if (getUserErr || !targetUser?.user) {
+        return json({ error: "user_not_found" }, 404);
+      }
+
+      // profiles.email — NOT NULL, тому plain upsert без email ризикує впасти,
+      // якщо рядок ще не існує (напр. користувач ще не логінився після
+      // запрошення). Спершу пробуємо update (найчастіший випадок — рядок уже
+      // є), і лише якщо рядка не існувало — insert з email із auth.users.
+      const { data: updatedRows, error: updateErr } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName })
+        .eq("user_id", userId)
+        .select("user_id");
+      if (updateErr) {
+        console.error("admin-invite-user update_profile update error:", updateErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: insertErr } = await supabase.from("profiles").insert({
+          user_id: userId,
+          email: targetUser.user.email ?? "",
+          full_name: fullName,
+        });
+        if (insertErr) {
+          console.error("admin-invite-user update_profile insert error:", insertErr.message);
+          return json({ error: "server_error" }, 500);
+        }
+      }
+
+      return json({ ok: true });
     }
 
     return json({ error: "invalid_action" }, 422);

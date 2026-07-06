@@ -29,10 +29,38 @@ export interface CandidateResumeFields {
 
 export type AtsCandidateWithResume = AtsCandidate & CandidateResumeFields;
 
+/** Заявка кандидата з розгорнутою вакансією/проектом/клієнтом (для бейджів у списку). */
+export interface CandidateApplicationRef {
+  id: string;
+  vacancy: {
+    id: string;
+    title: string;
+    hiring_project: { id: string; name: string; client: { id: string; name: string } | null } | null;
+  } | null;
+}
+
 export type AtsCandidateWithSource = AtsCandidateWithResume & {
   source: { id: string; name: string } | null;
   applications_count: number;
+  applications_refs: CandidateApplicationRef[];
 };
+
+// select-фрагмент заявок із ланцюгом вакансія → проект → клієнт (для списку/пошуку).
+const APPLICATIONS_REFS_SELECT =
+  "applications(id, vacancy:vacancies(id, title, hiring_project:hiring_projects(id, name, client:clients(id, name))))";
+
+function mapCandidateRow(row: unknown): AtsCandidateWithSource {
+  const { applications, ...rest } = row as AtsCandidate & {
+    source: { id: string; name: string } | null;
+    applications: CandidateApplicationRef[] | null;
+  };
+  const refs = applications ?? [];
+  return {
+    ...rest,
+    applications_count: refs.length,
+    applications_refs: refs,
+  } as AtsCandidateWithSource;
+}
 
 const CANDIDATES_KEY = ["ats", "candidates"] as const;
 const candidateKey = (id: string) => ["ats", "candidates", id] as const;
@@ -56,22 +84,13 @@ export function useCandidates() {
     queryFn: async (): Promise<AtsCandidateWithSource[]> => {
       const { data, error } = await supabase
         .from("ats_candidates")
-        .select("*, source:candidate_sources(id, name), applications(count)")
+        .select(`*, source:candidate_sources(id, name), ${APPLICATIONS_REFS_SELECT}`)
         .order("created_at", { ascending: false });
       if (error) {
         if (isPermissionDeniedError(error)) throw new Error("Немає доступу");
         throw error;
       }
-      return (data ?? []).map((row) => {
-        const { applications, ...rest } = row as AtsCandidate & {
-          source: { id: string; name: string } | null;
-          applications: { count: number }[] | null;
-        };
-        return {
-          ...rest,
-          applications_count: applications?.[0]?.count ?? 0,
-        } as AtsCandidateWithSource;
-      });
+      return (data ?? []).map(mapCandidateRow);
     },
     staleTime: 30_000,
   });
@@ -85,7 +104,7 @@ export function useSearchCandidates(search: string) {
     queryFn: async (): Promise<AtsCandidateWithSource[]> => {
       const { data, error } = await supabase
         .from("ats_candidates")
-        .select("*, source:candidate_sources(id, name), applications(count)")
+        .select(`*, source:candidate_sources(id, name), ${APPLICATIONS_REFS_SELECT}`)
         .or(`full_name.ilike.%${trimmed}%,email.ilike.%${trimmed}%`)
         .order("full_name")
         .limit(50);
@@ -93,16 +112,7 @@ export function useSearchCandidates(search: string) {
         if (isPermissionDeniedError(error)) throw new Error("Немає доступу");
         throw error;
       }
-      return (data ?? []).map((row) => {
-        const { applications, ...rest } = row as AtsCandidate & {
-          source: { id: string; name: string } | null;
-          applications: { count: number }[] | null;
-        };
-        return {
-          ...rest,
-          applications_count: applications?.[0]?.count ?? 0,
-        } as AtsCandidateWithSource;
-      });
+      return (data ?? []).map(mapCandidateRow);
     },
     enabled: trimmed.length > 0,
     staleTime: 15_000,

@@ -60,10 +60,10 @@ const CandidatesListPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Імʼя</TableHead>
+                  <TableHead>Вакансії / проекти</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Телефон</TableHead>
                   <TableHead>Джерело</TableHead>
-                  <TableHead>Заявок</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -83,10 +83,34 @@ const CandidatesListPage = () => {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      {candidate.applications_refs.length === 0 ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {candidate.applications_refs.map((a) =>
+                            a.vacancy ? (
+                              <Badge
+                                key={a.id}
+                                variant="secondary"
+                                className="cursor-pointer text-xs font-normal hover:bg-secondary/70"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/ats/vacancies/${a.vacancy!.id}`);
+                                }}
+                                title={a.vacancy.hiring_project?.client?.name ?? undefined}
+                              >
+                                {a.vacancy.title}
+                                {a.vacancy.hiring_project ? ` · ${a.vacancy.hiring_project.name}` : ""}
+                              </Badge>
+                            ) : null,
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{candidate.email || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{candidate.phone || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{candidate.source?.name || "—"}</TableCell>
-                    <TableCell>{candidate.applications_count}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

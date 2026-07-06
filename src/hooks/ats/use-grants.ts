@@ -196,7 +196,8 @@ export function useAssignRecruiter() {
   return useMutation({
     mutationFn: async (payload: { vacancy_id: string; recruiter_id: string | null }): Promise<void> => {
       const { data, error } = await supabase.functions.invoke("grant-management", {
-        body: { action: "assign_recruiter", ...payload },
+        // Контракт Edge: поле називається user_id (не recruiter_id).
+        body: { action: "assign_recruiter", vacancy_id: payload.vacancy_id, user_id: payload.recruiter_id },
       });
       if (error) throw error;
       const body = data as GrantManagementMutationResponse;

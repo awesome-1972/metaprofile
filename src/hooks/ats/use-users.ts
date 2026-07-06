@@ -55,6 +55,7 @@ const EDGE_ERROR_LABELS: Record<string, string> = {
   invalid_role: "Некоректна роль",
   invalid_user_id: "Некоректний ідентифікатор користувача",
   invalid_enabled: "Некоректне значення прапорця ролі",
+  invalid_full_name: "Імʼя має містити від 1 до 120 символів",
   user_exists: "Користувач із таким email вже існує",
   user_not_found: "Користувача не знайдено",
   self_lockout: "Не можна виконати цю дію над власним обліковим записом",
@@ -172,6 +173,42 @@ export function useSetUserRole() {
         return;
       }
       toast.error(error?.message || "Не вдалося оновити роль");
+    },
+  });
+}
+
+export interface UpdateUserProfilePayload {
+  user_id: string;
+  full_name: string;
+}
+
+/** Редагування імені користувача — `admin-invite-user` action: 'update_profile'. */
+export function useUpdateUserProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: UpdateUserProfilePayload): Promise<void> => {
+      const { data, error } = await supabase.functions.invoke("admin-invite-user", {
+        body: { action: "update_profile", ...payload },
+      });
+      if (error) throw error;
+      const body = data as AdminInviteUserMutationResponse;
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success("Імʼя оновлено");
+    },
+    onError: (error: { message?: string }) => {
+      if (isEdgeNotDeployedError(error)) {
+        toast.error("Функція ще не задеплоєна");
+        return;
+      }
+      const context = extractErrorContext(error);
+      if (context?.error) {
+        toast.error(edgeErrorMessage(context.error, context.detail));
+        return;
+      }
+      toast.error(error?.message || "Не вдалося оновити імʼя");
     },
   });
 }
