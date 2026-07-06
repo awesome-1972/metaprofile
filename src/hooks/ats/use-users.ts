@@ -58,6 +58,7 @@ const EDGE_ERROR_LABELS: Record<string, string> = {
   invalid_full_name: "Імʼя має містити від 1 до 120 символів",
   user_exists: "Користувач із таким email вже існує",
   user_not_found: "Користувача не знайдено",
+  already_active: "Користувач уже активний — скористайтесь «Скинути пароль»",
   self_lockout: "Не можна виконати цю дію над власним обліковим записом",
   server_error: "Внутрішня помилка сервера",
 };
@@ -147,6 +148,59 @@ export interface SetRolePayload {
 }
 
 /** Увімкнення/вимкнення ролі користувача — `admin-invite-user` action: 'set_role'. */
+/**
+ * Повторне запрошення користувачу, який ще не активувався (Edge: resend_invite —
+ * пересоздає auth-користувача зі збереженням ролей/грантів і шле новий лист).
+ */
+export function useResendInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string): Promise<void> => {
+      const { data, error } = await supabase.functions.invoke("admin-invite-user", {
+        body: { action: "resend_invite", user_id: userId },
+      });
+      if (error) throw error;
+      const body = data as AdminInviteUserMutationResponse;
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success("Запрошення надіслано повторно");
+    },
+    onError: (error: { message?: string }) => {
+      if (isEdgeNotDeployedError(error)) {
+        toast.error("Функція ще не задеплоєна");
+        return;
+      }
+      const context = extractErrorContext(error);
+      if (context?.error) {
+        toast.error(edgeErrorMessage(context.error, context.detail));
+        return;
+      }
+      toast.error(error?.message || "Не вдалося надіслати запрошення");
+    },
+  });
+}
+
+/**
+ * Лист «скинути пароль» для АКТИВНОГО користувача — без Edge: стандартний
+ * resetPasswordForEmail; лінк веде на /v2/auth, де форма встановлення пароля
+ * обробляє type=recovery.
+ */
+export function useSendPasswordReset() {
+  return useMutation({
+    mutationFn: async (email: string): Promise<void> => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/v2/auth`,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => toast.success("Лист для скидання пароля надіслано"),
+    onError: (error: { message?: string }) =>
+      toast.error(error?.message || "Не вдалося надіслати лист"),
+  });
+}
+
 export function useSetUserRole() {
   const qc = useQueryClient();
   return useMutation({

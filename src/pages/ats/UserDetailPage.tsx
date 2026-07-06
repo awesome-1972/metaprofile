@@ -22,10 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Pencil, Check, X, Ban, CheckCircle2, ShieldCheck, Trash2, Briefcase } from "lucide-react";
+import { ArrowLeft, Pencil, Check, X, Ban, CheckCircle2, ShieldCheck, Trash2, Briefcase, Send, KeyRound } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { supabase } from "@/integrations/supabase/client";
-import { useUsers, useUpdateUserProfile, useSetUserActive } from "@/hooks/ats/use-users";
+import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset } from "@/hooks/ats/use-users";
 import { UserRoleBadges, statusBadge } from "@/components/ats/UserRoleBadges";
 import { useGrants, useRevokeGrant, type GrantScopeType } from "@/hooks/ats/use-grants";
 import type { Database } from "@/integrations/supabase/types";
@@ -98,6 +98,8 @@ const UserDetailPage = () => {
 
   const updateProfile = useUpdateUserProfile();
   const setUserActive = useSetUserActive();
+  const resendInvite = useResendInvite();
+  const sendReset = useSendPasswordReset();
 
   const { data: assignedVacancies, isLoading: vacanciesLoading } = useAssignedVacancies(id);
 
@@ -207,6 +209,30 @@ const UserDetailPage = () => {
 
               <div className="flex items-center gap-3">
                 {statusBadge(user)}
+                {/* Повторне запрошення — лише поки користувач не активувався */}
+                {!user.last_sign_in_at && !user.banned && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={resendInvite.isPending}
+                    onClick={() => resendInvite.mutate(user.id)}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {resendInvite.isPending ? "Надсилання..." : "Повторне запрошення"}
+                  </Button>
+                )}
+                {/* Скидання пароля — для активних */}
+                {user.last_sign_in_at && user.email && !user.banned && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={sendReset.isPending}
+                    onClick={() => sendReset.mutate(user.email!)}
+                  >
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    {sendReset.isPending ? "Надсилання..." : "Скинути пароль"}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"

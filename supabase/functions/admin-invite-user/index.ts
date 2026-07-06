@@ -235,6 +235,72 @@ Deno.serve(async (req) => {
     }
 
     // ------------------------------------------------------------------
+    // action: resend_invite — повторне запрошення користувачу, який ще НЕ
+    // активувався (не логінився). Supabase не вміє повторно надіслати invite
+    // існуючому користувачу, тому: знімаємо знімок ролей/грантів/профілю →
+    // видаляємо auth-користувача → запрошуємо заново → відновлюємо ролі і
+    // гранти на новий user_id. Для активних користувачів → 409 already_active
+    // (їм пасує «Скинути пароль», він робиться з фронтенда).
+    // ------------------------------------------------------------------
+    if (action === "resend_invite") {
+      const targetId = typeof body.user_id === "string" ? body.user_id : "";
+      if (!UUID_RE.test(targetId)) return json({ error: "invalid_user_id" }, 422);
+
+      const { data: target, error: getErr } = await supabase.auth.admin.getUserById(targetId);
+      if (getErr || !target?.user) return json({ error: "user_not_found" }, 404);
+      if (target.user.last_sign_in_at) return json({ error: "already_active" }, 409);
+
+      const email = (target.user.email ?? "").toLowerCase();
+      if (!EMAIL_RE.test(email)) return json({ error: "invalid_email" }, 422);
+
+      // Знімок даних, які каскадно зникнуть разом із користувачем.
+      const [{ data: roles }, { data: grants }, { data: profile }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", targetId),
+        supabase
+          .from("access_grants")
+          .select("scope_type, scope_id, can_edit, can_view_financials, permissions, is_active, granted_by")
+          .eq("user_id", targetId),
+        supabase.from("profiles").select("full_name").eq("user_id", targetId).maybeSingle(),
+      ]);
+      const fullName = (profile as { full_name: string | null } | null)?.full_name ?? undefined;
+
+      const { error: delErr } = await supabase.auth.admin.deleteUser(targetId);
+      if (delErr) {
+        console.error("admin-invite-user resend delete error:", delErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+
+      const { data: reinvited, error: reinviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
+        data: fullName ? { full_name: fullName } : {},
+        redirectTo: `${APP_ORIGIN}/v2/auth`,
+      });
+      if (reinviteErr || !reinvited?.user) {
+        console.error("admin-invite-user resend invite error:", reinviteErr?.message);
+        return json({ error: "server_error" }, 500);
+      }
+      const newId = reinvited.user.id;
+
+      // Відновлення профілю, ролей і грантів на новий user_id (best-effort).
+      const { error: profErr } = await supabase
+        .from("profiles")
+        .upsert({ user_id: newId, email, full_name: fullName || null }, { onConflict: "user_id" });
+      if (profErr) console.error("admin-invite-user resend profile error:", profErr.message);
+
+      for (const r of (roles ?? []) as Array<{ role: string }>) {
+        const { error: rErr } = await supabase.from("user_roles").insert({ user_id: newId, role: r.role });
+        if (rErr && !/duplicate/i.test(rErr.message)) {
+          console.error("admin-invite-user resend role error:", rErr.message);
+        }
+      }
+      for (const g of (grants ?? []) as Array<Record<string, unknown>>) {
+        const { error: gErr } = await supabase.from("access_grants").insert({ ...g, user_id: newId });
+        if (gErr) console.error("admin-invite-user resend grant error:", gErr.message);
+      }
+
+      return json({ ok: true, user_id: newId, email });
+    }
+
+    // ------------------------------------------------------------------
     // action: list
     // ------------------------------------------------------------------
     if (action === "list") {
