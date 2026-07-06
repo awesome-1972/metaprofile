@@ -1,4 +1,4 @@
- import { useState } from "react";
+ import { useEffect, useState } from "react";
  import { useNavigate } from "react-router-dom";
  import { supabase } from "@/integrations/supabase/client";
  import { Button } from "@/components/ui/button";
@@ -20,7 +20,63 @@
    const [fullName, setFullName] = useState("");
    const [companyName, setCompanyName] = useState("");
    const [selectedRole, setSelectedRole] = useState<RoleType>("candidate");
- 
+   // Режим встановлення пароля для запрошених (invite) / відновлення (recovery):
+   // Supabase шле токен у hash; detectSessionInUrl створює сесію, а тип беремо з hash.
+   const [setPasswordMode, setSetPasswordMode] = useState(false);
+   const [newPassword, setNewPassword] = useState("");
+   const [newPassword2, setNewPassword2] = useState("");
+
+   useEffect(() => {
+     const hash = window.location.hash;
+     if (/type=(invite|recovery)/.test(hash)) {
+       setSetPasswordMode(true);
+     } else if (/error_code=otp_expired/.test(hash)) {
+       toast.error("Лінк недійсний або протермінований — попросіть надіслати запрошення ще раз");
+     } else if (/error=/.test(hash)) {
+       toast.error("Помилка авторизації за лінком");
+     }
+   }, []);
+
+   const redirectByRole = async (userId: string) => {
+     const { data: roles } = await supabase
+       .from("user_roles")
+       .select("role")
+       .eq("user_id", userId);
+     const all = (roles ?? []).map((r) => r.role as string);
+     if (all.some((r) => ["owner", "recruiter", "assistant"].includes(r))) {
+       navigate("/ats/clients");
+     } else if (all.includes("admin")) {
+       navigate("/v2/admin");
+     } else if (all.includes("company")) {
+       navigate("/v2/company");
+     } else {
+       navigate("/v2/candidate");
+     }
+   };
+
+   const handleSetPassword = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (newPassword.length < 6) {
+       toast.error("Пароль має бути не менше 6 символів");
+       return;
+     }
+     if (newPassword !== newPassword2) {
+       toast.error("Паролі не збігаються");
+       return;
+     }
+     setIsLoading(true);
+     try {
+       const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+       if (error) throw error;
+       toast.success("Пароль встановлено!");
+       if (data.user) await redirectByRole(data.user.id);
+     } catch (error: unknown) {
+       toast.error((error as Error)?.message || "Не вдалося встановити пароль");
+     } finally {
+       setIsLoading(false);
+     }
+   };
+
    const handleSignUp = async (e: React.FormEvent) => {
      e.preventDefault();
      
@@ -151,13 +207,15 @@
            .select("role")
            .eq("user_id", data.user.id);
  
-         const userRole = roles?.[0]?.role;
- 
+         const all = (roles ?? []).map((r) => r.role as string);
+
          toast.success("Вхід успішний!");
- 
-         if (userRole === "admin") {
+
+         if (all.some((r) => ["owner", "recruiter", "assistant"].includes(r))) {
+           navigate("/ats/clients");
+         } else if (all.includes("admin")) {
            navigate("/v2/admin");
-         } else if (userRole === "company") {
+         } else if (all.includes("company")) {
            navigate("/v2/company");
          } else {
            navigate("/v2/candidate");
@@ -193,6 +251,37 @@
          </CardHeader>
  
          <CardContent>
+           {setPasswordMode ? (
+             <form onSubmit={handleSetPassword} className="space-y-4 mt-2">
+               <p className="text-sm text-muted-foreground">
+                 Вас запрошено до системи. Встановіть пароль для входу.
+               </p>
+               <div className="space-y-2">
+                 <Label htmlFor="new-password">Новий пароль</Label>
+                 <Input
+                   id="new-password"
+                   type="password"
+                   value={newPassword}
+                   onChange={(e) => setNewPassword(e.target.value)}
+                   disabled={isLoading}
+                   autoFocus
+                 />
+               </div>
+               <div className="space-y-2">
+                 <Label htmlFor="new-password2">Повторіть пароль</Label>
+                 <Input
+                   id="new-password2"
+                   type="password"
+                   value={newPassword2}
+                   onChange={(e) => setNewPassword2(e.target.value)}
+                   disabled={isLoading}
+                 />
+               </div>
+               <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading ? "Збереження..." : "Встановити пароль і увійти"}
+               </Button>
+             </form>
+           ) : (
            <Tabs defaultValue="signin" className="w-full">
              <TabsList className="grid w-full grid-cols-2">
                <TabsTrigger value="signin">Вхід</TabsTrigger>
@@ -331,6 +420,7 @@
                </form>
              </TabsContent>
            </Tabs>
+           )}
          </CardContent>
        </Card>
      </div>
