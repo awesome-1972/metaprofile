@@ -403,6 +403,28 @@ Deno.serve(async (req) => {
     }
 
     // ------------------------------------------------------------------
+    // action: delete_user — повне видалення користувача (owner/admin).
+    // Каскадом зникають profiles/user_roles/access_grants; посилання типу
+    // vacancies.assigned_recruiter_id стають NULL (on delete set null).
+    // Себе видалити не можна.
+    // ------------------------------------------------------------------
+    if (action === "delete_user") {
+      const targetId = typeof body.user_id === "string" ? body.user_id : "";
+      if (!UUID_RE.test(targetId)) return json({ error: "invalid_user_id" }, 422);
+      if (targetId === caller.id) return json({ error: "self_lockout" }, 403);
+
+      const { data: target, error: getErr } = await supabase.auth.admin.getUserById(targetId);
+      if (getErr || !target?.user) return json({ error: "user_not_found" }, 404);
+
+      const { error: delErr } = await supabase.auth.admin.deleteUser(targetId);
+      if (delErr) {
+        console.error("admin-invite-user delete_user error:", delErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+      return json({ ok: true, user_id: targetId });
+    }
+
+    // ------------------------------------------------------------------
     // action: deactivate / activate
     // ------------------------------------------------------------------
     if (action === "deactivate" || action === "activate") {

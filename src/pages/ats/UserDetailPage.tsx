@@ -25,7 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Pencil, Check, X, Ban, CheckCircle2, ShieldCheck, Trash2, Briefcase, Send, KeyRound } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { supabase } from "@/integrations/supabase/client";
-import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset } from "@/hooks/ats/use-users";
+import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset, useDeleteUser } from "@/hooks/ats/use-users";
 import { UserRoleBadges, statusBadge } from "@/components/ats/UserRoleBadges";
 import { useGrants, useRevokeGrant, type GrantScopeType } from "@/hooks/ats/use-grants";
 import type { Database } from "@/integrations/supabase/types";
@@ -100,6 +100,7 @@ const UserDetailPage = () => {
   const setUserActive = useSetUserActive();
   const resendInvite = useResendInvite();
   const sendReset = useSendPasswordReset();
+  const deleteUser = useDeleteUser();
 
   const { data: assignedVacancies, isLoading: vacanciesLoading } = useAssignedVacancies(id);
 
@@ -251,6 +252,24 @@ const UserDetailPage = () => {
                       Деактивувати
                     </>
                   )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={isSelf || deleteUser.isPending}
+                  title={isSelf ? "Не можна видалити власний обліковий запис" : undefined}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Видалити користувача ${user.full_name || user.email}? Це незворотно: зникнуть його ролі та доступи.`,
+                      )
+                    ) {
+                      deleteUser.mutate(user.id, { onSuccess: () => navigate("/ats/users") });
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleteUser.isPending ? "Видалення..." : "Видалити"}
                 </Button>
               </div>
             </div>

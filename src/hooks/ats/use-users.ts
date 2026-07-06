@@ -59,6 +59,7 @@ const EDGE_ERROR_LABELS: Record<string, string> = {
   user_exists: "Користувач із таким email вже існує",
   user_not_found: "Користувача не знайдено",
   already_active: "Користувач уже активний — скористайтесь «Скинути пароль»",
+  self_lockout: "Цю дію не можна виконати щодо власного облікового запису",
   self_lockout: "Не можна виконати цю дію над власним обліковим записом",
   server_error: "Внутрішня помилка сервера",
 };
@@ -198,6 +199,37 @@ export function useSendPasswordReset() {
     onSuccess: () => toast.success("Лист для скидання пароля надіслано"),
     onError: (error: { message?: string }) =>
       toast.error(error?.message || "Не вдалося надіслати лист"),
+  });
+}
+
+/** Повне видалення користувача (Edge: delete_user). Себе видалити не можна. */
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string): Promise<void> => {
+      const { data, error } = await supabase.functions.invoke("admin-invite-user", {
+        body: { action: "delete_user", user_id: userId },
+      });
+      if (error) throw error;
+      const body = data as AdminInviteUserMutationResponse;
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: USERS_KEY });
+      toast.success("Користувача видалено");
+    },
+    onError: (error: { message?: string }) => {
+      if (isEdgeNotDeployedError(error)) {
+        toast.error("Функція ще не задеплоєна");
+        return;
+      }
+      const context = extractErrorContext(error);
+      if (context?.error) {
+        toast.error(edgeErrorMessage(context.error, context.detail));
+        return;
+      }
+      toast.error(error?.message || "Не вдалося видалити користувача");
+    },
   });
 }
 
