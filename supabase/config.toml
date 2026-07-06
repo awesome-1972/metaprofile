@@ -41,3 +41,9 @@ verify_jwt = true
 
 [functions.send-communication]
 verify_jwt = true
+
+[functions.schedule-interview]
+verify_jwt = true
+
+[functions.fetch-meet-transcript]
+verify_jwt = true

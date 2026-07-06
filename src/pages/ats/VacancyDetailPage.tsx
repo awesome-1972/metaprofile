@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { AtsLayout } from "@/components/layout/AtsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +25,15 @@ import {
   ArrowLeft,
   Briefcase,
   Building2,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Copy,
   MapPin,
   Plus,
   Users,
+  Video,
 } from "lucide-react";
 import { useVacancy } from "@/hooks/ats/use-vacancies";
 import { usePipelineStages, useSeedVacancyStages } from "@/hooks/ats/use-pipeline";
@@ -46,6 +50,7 @@ import {
   useSendBatchCommunication,
   useCancelBatchCommunication,
 } from "@/hooks/ats/use-communications";
+import { useScheduleInterview, useUpcomingInterviewsByApplications } from "@/hooks/ats/use-interviews";
 import { BriefTab } from "@/components/ats/BriefTab";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
@@ -117,6 +122,7 @@ const VacancyDetailPage = () => {
   const queueBatch = useQueueBatchCommunication();
   const sendBatch = useSendBatchCommunication();
   const cancelBatch = useCancelBatchCommunication();
+  const scheduleInterview = useScheduleInterview();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -127,6 +133,13 @@ const VacancyDetailPage = () => {
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pipeline");
   const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
+
+  const [meetingDialogApplication, setMeetingDialogApplication] = useState<ApplicationWithCandidate | null>(null);
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingDuration, setMeetingDuration] = useState("60");
+  const [meetingCandidateEmail, setMeetingCandidateEmail] = useState("");
+  const [meetingNote, setMeetingNote] = useState("");
+  const [meetingResult, setMeetingResult] = useState<{ meetLink: string | null; eventLink: string | null } | null>(null);
 
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
@@ -159,6 +172,10 @@ const VacancyDetailPage = () => {
   const allApplicationsFlat = useMemo(
     () => Object.values(applicationsByStage).flat(),
     [applicationsByStage],
+  );
+
+  const { data: upcomingInterviewsByApplication } = useUpcomingInterviewsByApplications(
+    allApplicationsFlat.map((a) => a.id),
   );
 
   const existingCandidateIds = useMemo(() => {
@@ -276,6 +293,42 @@ const VacancyDetailPage = () => {
         setPendingBatchId(null);
       },
     });
+  };
+
+  const openMeetingDialog = (application: ApplicationWithCandidate) => {
+    setMeetingDialogApplication(application);
+    setMeetingDate("");
+    setMeetingDuration("60");
+    setMeetingCandidateEmail(application.candidate?.email ?? "");
+    setMeetingNote("");
+    setMeetingResult(null);
+  };
+
+  const handleScheduleMeeting = () => {
+    if (!meetingDialogApplication || !meetingDate) return;
+    const scheduledAtIso = new Date(meetingDate).toISOString();
+    scheduleInterview.mutate(
+      {
+        application_id: meetingDialogApplication.id,
+        scheduled_at: scheduledAtIso,
+        duration_minutes: Number(meetingDuration),
+        candidate_email: meetingCandidateEmail.trim() || undefined,
+        note: meetingNote.trim() || undefined,
+      },
+      {
+        onSuccess: (data) => {
+          setMeetingResult({ meetLink: data.meet_link, eventLink: data.event_link });
+        },
+      },
+    );
+  };
+
+  const handleCopyMeetLink = () => {
+    if (!meetingResult?.meetLink) return;
+    navigator.clipboard
+      .writeText(meetingResult.meetLink)
+      .then(() => toast.success("Meet-лінк скопійовано"))
+      .catch(() => toast.error("Не вдалося скопіювати"));
   };
 
   const handleCardDragStart = (e: React.DragEvent<HTMLDivElement>, application: ApplicationWithCandidate) => {
@@ -527,6 +580,14 @@ const VacancyDetailPage = () => {
                                     <div>{application.candidate?.source?.name ?? "Джерело невідоме"}</div>
                                     <div>{daysSince(application.applied_at)} дн. на стадії/у процесі</div>
                                   </div>
+                                  {upcomingInterviewsByApplication?.[application.id] && (
+                                    <Badge variant="outline" className="text-xs gap-1 font-normal">
+                                      <CalendarClock className="h-3 w-3" />
+                                      {new Date(
+                                        upcomingInterviewsByApplication[application.id].scheduled_at!,
+                                      ).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                    </Badge>
+                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -535,6 +596,15 @@ const VacancyDetailPage = () => {
                                   >
                                     <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
                                     Оцінка компетенцій
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full h-7 text-xs"
+                                    onClick={() => openMeetingDialog(application)}
+                                  >
+                                    <Video className="h-3.5 w-3.5 mr-1.5" />
+                                    Зустріч
                                   </Button>
                                   <div className="flex items-center justify-between gap-1 pt-1">
                                     <Button
@@ -627,6 +697,109 @@ const VacancyDetailPage = () => {
           candidateName={scoreDialogApplication.candidate?.full_name ?? "Без імені"}
         />
       )}
+
+      {/* Діалог "Зустріч" — призначення інтервʼю з Google Meet-лінком (schedule-interview) */}
+      <Dialog
+        open={!!meetingDialogApplication}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMeetingDialogApplication(null);
+            setMeetingResult(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Запланувати зустріч</DialogTitle>
+            <DialogDescription>
+              {meetingDialogApplication?.candidate?.full_name ?? "Кандидат"} — створюється подія в Google Calendar
+              з Meet-лінком (організатор — ви, поточний користувач)
+            </DialogDescription>
+          </DialogHeader>
+
+          {!meetingResult ? (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="meeting-datetime">Дата й час *</Label>
+                <Input
+                  id="meeting-datetime"
+                  type="datetime-local"
+                  value={meetingDate}
+                  onChange={(e) => setMeetingDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Тривалість</Label>
+                <Select value={meetingDuration} onValueChange={setMeetingDuration}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 хв</SelectItem>
+                    <SelectItem value="45">45 хв</SelectItem>
+                    <SelectItem value="60">60 хв</SelectItem>
+                    <SelectItem value="90">90 хв</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="meeting-candidate-email">Email кандидата</Label>
+                <Input
+                  id="meeting-candidate-email"
+                  type="email"
+                  value={meetingCandidateEmail}
+                  onChange={(e) => setMeetingCandidateEmail(e.target.value)}
+                  placeholder="candidate@example.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="meeting-note">Примітка</Label>
+                <Textarea
+                  id="meeting-note"
+                  value={meetingNote}
+                  onChange={(e) => setMeetingNote(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Зустріч заплановано. Google Meet-лінк:</p>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={meetingResult.meetLink ?? "—"} className="text-xs" />
+                <Button size="icon" variant="outline" onClick={handleCopyMeetLink} disabled={!meetingResult.meetLink}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              {meetingResult.eventLink && (
+                <a
+                  href={meetingResult.eventLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Відкрити подію в Google Calendar
+                </a>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            {!meetingResult ? (
+              <>
+                <Button type="button" variant="outline" onClick={() => setMeetingDialogApplication(null)}>
+                  Скасувати
+                </Button>
+                <Button onClick={handleScheduleMeeting} disabled={!meetingDate || scheduleInterview.isPending}>
+                  {scheduleInterview.isPending ? "Створення..." : "Створити зустріч"}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setMeetingDialogApplication(null)}>Готово</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={addDialogOpen}

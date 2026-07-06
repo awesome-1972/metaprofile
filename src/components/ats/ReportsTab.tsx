@@ -4,11 +4,12 @@
 // кандидату" / "Порівняльний звіт" (виклик Edge generate-candidate-report),
 // перегляд звіту (markdown без нових залежностей — <pre> whitespace-pre-wrap),
 // копіювання і завантаження .md, редактор промту вакансії (vacancy_prompts).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -29,6 +30,7 @@ import {
 } from "@/hooks/ats/use-candidate-reports";
 import { useVacancyPrompts, useSaveVacancyPrompt } from "@/hooks/ats/use-vacancy-prompts";
 import type { ApplicationWithCandidate } from "@/hooks/ats/use-applications";
+import { useInterviewsByApplication, useFetchMeetTranscript } from "@/hooks/ats/use-interviews";
 
 interface ReportsTabProps {
   vacancyId: string;
@@ -219,6 +221,16 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string>("");
   const [transcript, setTranscript] = useState("");
   const [extraNotes, setExtraNotes] = useState("");
+  const [transcriptDocUrl, setTranscriptDocUrl] = useState("");
+
+  // Інтервʼю обраної заявки — щоб знайти найсвіжіше interview_id для
+  // fetch-meet-transcript (Edge вимагає конкретний interview_id, у яке
+  // зберігається/оновлюється транскрипт).
+  const { data: applicationInterviews } = useInterviewsByApplication(
+    genKind === "candidate_report" ? selectedApplicationId || undefined : undefined,
+  );
+  const latestInterview = applicationInterviews?.[0] ?? null;
+  const fetchTranscript = useFetchMeetTranscript();
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewContent, setViewContent] = useState<{ title: string; content: string } | null>(null);
@@ -242,7 +254,27 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
     setSelectedApplicationId("");
     setTranscript("");
     setExtraNotes("");
+    setTranscriptDocUrl("");
     setGenDialogOpen(true);
+  };
+
+  // Після успішного fetch-meet-transcript useFetchMeetTranscript інвалідує
+  // interviews-запит цієї заявки; коли прийде повний transcript (не лише
+  // 500-символьний preview з відповіді Edge) — підставляємо його в textarea.
+  useEffect(() => {
+    if (latestInterview?.transcript) {
+      setTranscript(latestInterview.transcript);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestInterview?.transcript, latestInterview?.transcript_fetched_at]);
+
+  const handleFetchTranscript = () => {
+    if (!latestInterview || !transcriptDocUrl.trim()) return;
+    fetchTranscript.mutate({
+      interview_id: latestInterview.id,
+      doc_url_or_id: transcriptDocUrl.trim(),
+      application_id: selectedApplicationId,
+    });
   };
 
   const handleGenerate = () => {
@@ -417,12 +449,38 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
                 </Select>
               </div>
             )}
+            {genKind === "candidate_report" && (
+              <div className="space-y-1.5">
+                <Label>Google Doc транскрипта (URL)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={transcriptDocUrl}
+                    onChange={(e) => setTranscriptDocUrl(e.target.value)}
+                    placeholder="https://docs.google.com/document/d/..."
+                    disabled={!selectedApplicationId}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleFetchTranscript}
+                    disabled={!selectedApplicationId || !latestInterview || !transcriptDocUrl.trim() || fetchTranscript.isPending}
+                  >
+                    {fetchTranscript.isPending ? "Завантаження..." : "Підтягнути"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Лише готовий транскрипт (Meet → Transcripts), без розпізнавання мовлення. Потрібна запланована
+                  зустріч (кнопка «Зустріч» на картці) — транскрипт привʼязується до найсвіжішого інтервʼю заявки.
+                  {selectedApplicationId && !latestInterview && " У цієї заявки ще немає запланованого інтервʼю."}
+                </p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Транскрипція співбесіди</Label>
               <Textarea
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
-                placeholder="Вставте транскрипцію інтерв'ю (Google Meet, Zoom тощо)"
+                placeholder="Вставте транскрипцію інтерв'ю (Google Meet, Zoom тощо) або підтягніть кнопкою вище"
                 className="min-h-[140px]"
               />
             </div>
