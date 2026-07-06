@@ -1,38 +1,30 @@
-# Хендоф — ATS Metaprofile (стан на 2026-07-05)
+# Хендоф — ATS Metaprofile (стан на 2026-07-06, вечір)
 
-**Репо**: github.com/awesome-1972/metaprofile · гілка `main` · локально `npm run dev` → :8080
-**Supabase (прод)**: `mnpcevhzqgcrllymdmil` («MetaProfile Project»; старий Lovable-проєкт `qzmjeftxpaseobkexekg` недоступний, не використовувати). CLI: `supabase link --project-ref mnpcevhzqgcrllymdmil`; при глюку login-ролі — `$env:SUPABASE_DB_PASSWORD`.
-**Ключі**: нові формати `sb_publishable_...` у `.env` (поза git). Типи: `cmd /c "supabase gen types typescript --project-id mnpcevhzqgcrllymdmil > src\integrations\supabase\types.ts"` (не `>` у PowerShell — дасть UTF-16!).
+**Прод**: фронтенд https://metaprofile.pages.dev (Cloudflare Pages, авто з `main`, npm build; bun-локфайли видалені — не повертати). Вхід: /v2/auth → /ats/clients. Корінь `/` веде на V1-демо — свідомо, до переїзду на єдиний домен.
+**Supabase**: `mnpcevhzqgcrllymdmil`. Хаб: `vpgdjffmcnkqgwqdrsyd` (деплой функцій — з відповідної папки!).
+**Пастки середовища**: PowerShell `>` пише UTF-16 (типи генерувати через `cmd /c "... > ..."`); `&&` нема (використовувати `;`); пісочниця Claude віддає стейл-копії файлів — реальний стан через Read/host.
 
-## Що ПРАЦЮЄ (все локально, задеплоєна лише БД)
-- Схема ATS: 22 таблиці (міграції `20260704*` + `20260705100000`), RLS повністю, seed.
-- `/ats/*` (ролі admin/owner/recruiter): клієнти → проекти → вакансії → kanban з drag-and-drop → кандидати. Вкладки вакансії: Воронка / Бріф (68 дослівних питань, фінансові окремо під гейтом) / Компетенції (матриця з вагами) / Звіти (промти per-vacancy + генерація).
-- Скоринг компетенцій 1–3 у діалозі заявки, зважені бали, пороги 2.34/1.67.
-- Стадії воронки сіються з шаблону НАПРЯМУ під RLS (`seedVacancyStagesDirect`) — Edge не потрібна.
-- Користувач: v.poddubny@metavision.ua (admin через user_roles).
+## Зроблено (все в main)
+- Повний ATS: клієнти → проекти → вакансії (вкладки: Воронка/Бріф/Компетенції/Звіти) → kanban з DnD → кандидати (з бейджами вакансій) → комунікації (Resend, масові з batch/cancel) → резюме-парсинг (AI) → скоринг компетенцій 1–3 → AI-звіти (по кандидату + порівняльний, промти per-vacancy).
+- Онбординг: /ats/users (запрошення+ролі: owner/recruiter/assistant/admin), картка користувача (редагування імені, відповідальні вакансії, гранти, повторне запрошення, скидання пароля), /ats/access (гранти клієнт/проект/вакансія, фін-гейт), призначення відповідального рекрутера.
+- Auth: інвайти через Resend SMTP, форма встановлення пароля (invite/recovery), редіректи за ролями.
+- Edge задеплоєні (8): admin-invite-user, grant-management, send-communication, parse-resume, log-application-event, generate-candidate-report, erase-candidate (+ старі). НЕ задеплоєні: schedule-interview, fetch-meet-transcript (чекають Google Workspace), ref-replicator (чекає фасад хаба), seed-vacancy-stages (не потрібна — прямий шлях).
 
-## НЕ задеплоєно (свідомо — «все локально, потім деплой»)
-- 6 Edge Functions (написані): grant-management, ref-replicator, log-application-event, erase-candidate, seed-vacancy-stages, generate-candidate-report.
-- Фронтенд ніде не хоститься (нема Cloudflare Pages проєкту).
-- Для тесту AI-звітів мінімум: `supabase secrets set ANTHROPIC_API_KEY=...` + `supabase functions deploy generate-candidate-report`.
+## Перше завтра / чекає користувача
+1. Прод-верифікація: чи виконані auth URL-и (Site URL/Redirect https://metaprofile.pages.dev/**) + `supabase secrets set APP_ORIGIN=https://metaprofile.pages.dev`; тест повторного запрошення на проді (потрібен деплой admin-invite-user + build/push останніх правок, якщо не зроблені ввечері).
+2. **Лого агенції** → public/logo.png (для брендованого звіту).
+3. **Google Workspace** за docs/google-workspace-setup.md → потім deploy schedule-interview + fetch-meet-transcript.
+4. Тест AI-звіту на реальному кандидаті (транскрипти є в Drive користувача).
 
-## Наступні кроки (узгоджено)
-1. Деплой AI-функції + тест генерації звіту (по кандидату + порівняльний).
-2. M4b: резюме-парсинг (AI), комунікації з кандидатом (email/месенджери/SMS), Google Calendar, транскрибація з запису Google Meet.
-3. Vacancy-scope доступи: «виділений рекрутер» + роль «Асистент» (вимога 3; аналіз варіантів у docs/requirements/ats-agency-features.md хаба).
-4. Брендований файл звіту (лого) замість markdown.
-5. Фінальний деплой: Cloudflare Pages (субдомен) + всі Edge + секрети; заглушка Metaprofile у хабі → крос-лінк.
+## Черга далі
+- Заглушка Metaprofile у хабі → перехід на metaprofile.pages.dev (дрібне, у хабі).
+- Брендований docx/pdf звіт (зараз HTML-друк «Версія для клієнта»).
+- Telegram-відправка через бота; пресейл V1 demo-форма (падає на RLS demo_registrations).
+- Хаб-фасад довідника (ADR-009 Рішення 7) + ref-replicator.
+- Переїзд на власний домен (обхід блокувань *.pages.dev; єдиний домен із хабом — рішення власника).
 
-## Документи (в репо ХАБА studio-performance-hub)
-- ADR-010 (Accepted) — архітектура, агенційна модель.
-- docs/specs/metaprofile-ats-schema.md v2 (після security-аудиту, вердикт закрито).
-- docs/security/review-metaprofile-ats.md.
-- docs/requirements/ats-agency-features.md v2 — 8 вимог, Додатки A–C (артефакти Drive: матриця/промт/звіти; «Асистент»; бріф-форма).
-- docs/research/qwaybe-ideas.md — ідеї для survey/360 хаба.
-
-## C2C (хаб) — на паузі, стан
-Скоуп хендофа закритий повністю: Етап 2 (файли docx/xlsx/pdf у браузері, PII-псевдонімізація, verify-стадія з evidence) + стилі (легенда, MiniMap, skeleton) — усе на проді. Відкрите: опційний режим «Канва/Дерево»; поза-C2C — валідація 360 «1 керівник/1 self».
-
-## Застереження середовища (успадковані)
-- Пісочниця інколи віддає усічені копії щойно змінених файлів → хибні «end of file»; реальний стан — через Read/host або build.
-- EOL-шум LF↔CRLF — нешкідливий. PowerShell 5.1 не знає `&&` (використовувати `;`).
+## Хаб (паралельні хвости)
+- 360 «мʼяке закриття»: код ГОТОВИЙ у робочій копії хаба, але НЕ задеплоєний (build+push+db push+deploy 2 функцій+cron — інструкція в чаті 06.07). Дедлайни 6 запусків продовжені до 2026-07-13 SQL-ом.
+- 360 кампанія: Людмилі лишилась самооцінка; Марині — всі 6 її анкет (переплутані відповіді перенесені SQL-хірургією 06.07). Після завершення — фінальна перевірка і закриття.
+- Ідея з інциденту: у 360-анкеті показувати імʼя оцінювача + «це не я»; валідація «1 керівник/1 self».
+- C2C: закритий повністю; опційно «Канва/Дерево».
