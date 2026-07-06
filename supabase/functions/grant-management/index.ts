@@ -179,7 +179,48 @@ Deno.serve(async (req) => {
         console.error("grant-management list error:", error.message);
         return json({ error: "server_error" }, 500);
       }
-      return json({ ok: true, grants: data ?? [] });
+      const grants = data ?? [];
+
+      // Збагачення для UI: email/імʼя користувача + назва обʼєкта scope
+      // (клієнт/проект/вакансія). Batch-запити під service_role.
+      const userIds = [...new Set(grants.map((g) => g.user_id as string))];
+      const idsByType: Record<string, string[]> = { client: [], hiring_project: [], vacancy: [] };
+      for (const g of grants) {
+        const t = g.scope_type as string;
+        if (idsByType[t]) idsByType[t].push(g.scope_id as string);
+      }
+
+      const [profilesRes, clientsRes, projectsRes, vacanciesRes] = await Promise.all([
+        userIds.length
+          ? supabase.from("profiles").select("user_id, email, full_name").in("user_id", userIds)
+          : Promise.resolve({ data: [] as unknown[], error: null }),
+        idsByType.client.length
+          ? supabase.from("clients").select("id, name").in("id", idsByType.client)
+          : Promise.resolve({ data: [] as unknown[], error: null }),
+        idsByType.hiring_project.length
+          ? supabase.from("hiring_projects").select("id, name").in("id", idsByType.hiring_project)
+          : Promise.resolve({ data: [] as unknown[], error: null }),
+        idsByType.vacancy.length
+          ? supabase.from("vacancies").select("id, title").in("id", idsByType.vacancy)
+          : Promise.resolve({ data: [] as unknown[], error: null }),
+      ]);
+
+      const emailByUser = new Map(
+        ((profilesRes.data ?? []) as Array<{ user_id: string; email: string | null; full_name: string | null }>).map(
+          (p) => [p.user_id, p.full_name || p.email],
+        ),
+      );
+      const nameByScope = new Map<string, string>();
+      for (const c of (clientsRes.data ?? []) as Array<{ id: string; name: string }>) nameByScope.set(c.id, c.name);
+      for (const p of (projectsRes.data ?? []) as Array<{ id: string; name: string }>) nameByScope.set(p.id, p.name);
+      for (const v of (vacanciesRes.data ?? []) as Array<{ id: string; title: string }>) nameByScope.set(v.id, v.title);
+
+      const enriched = grants.map((g) => ({
+        ...g,
+        user_email: emailByUser.get(g.user_id as string) ?? null,
+        scope_name: nameByScope.get(g.scope_id as string) ?? null,
+      }));
+      return json({ ok: true, grants: enriched });
     }
 
     if (action === "grant") {
