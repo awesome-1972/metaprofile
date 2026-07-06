@@ -213,8 +213,13 @@ export type Database = {
           is_anonymized: boolean
           linkedin_url: string | null
           location: string | null
+          messengers: Json
           notes: string | null
           phone: string | null
+          resume_file_name: string | null
+          resume_parsed: Json | null
+          resume_text: string | null
+          resume_uploaded_at: string | null
           source_id: string | null
           updated_at: string
         }
@@ -230,8 +235,13 @@ export type Database = {
           is_anonymized?: boolean
           linkedin_url?: string | null
           location?: string | null
+          messengers?: Json
           notes?: string | null
           phone?: string | null
+          resume_file_name?: string | null
+          resume_parsed?: Json | null
+          resume_text?: string | null
+          resume_uploaded_at?: string | null
           source_id?: string | null
           updated_at?: string
         }
@@ -247,8 +257,13 @@ export type Database = {
           is_anonymized?: boolean
           linkedin_url?: string | null
           location?: string | null
+          messengers?: Json
           notes?: string | null
           phone?: string | null
+          resume_file_name?: string | null
+          resume_parsed?: Json | null
+          resume_text?: string | null
+          resume_uploaded_at?: string | null
           source_id?: string | null
           updated_at?: string
         }
@@ -258,6 +273,88 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "candidate_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidate_communications: {
+        Row: {
+          application_id: string | null
+          batch_id: string | null
+          body: string
+          candidate_id: string
+          channel: Database["public"]["Enums"]["comm_channel"]
+          created_at: string
+          created_by: string | null
+          direction: Database["public"]["Enums"]["comm_direction"]
+          error: string | null
+          external_id: string | null
+          id: string
+          scheduled_at: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["comm_status"]
+          subject: string | null
+          updated_at: string
+          vacancy_id: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          batch_id?: string | null
+          body: string
+          candidate_id: string
+          channel: Database["public"]["Enums"]["comm_channel"]
+          created_at?: string
+          created_by?: string | null
+          direction?: Database["public"]["Enums"]["comm_direction"]
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["comm_status"]
+          subject?: string | null
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          batch_id?: string | null
+          body?: string
+          candidate_id?: string
+          channel?: Database["public"]["Enums"]["comm_channel"]
+          created_at?: string
+          created_by?: string | null
+          direction?: Database["public"]["Enums"]["comm_direction"]
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["comm_status"]
+          subject?: string | null
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_communications_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_communications_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_communications_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
             referencedColumns: ["id"]
           },
         ]
@@ -1407,6 +1504,7 @@ export type Database = {
       }
       vacancies: {
         Row: {
+          assigned_recruiter_id: string | null
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -1426,6 +1524,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_recruiter_id?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1445,6 +1544,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_recruiter_id?: string | null
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1777,7 +1877,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "company" | "candidate" | "owner" | "recruiter"
+      app_role:
+        | "admin"
+        | "company"
+        | "candidate"
+        | "owner"
+        | "recruiter"
+        | "assistant"
       application_event_type:
         | "created"
         | "stage_changed"
@@ -1799,13 +1905,24 @@ export type Database = {
         | "on_hold"
       candidate_report_status: "generating" | "ready" | "failed"
       client_status: "active" | "prospect" | "archived"
+      comm_channel:
+        | "email"
+        | "telegram"
+        | "viber"
+        | "whatsapp"
+        | "linkedin"
+        | "facebook"
+        | "phone"
+        | "other"
+      comm_direction: "out" | "in"
+      comm_status: "draft" | "queued" | "sent" | "failed" | "cancelled"
       employment_type:
         | "full_time"
         | "part_time"
         | "contract"
         | "internship"
         | "temporary"
-      grant_scope: "client" | "hiring_project"
+      grant_scope: "client" | "hiring_project" | "vacancy"
       hiring_project_status:
         | "draft"
         | "active"
@@ -1990,7 +2107,14 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["admin", "company", "candidate", "owner", "recruiter"],
+      app_role: [
+        "admin",
+        "company",
+        "candidate",
+        "owner",
+        "recruiter",
+        "assistant",
+      ],
       application_event_type: [
         "created",
         "stage_changed",
@@ -2014,6 +2138,18 @@ export const Constants = {
       ],
       candidate_report_status: ["generating", "ready", "failed"],
       client_status: ["active", "prospect", "archived"],
+      comm_channel: [
+        "email",
+        "telegram",
+        "viber",
+        "whatsapp",
+        "linkedin",
+        "facebook",
+        "phone",
+        "other",
+      ],
+      comm_direction: ["out", "in"],
+      comm_status: ["draft", "queued", "sent", "failed", "cancelled"],
       employment_type: [
         "full_time",
         "part_time",
@@ -2021,7 +2157,7 @@ export const Constants = {
         "internship",
         "temporary",
       ],
-      grant_scope: ["client", "hiring_project"],
+      grant_scope: ["client", "hiring_project", "vacancy"],
       hiring_project_status: [
         "draft",
         "active",

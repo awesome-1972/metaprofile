@@ -3,7 +3,7 @@
  import { useAuthV2 } from "@/hooks/useAuthV2";
  import { Skeleton } from "@/components/ui/skeleton";
  
- export type AppRole = "admin" | "company" | "candidate" | "owner" | "recruiter";
+ export type AppRole = "admin" | "company" | "candidate" | "owner" | "recruiter" | "assistant";
 
  interface ProtectedRouteProps {
    children: ReactNode;
@@ -40,12 +40,12 @@
          return <Navigate to="/v2/company" replace />;
        } else if (roles.includes("candidate")) {
          return <Navigate to="/v2/candidate" replace />;
-       } else if (roles.includes("owner") || roles.includes("recruiter")) {
+       } else if (roles.includes("owner") || roles.includes("recruiter") || roles.includes("assistant")) {
          return <Navigate to="/ats/clients" replace />;
        }
        return <Navigate to="/v2/auth" replace />;
      }
    }
- 
+
    return <>{children}</>;
  };

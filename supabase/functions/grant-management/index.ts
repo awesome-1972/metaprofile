@@ -27,13 +27,29 @@
 //     200 { ok: true, grants: [...] }               (усі гранти; owner/admin only)
 //   POST { action: "update", grant_id, can_edit?, can_view_financials?, permissions? }
 //     200 { ok: true, grant_id, is_active }
+//   POST { action: "assign_recruiter", vacancy_id, user_id: uuid|null }
+//     200 { ok: true, vacancy_id, assigned_recruiter_id, grant_id: uuid|null }
+//     — Призначає/знімає відповідального рекрутера на вакансію
+//       (vacancies.assigned_recruiter_id, ПІД service_role, лише
+//       owner/admin — ліберальніше не потрібно: власник вакансії — не
+//       окрема концепція, авторизація тотожна action="grant").
+//     — Якщо user_id != null: атомарно (в межах цього виклику) також
+//       upsert vacancy-грант (scope_type='vacancy', scope_id=vacancy_id,
+//       can_edit=true) цьому користувачу, якщо активного гранта ще немає —
+//       інакше поле стало б лише візуальним ярликом без реального доступу
+//       (див. коментар у 20260706090000_ats_m4b_grants_comms_resume.sql).
+//     — Якщо user_id == null: лише знімає assigned_recruiter_id; існуючий
+//       vacancy-грант (якщо був) НЕ відкликається автоматично (явне
+//       revoke — окрема дія адміністратора, щоб не ламати доступ, виданий
+//       з іншої причини на ту саму вакансію).
 //
 //   401 { error: "unauthorized" }        — немає/невалідний JWT
 //   403 { error: "forbidden" }           — викликач не owner/admin
 //   404 { error: "scope_not_found" }     — scope_id не існує у відповідній таблиці
 //   404 { error: "grant_not_found" }     — grant_id не існує (revoke/update)
-//   422 { error: "invalid_scope_type" }  — scope_type поза {client,hiring_project}
-//   422 { error: "invalid_action" | "invalid_body" | ... }
+//   404 { error: "vacancy_not_found" }   — vacancy_id не існує (assign_recruiter)
+//   422 { error: "invalid_scope_type" }  — scope_type поза {client,hiring_project,vacancy}
+//   422 { error: "invalid_action" | "invalid_body" | "invalid_user_id" | ... }
 //   429 { error: "rate_limited" }        — забагато запитів (проста in-memory throttle)
 //   500 { error: "server_error" }
 //
@@ -56,7 +72,10 @@ const corsHeaders = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SCOPE_TYPES = new Set(["client", "hiring_project"]);
+// 'vacancy' — третій scope_type (М4b, гібрид V3, вимога 3): гранулярний грант
+// на одну вакансію, окремо від client/hiring_project. Валідується проти
+// vacancies (не clients/hiring_projects) у гілці action==="grant" нижче.
+const SCOPE_TYPES = new Set(["client", "hiring_project", "vacancy"]);
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -179,8 +198,8 @@ Deno.serve(async (req) => {
       if (permissions === null) return json({ error: "invalid_permissions" }, 422);
 
       // Валідація існування scope_id у відповідній таблиці (декларативний FK
-      // на дві таблиці неможливий — це відповідальність цієї функції).
-      const table = scopeType === "client" ? "clients" : "hiring_projects";
+      // на три таблиці неможливий — це відповідальність цієї функції).
+      const table = scopeType === "client" ? "clients" : scopeType === "hiring_project" ? "hiring_projects" : "vacancies";
       const { data: scopeRow, error: scopeErr } = await supabase
         .from(table)
         .select("id")
@@ -271,6 +290,94 @@ Deno.serve(async (req) => {
       }
       if (!revoked) return json({ error: "grant_not_found" }, 404);
       return json({ ok: true, grant_id: revoked.id, is_active: revoked.is_active });
+    }
+
+    if (action === "assign_recruiter") {
+      const vacancyId = body.vacancy_id;
+      if (!isUuid(vacancyId)) return json({ error: "invalid_body", detail: "vacancy_id" }, 422);
+
+      // user_id: uuid АБО null (зняти призначення). undefined — invalid_body.
+      let userId: string | null;
+      if (body.user_id === null) {
+        userId = null;
+      } else if (isUuid(body.user_id)) {
+        userId = body.user_id;
+      } else {
+        return json({ error: "invalid_user_id" }, 422);
+      }
+
+      // Перевірка існування вакансії (owner/admin вже підтверджено вище —
+      // авторизація для цієї дії тотожна дії "grant").
+      const { data: vacancy, error: vacErr } = await supabase
+        .from("vacancies")
+        .select("id, assigned_recruiter_id")
+        .eq("id", vacancyId)
+        .maybeSingle();
+      if (vacErr) {
+        console.error("grant-management assign_recruiter vacancy lookup error:", vacErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+      if (!vacancy) return json({ error: "vacancy_not_found" }, 404);
+
+      // 1) Запис vacancies.assigned_recruiter_id (UI-денормалізація) — ПІД
+      //    service_role, лише після підтвердженої owner/admin-авторизації.
+      const { error: assignErr } = await supabase
+        .from("vacancies")
+        .update({ assigned_recruiter_id: userId })
+        .eq("id", vacancyId);
+      if (assignErr) {
+        console.error("grant-management assign_recruiter update error:", assignErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+
+      // 2) Якщо призначаємо (user_id != null) — атомарно (в межах цього
+      //    виклику) гарантуємо реальний доступ: upsert vacancy-гранта
+      //    can_edit=true, якщо ще не існує активного гранта цьому
+      //    користувачу на цю вакансію. Повторний виклик = ідемпотентний
+      //    (upsert за унікальним (user_id, scope_type, scope_id)).
+      let grantId: string | null = null;
+      if (userId) {
+        const { data: existingGrant, error: existErr } = await supabase
+          .from("access_grants")
+          .select("id, is_active, can_edit")
+          .eq("user_id", userId)
+          .eq("scope_type", "vacancy")
+          .eq("scope_id", vacancyId)
+          .maybeSingle();
+        if (existErr) {
+          console.error("grant-management assign_recruiter grant lookup error:", existErr.message);
+          return json({ error: "server_error" }, 500);
+        }
+
+        if (!existingGrant || !existingGrant.is_active) {
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("access_grants")
+            .upsert(
+              {
+                user_id: userId,
+                scope_type: "vacancy",
+                scope_id: vacancyId,
+                can_edit: true,
+                can_view_financials: false,
+                permissions: {},
+                is_active: true,
+                granted_by: caller.id, // SEC-09: завжди з JWT, ніколи з body
+              },
+              { onConflict: "user_id,scope_type,scope_id" },
+            )
+            .select("id")
+            .single();
+          if (upsertErr || !upserted) {
+            console.error("grant-management assign_recruiter grant upsert error:", upsertErr?.message);
+            return json({ error: "server_error" }, 500);
+          }
+          grantId = upserted.id;
+        } else {
+          grantId = existingGrant.id;
+        }
+      }
+
+      return json({ ok: true, vacancy_id: vacancyId, assigned_recruiter_id: userId, grant_id: grantId });
     }
 
     return json({ error: "invalid_action" }, 422);

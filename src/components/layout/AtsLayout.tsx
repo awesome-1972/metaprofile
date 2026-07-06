@@ -14,13 +14,16 @@ const navItems = [
   { path: "/ats/projects", label: "Проекти найму", icon: Briefcase },
   { path: "/ats/vacancies", label: "Вакансії", icon: Users },
   { path: "/ats/candidates", label: "Кандидати", icon: User },
-  // Далі: налаштування доступів (наступна частина)
 ];
+
+// "Доступи" — лише admin/owner (мірор allowedRoles на маршруті /ats/access у App.tsx).
+const adminOnlyNavItems = [{ path: "/ats/access", label: "Доступи", icon: ShieldCheck }];
 
 export const AtsLayout = ({ children }: AtsLayoutProps) => {
   const location = useLocation();
   const { profile, signOut, isLoading, getPrimaryRole } = useAuthV2();
   const primaryRole = getPrimaryRole();
+  const isAdminLike = primaryRole === "admin" || primaryRole === "owner";
 
   const roleLabel =
     primaryRole === "owner"
@@ -29,7 +32,9 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
         ? "Адміністратор"
         : primaryRole === "recruiter"
           ? "Рекрутер"
-          : "Користувач";
+          : primaryRole === "assistant"
+            ? "Асистент"
+            : "Користувач";
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -76,10 +81,27 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
                 </li>
               );
             })}
-            <li className="px-3 py-2 text-xs text-muted-foreground/60 flex items-center gap-2">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Налаштування доступів — далі
-            </li>
+            {isAdminLike &&
+              adminOnlyNavItems.map((item) => {
+                const isActive = location.pathname.startsWith(item.path);
+                const Icon = item.icon;
+                return (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
           </ul>
         </nav>
 

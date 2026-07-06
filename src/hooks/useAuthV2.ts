@@ -3,7 +3,7 @@
  import { supabase } from "@/integrations/supabase/client";
  import type { User, Session } from "@supabase/supabase-js";
  
- type AppRole = "admin" | "company" | "candidate" | "owner" | "recruiter";
+ type AppRole = "admin" | "company" | "candidate" | "owner" | "recruiter" | "assistant";
  
  interface AuthState {
    user: User | null;
@@ -112,6 +112,7 @@
      if (state.roles.includes("admin")) return "admin";
      if (state.roles.includes("owner")) return "owner";
      if (state.roles.includes("recruiter")) return "recruiter";
+     if (state.roles.includes("assistant")) return "assistant";
      if (state.roles.includes("company")) return "company";
      if (state.roles.includes("candidate")) return "candidate";
      return null;

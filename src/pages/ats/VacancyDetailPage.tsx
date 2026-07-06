@@ -7,6 +7,7 @@ import { AtsLayout } from "@/components/layout/AtsLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,10 +40,17 @@ import {
   type ApplicationWithCandidate,
 } from "@/hooks/ats/use-applications";
 import { useCandidates, useCandidateSources, useCreateCandidate, useSearchCandidates } from "@/hooks/ats/use-candidates";
+import { useAssignRecruiter, useProfilesList } from "@/hooks/ats/use-grants";
+import {
+  useQueueBatchCommunication,
+  useSendBatchCommunication,
+  useCancelBatchCommunication,
+} from "@/hooks/ats/use-communications";
 import { BriefTab } from "@/components/ats/BriefTab";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
 
 type VacancyStatus = Database["public"]["Enums"]["vacancy_status"];
@@ -84,6 +92,11 @@ const newCandidateFormSchema = z.object({
   email: z.string().email("Некоректний email").optional().or(z.literal("")),
   phone: z.string().optional(),
   source_id: z.string().optional(),
+  telegram: z.string().optional(),
+  viber: z.string().optional(),
+  whatsapp: z.string().optional(),
+  linkedin: z.string().optional(),
+  facebook: z.string().optional(),
 });
 
 type NewCandidateFormValues = z.infer<typeof newCandidateFormSchema>;
@@ -99,6 +112,11 @@ const VacancyDetailPage = () => {
   const moveApplicationMutation = useMoveApplication();
   const createCandidate = useCreateCandidate();
   const { data: sources } = useCandidateSources();
+  const { data: profiles } = useProfilesList();
+  const assignRecruiter = useAssignRecruiter();
+  const queueBatch = useQueueBatchCommunication();
+  const sendBatch = useSendBatchCommunication();
+  const cancelBatch = useCancelBatchCommunication();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
@@ -110,13 +128,30 @@ const VacancyDetailPage = () => {
   const [activeTab, setActiveTab] = useState("pipeline");
   const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
 
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [bulkComposeOpen, setBulkComposeOpen] = useState(false);
+  const [bulkSubject, setBulkSubject] = useState("");
+  const [bulkBody, setBulkBody] = useState("");
+  const [pendingBatchId, setPendingBatchId] = useState<string | null>(null);
+
   const { data: allCandidates } = useCandidates();
   const { data: searchResults } = useSearchCandidates(search);
   const candidateOptions = search.trim() ? searchResults ?? [] : allCandidates ?? [];
 
   const newCandidateForm = useForm<NewCandidateFormValues>({
     resolver: zodResolver(newCandidateFormSchema),
-    defaultValues: { full_name: "", email: "", phone: "", source_id: "" },
+    defaultValues: {
+      full_name: "",
+      email: "",
+      phone: "",
+      source_id: "",
+      telegram: "",
+      viber: "",
+      whatsapp: "",
+      linkedin: "",
+      facebook: "",
+    },
   });
 
   const sortedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.position - b.position), [stages]);
@@ -159,6 +194,16 @@ const VacancyDetailPage = () => {
         email: values.email || null,
         phone: values.phone || null,
         source_id: values.source_id || null,
+        // messengers — jsonb-колонка з міграції 20260706090000, ще не в
+        // AtsCandidateInsert (types.ts не регенеровано); useCreateCandidate
+        // приймає її окремим полем (TODO: типи після gen types).
+        messengers: {
+          telegram: values.telegram || undefined,
+          viber: values.viber || undefined,
+          whatsapp: values.whatsapp || undefined,
+          linkedin: values.linkedin || undefined,
+          facebook: values.facebook || undefined,
+        },
       },
       {
         onSuccess: (candidate) => {
@@ -188,6 +233,49 @@ const VacancyDetailPage = () => {
   const handleMoveToStage = (application: ApplicationWithCandidate, stageId: string) => {
     if (!id) return;
     moveApplicationMutation.mutate({ applicationId: application.id, stageId, vacancyId: id });
+  };
+
+  const handleQueueBulk = () => {
+    if (!id || !bulkBody.trim() || selectedForBulk.size === 0) return;
+    queueBatch.mutate(
+      {
+        candidate_ids: Array.from(selectedForBulk),
+        vacancy_id: id,
+        subject: bulkSubject.trim() || undefined,
+        body: bulkBody.trim(),
+      },
+      {
+        onSuccess: ({ batch_id }) => {
+          setBulkComposeOpen(false);
+          setPendingBatchId(batch_id);
+        },
+      },
+    );
+  };
+
+  const handleConfirmSendBatch = () => {
+    if (!pendingBatchId) return;
+    sendBatch.mutate(pendingBatchId, {
+      onSuccess: () => {
+        setPendingBatchId(null);
+        setBulkMode(false);
+        setSelectedForBulk(new Set());
+        setBulkSubject("");
+        setBulkBody("");
+      },
+    });
+  };
+
+  const handleCancelBatch = () => {
+    if (!pendingBatchId) {
+      setBulkComposeOpen(false);
+      return;
+    }
+    cancelBatch.mutate(pendingBatchId, {
+      onSuccess: () => {
+        setPendingBatchId(null);
+      },
+    });
   };
 
   const handleCardDragStart = (e: React.DragEvent<HTMLDivElement>, application: ApplicationWithCandidate) => {
@@ -297,12 +385,56 @@ const VacancyDetailPage = () => {
                 {employmentTypeLabel[vacancy.employment_type]} · {vacancy.headcount} позиц.
               </span>
             </div>
+            <div className="flex items-center gap-2 mt-3">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">Відповідальний рекрутер</Label>
+              <Select
+                // TODO: типи після gen types — assigned_recruiter_id додано міграцією
+                // 20260706090000, ще не в types.ts (Vacancy Row).
+                value={(vacancy as unknown as { assigned_recruiter_id: string | null }).assigned_recruiter_id ?? ""}
+                onValueChange={(recruiterId) => {
+                  if (!id) return;
+                  assignRecruiter.mutate({ vacancy_id: id, recruiter_id: recruiterId || null });
+                }}
+              >
+                <SelectTrigger className="h-8 w-56 text-xs">
+                  <SelectValue placeholder="Не призначено" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(profiles ?? []).map((p) => (
+                    <SelectItem key={p.user_id} value={p.user_id}>
+                      {p.full_name || p.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(() => {
+                const assignedId = (vacancy as unknown as { assigned_recruiter_id: string | null })
+                  .assigned_recruiter_id;
+                const assignedProfile = (profiles ?? []).find((p) => p.user_id === assignedId);
+                return assignedProfile ? (
+                  <Badge variant="outline" className="text-xs">
+                    {assignedProfile.full_name || assignedProfile.email}
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
           </div>
           {activeTab === "pipeline" && (
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Додати кандидата
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={bulkMode ? "default" : "outline"}
+                onClick={() => {
+                  setBulkMode((v) => !v);
+                  setSelectedForBulk(new Set());
+                }}
+              >
+                Масова розсилка
+              </Button>
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Додати кандидата
+              </Button>
+            </div>
           )}
         </div>
 
@@ -369,12 +501,28 @@ const VacancyDetailPage = () => {
                                 }`}
                               >
                                 <CardContent className="p-3 space-y-2">
-                                  <Link
-                                    to={`/ats/candidates/${application.candidate_id}`}
-                                    className="font-medium text-sm hover:underline block truncate"
-                                  >
-                                    {application.candidate?.full_name ?? "Без імені"}
-                                  </Link>
+                                  <div className="flex items-start gap-2">
+                                    {bulkMode && (
+                                      <Checkbox
+                                        className="mt-0.5"
+                                        checked={selectedForBulk.has(application.candidate_id)}
+                                        onCheckedChange={(checked) => {
+                                          setSelectedForBulk((prev) => {
+                                            const next = new Set(prev);
+                                            if (checked) next.add(application.candidate_id);
+                                            else next.delete(application.candidate_id);
+                                            return next;
+                                          });
+                                        }}
+                                      />
+                                    )}
+                                    <Link
+                                      to={`/ats/candidates/${application.candidate_id}`}
+                                      className="font-medium text-sm hover:underline block truncate flex-1"
+                                    >
+                                      {application.candidate?.full_name ?? "Без імені"}
+                                    </Link>
+                                  </div>
                                   <div className="text-xs text-muted-foreground space-y-0.5">
                                     <div>{application.candidate?.source?.name ?? "Джерело невідоме"}</div>
                                     <div>{daysSince(application.applied_at)} дн. на стадії/у процесі</div>
@@ -434,6 +582,22 @@ const VacancyDetailPage = () => {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {bulkMode && selectedForBulk.size > 0 && (
+              <div className="sticky bottom-4 mt-4 flex justify-center">
+                <Card className="shadow-lg">
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <span className="text-sm font-medium">Обрано {selectedForBulk.size}</span>
+                    <Button size="sm" onClick={() => setBulkComposeOpen(true)}>
+                      Написати всім
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedForBulk(new Set())}>
+                      Скасувати вибір
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
@@ -571,6 +735,16 @@ const VacancyDetailPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wide">Месенджери</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input placeholder="Telegram (@username)" {...newCandidateForm.register("telegram")} />
+                    <Input placeholder="Viber (+380...)" {...newCandidateForm.register("viber")} />
+                    <Input placeholder="WhatsApp (+380...)" {...newCandidateForm.register("whatsapp")} />
+                    <Input placeholder="LinkedIn URL" {...newCandidateForm.register("linkedin")} />
+                    <Input placeholder="Facebook URL" {...newCandidateForm.register("facebook")} />
+                  </div>
+                </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setAddDialogOpen(false)}>
                     Скасувати
@@ -584,6 +758,75 @@ const VacancyDetailPage = () => {
               </form>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Діалог "Написати всім" — постановка масової розсилки в чергу */}
+      <Dialog
+        open={bulkComposeOpen}
+        onOpenChange={(open) => {
+          setBulkComposeOpen(open);
+          if (!open) {
+            setBulkSubject("");
+            setBulkBody("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Написати всім ({selectedForBulk.size})</DialogTitle>
+            <DialogDescription>
+              У тексті можна використати <code>{"{{name}}"}</code> — буде замінено на імʼя кожного кандидата
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Тема</Label>
+              <Input value={bulkSubject} onChange={(e) => setBulkSubject(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Текст листа</Label>
+              <Textarea
+                value={bulkBody}
+                onChange={(e) => setBulkBody(e.target.value)}
+                placeholder="Привіт, {{name}}!..."
+                rows={6}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setBulkComposeOpen(false)}>
+              Скасувати
+            </Button>
+            <Button onClick={handleQueueBulk} disabled={!bulkBody.trim() || queueBatch.isPending}>
+              {queueBatch.isPending ? "Постановка в чергу..." : "Поставити в чергу"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Підтвердження відправки/скасування партії (batch_id вже отримано з queue_batch) */}
+      <Dialog
+        open={!!pendingBatchId}
+        onOpenChange={(open) => {
+          if (!open) setPendingBatchId(null);
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Партія готова до відправки</DialogTitle>
+            <DialogDescription>
+              Розсилку поставлено в чергу ({selectedForBulk.size} кандидатів). Підтвердіть відправку або скасуйте.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCancelBatch} disabled={cancelBatch.isPending}>
+              {cancelBatch.isPending ? "Скасування..." : "Скасувати"}
+            </Button>
+            <Button onClick={handleConfirmSendBatch} disabled={sendBatch.isPending}>
+              {sendBatch.isPending ? "Відправка..." : "Відправити batch"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AtsLayout>

@@ -7,7 +7,29 @@ export type AtsCandidate = Database["public"]["Tables"]["ats_candidates"]["Row"]
 export type AtsCandidateInsert = Database["public"]["Tables"]["ats_candidates"]["Insert"];
 export type AtsCandidateUpdate = Database["public"]["Tables"]["ats_candidates"]["Update"];
 
-export type AtsCandidateWithSource = AtsCandidate & {
+// TODO: типи після gen types — messengers/resume_* колонки додані міграцією
+// 20260706090000_ats_m4b_grants_comms_resume.sql на ats_candidates, ще не
+// потрапили в types.ts (не регенеровано). Розширюємо Row/Insert/Update
+// локально, щоб не втратити типізацію решти (уже наявних) полів кандидата.
+export interface CandidateMessengers {
+  telegram?: string;
+  viber?: string;
+  whatsapp?: string;
+  linkedin?: string;
+  facebook?: string;
+}
+
+export interface CandidateResumeFields {
+  messengers: CandidateMessengers;
+  resume_file_name: string | null;
+  resume_text: string | null;
+  resume_parsed: Record<string, unknown> | null;
+  resume_uploaded_at: string | null;
+}
+
+export type AtsCandidateWithResume = AtsCandidate & CandidateResumeFields;
+
+export type AtsCandidateWithSource = AtsCandidateWithResume & {
   source: { id: string; name: string } | null;
   applications_count: number;
 };
@@ -87,7 +109,12 @@ export function useSearchCandidates(search: string) {
   });
 }
 
-/** Один кандидат за id, з джерелом (RLS: mp_can_access_candidate). */
+/**
+ * Один кандидат за id, з джерелом (RLS: mp_can_access_candidate).
+ * `select("*")` вже підхоплює нові колонки messengers/resume_* (RLS діє на
+ * рівні рядка, колонки не приховані) — типи звужуємо локальним каст, бо
+ * types.ts ще не регенеровано (TODO: типи після gen types).
+ */
 export function useCandidate(id: string | undefined) {
   return useQuery({
     queryKey: id ? candidateKey(id) : ["ats", "candidates", "unknown"],
@@ -103,7 +130,13 @@ export function useCandidate(id: string | undefined) {
         throw error;
       }
       if (!data) return null;
-      return { ...(data as AtsCandidate & { source: { id: string; name: string } | null }), applications_count: 0 };
+      // TODO: типи після gen types
+      const row = data as unknown as AtsCandidateWithResume & { source: { id: string; name: string } | null };
+      return {
+        ...row,
+        messengers: row.messengers ?? {},
+        applications_count: 0,
+      };
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -130,12 +163,23 @@ export function useCandidateSources() {
   });
 }
 
-/** Створення кандидата — будь-який внутрішній користувач (RLS: candidates_insert). */
+/**
+ * Створення кандидата — будь-який внутрішній користувач (RLS: candidates_insert).
+ * `messengers` — опційне поле поверх AtsCandidateInsert (TODO: типи після gen
+ * types, колонка ще не в types.ts) — приймаємо окремо і докладаємо `as`-каст
+ * лише на сам insert-виклик, щоб не втратити типізацію решти полів.
+ */
 export function useCreateCandidate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: AtsCandidateInsert): Promise<AtsCandidate> => {
-      const { data, error } = await supabase.from("ats_candidates").insert(payload).select().single();
+    mutationFn: async (
+      payload: AtsCandidateInsert & { messengers?: CandidateMessengers },
+    ): Promise<AtsCandidate> => {
+      // TODO: типи після gen types
+      const { data, error } = await (supabase.from("ats_candidates") as any)
+        .insert(payload)
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
@@ -165,6 +209,110 @@ export function useUpdateCandidate() {
     },
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+/**
+ * Оновлення месенджерів кандидата (jsonb, довільні канали) — той самий
+ * candidates_update RLS-предикат. Окремий хук, щоб не змішувати з
+ * AtsCandidateUpdate (messengers ще не в generated Update-типі).
+ * TODO: типи після gen types
+ */
+export function useUpdateCandidateMessengers() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      messengers,
+    }: {
+      id: string;
+      messengers: CandidateMessengers;
+    }): Promise<void> => {
+      // TODO: типи після gen types
+      const { error } = await (supabase.from("ats_candidates") as any)
+        .update({ messengers })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: CANDIDATES_KEY });
+      qc.invalidateQueries({ queryKey: candidateKey(variables.id) });
+      toast.success("Контакти оновлено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+interface ParseResumeResponse {
+  ok?: boolean;
+  resume_parsed?: Record<string, unknown>;
+  error?: string;
+  detail?: string;
+}
+
+function isEdgeNotDeployedError(error: { message?: string } | null): boolean {
+  const message = error?.message || "";
+  return /not.?found|failed to send|fetch|404/i.test(message);
+}
+
+const PARSE_RESUME_ERROR_LABELS: Record<string, string> = {
+  unauthorized: "Сесія недійсна — увійдіть повторно",
+  forbidden: "Немає доступу до цього кандидата",
+  invalid_body: "Некоректні дані запиту",
+  candidate_not_found: "Кандидата не знайдено",
+  ai_not_configured: "AI-функція ще не налаштована (відсутній ключ провайдера)",
+  server_error: "Внутрішня помилка сервера",
+};
+
+function parseResumeErrorMessage(code: string | undefined, detail?: string): string {
+  const label = code ? PARSE_RESUME_ERROR_LABELS[code] : undefined;
+  if (label) return detail ? `${label}: ${detail}` : label;
+  return detail || "Не вдалося розібрати резюме";
+}
+
+/**
+ * Виклик Edge Function `parse-resume` — надсилає вже витягнутий на клієнті
+ * (resume-parse-client.ts) plain text резюме на структурований AI-парсинг.
+ * Не падає, якщо функція ще не задеплоєна — показує toast.
+ */
+export function useParseResume() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      candidate_id: string;
+      resume_text: string;
+      file_name?: string;
+    }): Promise<ParseResumeResponse> => {
+      const { data, error } = await supabase.functions.invoke("parse-resume", {
+        body: {
+          candidate_id: payload.candidate_id,
+          resume_text: payload.resume_text,
+          file_name: payload.file_name,
+        },
+      });
+      if (error) {
+        const context = (error as { context?: { error?: string; detail?: string } })?.context;
+        if (context?.error) throw new Error(parseResumeErrorMessage(context.error, context.detail));
+        throw error;
+      }
+      const body = data as ParseResumeResponse;
+      if (body?.error) throw new Error(parseResumeErrorMessage(body.error, body.detail));
+      return body;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: candidateKey(variables.candidate_id) });
+      qc.invalidateQueries({ queryKey: CANDIDATES_KEY });
+      toast.success("Резюме розібрано");
+    },
+    onError: (error: { message?: string }) => {
+      if (isEdgeNotDeployedError(error)) {
+        toast.error("Функція ще не задеплоєна");
+        return;
+      }
+      toast.error(error?.message || "Не вдалося розібрати резюме");
     },
   });
 }

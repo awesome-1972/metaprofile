@@ -52,6 +52,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import VacancyDetailPage from "./pages/ats/VacancyDetailPage";
  import CandidatesListPage from "./pages/ats/CandidatesListPage";
  import CandidateDetailPage from "./pages/ats/CandidateDetailPage";
+ import AccessGrantsPage from "./pages/ats/AccessGrantsPage";
 
 const queryClient = new QueryClient();
 
@@ -221,6 +222,14 @@ const App = () => (
            element={
              <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
                <CandidateDetailPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/access"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner"]}>
+               <AccessGrantsPage />
              </ProtectedRoute>
            }
          />

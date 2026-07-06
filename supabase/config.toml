@@ -32,3 +32,9 @@ verify_jwt = true
 
 [functions.generate-candidate-report]
 verify_jwt = true
+
+[functions.parse-resume]
+verify_jwt = true
+
+[functions.send-communication]
+verify_jwt = true

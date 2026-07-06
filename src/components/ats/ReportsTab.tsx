@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Copy, Download, Sparkles, Users as UsersIcon } from "lucide-react";
+import { FileText, Copy, Download, Sparkles, Users as UsersIcon, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCandidateReports,
@@ -62,6 +62,150 @@ function downloadMarkdown(filename: string, content: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Мінімальний, без-залежностей markdown→HTML конвертер для клієнтської версії
+ * звіту: підтримує лише `## heading` → h2, порожній рядок = абзац, `- `/`* `
+ * рядки → ul/li. Навмисно НЕ повний markdown-парсер — досить для AI-звітів
+ * generate-candidate-report, які самі генеруються за простим шаблоном.
+ */
+function simpleMarkdownToHtml(markdown: string): string {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const htmlParts: string[] = [];
+  let listBuffer: string[] = [];
+  let paragraphBuffer: string[] = [];
+
+  const flushList = () => {
+    if (listBuffer.length > 0) {
+      htmlParts.push(`<ul>${listBuffer.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`);
+      listBuffer = [];
+    }
+  };
+  const flushParagraph = () => {
+    if (paragraphBuffer.length > 0) {
+      htmlParts.push(`<p>${escapeHtml(paragraphBuffer.join(" "))}</p>`);
+      paragraphBuffer = [];
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    const headingMatch = line.match(/^(#{1,3})\s+(.*)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const level = Math.min(headingMatch[1].length + 1, 4); // ## -> h2, ### -> h3
+      htmlParts.push(`<h${level}>${escapeHtml(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+    const listMatch = line.match(/^[-*]\s+(.*)$/);
+    if (listMatch) {
+      flushParagraph();
+      listBuffer.push(listMatch[1]);
+      continue;
+    }
+    flushList();
+    paragraphBuffer.push(line);
+  }
+  flushParagraph();
+  flushList();
+  return htmlParts.join("\n");
+}
+
+function buildClientReportHtml(title: string, markdown: string): string {
+  const bodyHtml = simpleMarkdownToHtml(markdown);
+  const today = new Date().toLocaleDateString("uk-UA", { year: "numeric", month: "long", day: "numeric" });
+  return `<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<title>${escapeHtml(title)} — Metavision</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1f2933;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    line-height: 1.6;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 20px;
+    margin-bottom: 32px;
+  }
+  header img { height: 40px; width: auto; display: block; }
+  header .agency-fallback {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 0.02em;
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 18px; margin-top: 28px; color: #111827; }
+  h3 { font-size: 15px; margin-top: 20px; color: #111827; }
+  p { margin: 10px 0; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #6b7280;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .print-btn {
+    background: #111827;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .print-btn:hover { background: #1f2937; }
+  @media print {
+    .print-btn { display: none; }
+    body { padding: 0 12px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <img src="/logo.png" alt="Metavision" onerror="this.style.display='none'; document.getElementById('agency-fallback').style.display='inline';" />
+    <span id="agency-fallback" class="agency-fallback" style="display:none;">Metavision</span>
+  </header>
+  <h1>${escapeHtml(title)}</h1>
+  <div class="report-body">
+    ${bodyHtml}
+  </div>
+  <footer>
+    <span>Звіт сформовано: ${escapeHtml(today)}</span>
+    <button class="print-btn" onclick="window.print()">Друк / зберегти PDF</button>
+  </footer>
+</body>
+</html>`;
 }
 
 export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
@@ -150,6 +294,24 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const handleDownload = () => {
     if (!viewContent) return;
     downloadMarkdown(`${viewContent.title.replace(/[^\p{L}\p{N}_-]+/gu, "_")}.md`, viewContent.content);
+  };
+
+  /**
+   * "Версія для клієнта" — окреме вікно (не React-дерево): document.write
+   * повного standalone HTML з інлайновими стилями/onerror-фолбеком на лого,
+   * кнопкою друку (inline onclick, бо це окремий document). Без нової Edge
+   * Function — переформатовує вже наявний markdown звіту (viewContent).
+   */
+  const handleOpenClientVersion = () => {
+    if (!viewContent) return;
+    const win = window.open("", "_blank");
+    if (!win) {
+      toast.error("Не вдалося відкрити нове вікно (заблоковано браузером)");
+      return;
+    }
+    const html = buildClientReportHtml(viewContent.title, viewContent.content);
+    win.document.write(html);
+    win.document.close();
   };
 
   const handleSavePrompt = () => {
@@ -297,6 +459,10 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
             <Button type="button" variant="outline" onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" />
               Завантажити .md
+            </Button>
+            <Button type="button" variant="outline" onClick={handleOpenClientVersion}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Версія для клієнта
             </Button>
           </DialogFooter>
         </DialogContent>
