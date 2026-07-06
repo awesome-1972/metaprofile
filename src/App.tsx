@@ -53,6 +53,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CandidatesListPage from "./pages/ats/CandidatesListPage";
  import CandidateDetailPage from "./pages/ats/CandidateDetailPage";
  import AccessGrantsPage from "./pages/ats/AccessGrantsPage";
+ import UsersPage from "./pages/ats/UsersPage";
 
 const queryClient = new QueryClient();
 
@@ -230,6 +231,14 @@ const App = () => (
            element={
              <ProtectedRoute allowedRoles={["admin", "owner"]}>
                <AccessGrantsPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/users"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner"]}>
+               <UsersPage />
              </ProtectedRoute>
            }
          />

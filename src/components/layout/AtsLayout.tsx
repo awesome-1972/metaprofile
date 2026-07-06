@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Building2, Briefcase, LogOut, User, Users, ShieldCheck } from "lucide-react";
+import { Building2, Briefcase, LogOut, User, Users, ShieldCheck, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,8 +16,12 @@ const navItems = [
   { path: "/ats/candidates", label: "Кандидати", icon: User },
 ];
 
-// "Доступи" — лише admin/owner (мірор allowedRoles на маршруті /ats/access у App.tsx).
-const adminOnlyNavItems = [{ path: "/ats/access", label: "Доступи", icon: ShieldCheck }];
+// "Доступи" і "Користувачі" — лише admin/owner (мірор allowedRoles на маршрутах
+// /ats/access і /ats/users у App.tsx).
+const adminOnlyNavItems = [
+  { path: "/ats/access", label: "Доступи", icon: ShieldCheck },
+  { path: "/ats/users", label: "Користувачі", icon: UserCog },
+];
 
 export const AtsLayout = ({ children }: AtsLayoutProps) => {
   const location = useLocation();

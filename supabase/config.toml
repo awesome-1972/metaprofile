@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.grant-management]
 verify_jwt = true
 
+[functions.admin-invite-user]
+verify_jwt = true
+
 [functions.ref-replicator]
 verify_jwt = false
 
