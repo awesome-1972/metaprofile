@@ -177,6 +177,13 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "unauthorized" }, 401);
     const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    // Клієнт від імені викликача — для RPC mp_can_* (auth.uid()); service_role
+    // uid=NULL → перевірки завжди false.
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+    );
     const {
       data: { user: caller },
       error: authError,
@@ -216,7 +223,7 @@ Deno.serve(async (req) => {
     }
     if (!interview) return json({ error: "interview_not_found" }, 404);
 
-    const { data: canAccess, error: accessErr } = await supabase.rpc("mp_can_access_application", {
+    const { data: canAccess, error: accessErr } = await supabaseAuth.rpc("mp_can_access_application", {
       p_application_id: interview.application_id,
     });
     if (accessErr) {
@@ -234,7 +241,7 @@ Deno.serve(async (req) => {
     const isOwnInterview = interview.interviewer_id === caller.id;
     let canWrite = isOwnInterview;
     if (!canWrite && vacancyId) {
-      const { data: canEdit, error: editErr } = await supabase.rpc("mp_can_edit_vacancy", {
+      const { data: canEdit, error: editErr } = await supabaseAuth.rpc("mp_can_edit_vacancy", {
         p_vacancy_id: vacancyId,
       });
       if (editErr) {

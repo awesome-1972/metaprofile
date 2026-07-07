@@ -130,6 +130,15 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "unauthorized" }, 401);
     const jwt = authHeader.replace(/^Bearer\s+/i, "");
+
+    // Клієнт від імені викликача (JWT у заголовку) — ПОТРІБЕН для RPC
+    // mp_can_* (вони спираються на auth.uid(); під service_role uid=NULL →
+    // перевірки завжди повертали б false). Записи лишаються під service_role.
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: `Bearer ${jwt}` } } },
+    );
     const {
       data: { user: caller },
       error: authError,
@@ -177,7 +186,7 @@ Deno.serve(async (req) => {
     const note = typeof body.note === "string" ? body.note.trim().slice(0, MAX_NOTE_LEN) : null;
 
     // --- 3. Scope-перевірка: mp_can_access_application (дзеркалить RLS) ---
-    const { data: canAccess, error: accessErr } = await supabase.rpc("mp_can_access_application", {
+    const { data: canAccess, error: accessErr } = await supabaseAuth.rpc("mp_can_access_application", {
       p_application_id: applicationId,
     });
     if (accessErr) {
@@ -203,7 +212,7 @@ Deno.serve(async (req) => {
     // mp_can_access_application (read-scope) недостатньо для write-дії —
     // без цієї другої перевірки read-only грант (can_edit=false) міг би
     // створювати реальні Google Calendar-події, що суперечить RLS-моделі.
-    const { data: canEdit, error: editErr } = await supabase.rpc("mp_can_edit_vacancy", {
+    const { data: canEdit, error: editErr } = await supabaseAuth.rpc("mp_can_edit_vacancy", {
       p_vacancy_id: application.vacancy_id,
     });
     if (editErr) {

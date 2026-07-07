@@ -158,7 +158,21 @@ export function useCreateApplication() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: ApplicationInsert): Promise<Application> => {
-      const { data, error } = await supabase.from("applications").insert(payload).select().single();
+      // Якщо стадію не задано явно — ставимо заявку на ПЕРШУ стадію воронки
+      // вакансії, інакше вона матиме current_stage_id=null і не покажеться
+      // в жодній kanban-колонці.
+      let insert = payload;
+      if (!payload.current_stage_id && payload.vacancy_id) {
+        const { data: firstStage } = await supabase
+          .from("pipeline_stages")
+          .select("id")
+          .eq("vacancy_id", payload.vacancy_id)
+          .order("position", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (firstStage) insert = { ...payload, current_stage_id: firstStage.id };
+      }
+      const { data, error } = await supabase.from("applications").insert(insert).select().single();
       if (error) throw error;
       return data;
     },
