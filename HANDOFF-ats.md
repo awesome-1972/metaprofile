@@ -1,4 +1,34 @@
-# Хендоф — ATS Metaprofile (стан на 2026-07-06, вечір)
+# Хендоф — ATS Metaprofile (стан на 2026-07-07, вечір)
+
+## ⚠️ ПЕРШЕ ЗАВТРА: закоммітити останній фікс (лежить локально, НЕ в git)
+```
+cd C:\Projects\metaprofile
+git add -A
+git commit -m "fix(ats): заявка на першу стадію + auth Google-функцій + лого"
+git push origin main
+```
+Файли поза git: `public/logo.png` (лого MetaVision), фікс `src/hooks/ats/use-applications.ts`
+(нова заявка → перша стадія), фікс `supabase/functions/{schedule-interview,fetch-meet-transcript}`
+(RPC-перевірки під JWT-клієнтом, не service_role), `supabase/.secrets.env.example`, `.gitignore`.
+Google-функції ВЖЕ передеплоєні (supabase functions deploy) — лишилось лише git push фронтенду.
+
+## Сесія 07.07 — що зроблено
+- **Google Workspace ЖИВИЙ**: service account + Domain-wide Delegation налаштовані;
+  `schedule-interview` (зустріч у Calendar з Meet-лінком — ПЕРЕВІРЕНО, подія створюється)
+  і `fetch-meet-transcript` задеплоєні. Секрети GOOGLE_SA_EMAIL/GOOGLE_SA_PRIVATE_KEY встановлені.
+  Обмеження: транскрибації аудіо НЕМАЄ — лише читання готового Google-Doc транскрипта Meet.
+- Фікс: 2 Google-функції відхиляли все як forbidden (RPC під service_role, auth.uid()=NULL) → JWT-клієнт.
+- Фікс: нові заявки мали current_stage_id=null і не показувались на kanban → тепер на першу стадію.
+- Лого MetaVision → public/logo.png (брендований звіт «Версія для клієнта»).
+- APP_ORIGIN=https://metaprofile.pages.dev виставлено; auth Site URL/Redirect — на прод.
+
+## Чекає користувача (не код)
+1. Git push останнього фіксу (див. вгорі).
+2. Тест транскрипта: провести Meet із увімкненим Transcript → URL Google-Doc → вкладка «Звіти» → «Підтягнути».
+3. Тест AI-звіту на реальному кандидаті (промт+компетенції+транскрипт → генерація).
+
+---
+# (попередній хендоф 2026-07-06)
 
 **Прод**: фронтенд https://metaprofile.pages.dev (Cloudflare Pages, авто з `main`, npm build; bun-локфайли видалені — не повертати). Вхід: /v2/auth → /ats/clients. Корінь `/` веде на V1-демо — свідомо, до переїзду на єдиний домен.
 **Supabase**: `mnpcevhzqgcrllymdmil`. Хаб: `vpgdjffmcnkqgwqdrsyd` (деплой функцій — з відповідної папки!).
