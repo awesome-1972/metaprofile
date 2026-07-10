@@ -11,6 +11,8 @@ export type HiringProjectWithClient = HiringProject & {
   client: { id: string; name: string } | null;
 };
 
+export type RequisitionApprovalStatus = Database["public"]["Enums"]["requisition_approval_status"];
+
 const PROJECTS_KEY = ["ats", "hiring_projects"] as const;
 const projectsByClientKey = (clientId: string) => ["ats", "hiring_projects", "client", clientId] as const;
 const projectKey = (id: string) => ["ats", "hiring_projects", id] as const;
@@ -141,6 +143,51 @@ export function useUpdateHiringProject() {
       qc.invalidateQueries({ queryKey: projectKey(data.id) });
       qc.invalidateQueries({ queryKey: projectsByClientKey(data.client_id) });
       toast.success("Зміни збережено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+const projectApprovalToast: Record<RequisitionApprovalStatus, string> = {
+  draft: "Requisition повернуто в чернетку",
+  pending_approval: "Заявку подано на затвердження",
+  approved: "Requisition затверджено",
+  changes_requested: "Повернуто на доопрацювання",
+  rejected: "Requisition відхилено",
+};
+
+/**
+ * Зміна стану requisition проекту найму (draft→pending_approval→approved /
+ * rejected / changes_requested). Серверний guard
+ * mp_hiring_projects_requisition_guard: decision-переходи — лише owner/admin
+ * або creator проекту; сам проставляє submitted_at / approved_by / approved_at.
+ * Тільки approved-проект дозволяє відкривати вакансії (status→open).
+ */
+export function useSetProjectApproval() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      approvalStatus,
+      note,
+    }: {
+      id: string;
+      approvalStatus: RequisitionApprovalStatus;
+      note?: string | null;
+    }): Promise<HiringProject> => {
+      const patch: HiringProjectUpdate = { approval_status: approvalStatus };
+      if (note !== undefined) patch.approval_note = note;
+      const { data, error } = await supabase.from("hiring_projects").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: projectKey(data.id) });
+      qc.invalidateQueries({ queryKey: projectsByClientKey(data.client_id) });
+      toast.success(projectApprovalToast[data.approval_status]);
     },
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));

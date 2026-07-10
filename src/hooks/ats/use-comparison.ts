@@ -39,6 +39,7 @@ export interface CandidateComparisonColumn {
   isScored: boolean;
   shortlistOverride: boolean;
   shortlistOverrideReason: string | null;
+  listState: Database["public"]["Enums"]["list_state"];
 }
 
 function computeWeightedScore(
@@ -129,6 +130,7 @@ export function useComparisonMatrix(vacancyId: string | undefined): ComparisonMa
         isScored: scoresByCompetency.size > 0,
         shortlistOverride: app.shortlist_override ?? false,
         shortlistOverrideReason: app.shortlist_override_reason ?? null,
+        listState: app.list_state ?? "none",
       };
     });
   }, [applications, allScores, competencies, mustHaveCompetencies]);

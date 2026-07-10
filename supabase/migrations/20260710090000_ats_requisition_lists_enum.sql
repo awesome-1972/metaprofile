@@ -1,0 +1,27 @@
+-- ============================================================
+-- Metaprofile ATS — MVP+ (roadmap-ATS-platform.md розділ 2):
+--   • Requisition + approval flow (draft→approve) на hiring_projects і vacancies
+--   • Long list / Short list як стани заявки (applications.list_state)
+-- ------------------------------------------------------------
+-- КРОК 0/2: розширення enum-типу application_event_type.
+-- КРИТИЧНО (як і 20260706085900_ats_m4b_enum.sql та 20260704090000_*):
+-- ALTER TYPE ... ADD VALUE НЕ можна виконати в одній транзакції разом із
+-- подальшим використанням нового значення (обмеження PostgreSQL) — тому нове
+-- значення 'list_state_changed' додається ОКРЕМОЮ, найпершою міграцією цієї
+-- фази. Наступна міграція (20260710090100_ats_requisition_lists.sql), де
+-- тригер mp_log_list_state_change ВСТАВЛЯЄ подію 'list_state_changed',
+-- застосовується окремою подальшою транзакцією, де значення вже видиме.
+--
+-- Requisition-події (submit/approve/reject) НЕ логуються в application_events —
+-- цей журнал append-only ПРО ЗАЯВКУ (per-application), а requisition-рішення
+-- належать вакансії/проекту (не заявці). Їх аудит фіксується самими колонками
+-- approval_status / approved_by / approved_at / approval_note (наступна
+-- міграція), тому нових application_event_type значень для них не додаємо.
+-- ============================================================
+
+-- list_state_changed: заявку перенесено між станами списку (none/long/short).
+-- Деталь переходу (from/to) — у application_events.metadata {from,to}, за
+-- аналогією зі 'stage_changed' (from_stage_id/to_stage_id). Окремих значень
+-- на кожен напрям (long/short/unlist) навмисно НЕ вводимо — один тип події
+-- + metadata достатньо й не роздуває enum.
+alter type public.application_event_type add value if not exists 'list_state_changed';

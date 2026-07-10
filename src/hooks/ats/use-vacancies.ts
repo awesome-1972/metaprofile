@@ -8,9 +8,16 @@ export type Vacancy = Database["public"]["Tables"]["vacancies"]["Row"];
 export type VacancyInsert = Database["public"]["Tables"]["vacancies"]["Insert"];
 export type VacancyUpdate = Database["public"]["Tables"]["vacancies"]["Update"];
 export type VacancyStatus = Database["public"]["Enums"]["vacancy_status"];
+export type RequisitionApprovalStatus = Database["public"]["Enums"]["requisition_approval_status"];
 
 export type VacancyWithProject = Vacancy & {
-  hiring_project: { id: string; name: string; client_id: string; client: { id: string; name: string } | null } | null;
+  hiring_project: {
+    id: string;
+    name: string;
+    client_id: string;
+    approval_status: RequisitionApprovalStatus;
+    client: { id: string; name: string } | null;
+  } | null;
   applications_count: number;
 };
 
@@ -36,7 +43,9 @@ export function useVacancies() {
     queryFn: async (): Promise<VacancyWithProject[]> => {
       const { data, error } = await supabase
         .from("vacancies")
-        .select("*, hiring_project:hiring_projects(id, name, client_id, client:clients(id, name)), applications(count)")
+        .select(
+          "*, hiring_project:hiring_projects(id, name, client_id, approval_status, client:clients(id, name)), applications(count)",
+        )
         .order("created_at", { ascending: false });
       if (error) {
         if (isPermissionDeniedError(error)) throw new Error("Немає доступу");
@@ -87,7 +96,9 @@ export function useVacancy(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from("vacancies")
-        .select("*, hiring_project:hiring_projects(id, name, client_id, client:clients(id, name)), applications(count)")
+        .select(
+          "*, hiring_project:hiring_projects(id, name, client_id, approval_status, client:clients(id, name)), applications(count)",
+        )
         .eq("id", id)
         .maybeSingle();
       if (error) {
@@ -173,4 +184,52 @@ export function useUpdateVacancyStatus() {
     mutate: (args: { id: string; status: VacancyStatus }) =>
       updateVacancy.mutate({ id: args.id, patch: { status: args.status } }),
   };
+}
+
+const approvalToast: Record<RequisitionApprovalStatus, string> = {
+  draft: "Requisition повернуто в чернетку",
+  pending_approval: "Заявку подано на затвердження",
+  approved: "Requisition затверджено",
+  changes_requested: "Повернуто на доопрацювання",
+  rejected: "Requisition відхилено",
+};
+
+/**
+ * Зміна стану requisition вакансії (draft→pending_approval→approved / rejected /
+ * changes_requested) — Requisition + approval flow (roadmap-ATS-platform.md
+ * розділ 2). Серверний guard mp_vacancies_requisition_guard:
+ *   • decision-переходи (approved/changes_requested/rejected) дозволені лише
+ *     owner/admin або відповідальному (assigned recruiter / hiring manager /
+ *     creator) — інакше 42501 «Немає доступу»;
+ *   • сам проставляє submitted_at / approved_by / approved_at.
+ * approval_note (коментар/причина) — опційний; передається лише коли задано.
+ */
+export function useSetVacancyApproval() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      approvalStatus,
+      note,
+    }: {
+      id: string;
+      approvalStatus: RequisitionApprovalStatus;
+      note?: string | null;
+    }): Promise<Vacancy> => {
+      const patch: VacancyUpdate = { approval_status: approvalStatus };
+      if (note !== undefined) patch.approval_note = note;
+      const { data, error } = await supabase.from("vacancies").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: VACANCIES_KEY });
+      qc.invalidateQueries({ queryKey: vacancyKey(data.id) });
+      qc.invalidateQueries({ queryKey: vacanciesByProjectKey(data.hiring_project_id) });
+      toast.success(approvalToast[data.approval_status]);
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
 }

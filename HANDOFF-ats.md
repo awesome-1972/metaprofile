@@ -1,3 +1,70 @@
+# Хендоф — ATS Metaprofile (стан на 2026-07-10)
+
+## Сесія 10.07 — Requisition + approval flow + Long/Short list стани (MVP+)
+
+Реалізовано наступні два пункти roadmap (docs/roadmap-ATS-platform.md, розділ 2 «MVP+»).
+Рішення власника по розвилках: **обидва рівні** requisition (проект + вакансія);
+затверджує **owner/admin АБО відповідальний**; Long/Short list — **окрема вкладка «Списки»**.
+
+### ⚠️ ПЕРШЕ ЗАВТРА (обовʼязково перед push)
+1. **Build/lint/typecheck НЕ прогнані в цій сесії** — пісочниця віддавала пошкоджені
+   (обрізані) копії навіть незмінених файлів (`use-competencies.ts` тощо) + індекс git
+   у пісочниці був corrupt. Реальні файли на хості коректні (перевірено через Read).
+   Перед комітом локально прогнати:
+   ```
+   npm run lint && npx tsc -p tsconfig.app.json --noEmit && npm run build
+   ```
+2. **Застосувати 2 нові міграції** (порядок критичний — enum окремо перший):
+   ```
+   supabase db push        # або migration up
+   ```
+   - `20260710090000_ats_requisition_lists_enum.sql` — `application_event_type += 'list_state_changed'`
+     (ALTER TYPE ADD VALUE не можна в одній tx з використанням — тому окремо).
+   - `20260710090100_ats_requisition_lists.sql` — enum `requisition_approval_status`/`list_state`,
+     approval-колонки на hiring_projects+vacancies, `applications.list_state`+listed_at/by,
+     guard-тригери (авторизація рішення + гейт open/active + both-level ієрархія),
+     аудит-тригер list_state, **BACKFILL** існуючих не-draft рядків у `approved`.
+3. **Перегенерувати типи БД** після застосування міграцій (я пропатчив `types.ts` вручну
+   під нові колонки/enum, але краще звірити авто-генерацією):
+   ```
+   cmd /c "supabase gen types typescript --project-id mnpcevhzqgcrllymdmil > src/integrations/supabase/types.ts"
+   ```
+   (PowerShell `>` пише UTF-16 — тільки через `cmd /c`, як і раніше.)
+
+### Що зроблено (файли)
+- Міграції: 2 нові (див. вище).
+- `types.ts`: додано колонки на applications/vacancies/hiring_projects, enum
+  `requisition_approval_status`/`list_state`, подію `list_state_changed`.
+- Хуки: `use-vacancies.ts` (`useSetVacancyApproval`, тип у VacancyWithProject +
+  `hiring_project.approval_status` у select), `use-hiring-projects.ts`
+  (`useSetProjectApproval`), `use-applications.ts` (`useSetListState`, тип `ListState`),
+  `use-comparison.ts` (`listState` у колонці матриці).
+- UI: `components/ats/RequisitionPanel.tsx` (submit/approve/changes/reject з нотаткою,
+  спільний для проекту й вакансії), `components/ats/ListsTab.tsx` (3 колонки
+  У воронці/Long/Short + promote/demote), вкладка «Списки» + панель requisition над
+  табами у `VacancyDetailPage.tsx`, панель requisition у `ProjectDetailPage.tsx`,
+  бейдж+швидкий promote list_state на картках воронки, «→ Short list» у матриці порівняння.
+
+### Бізнес-правила (у guard-тригерах, не лише UI)
+- Рішення (approve/changes_requested/rejected): вакансія — owner/admin або
+  assigned_recruiter/hiring_manager/creator; проект — owner/admin або creator.
+  Інакше 42501. UI ховає кнопки, але фінальний гейт — БД.
+- `vacancy.status→open` лише коли **і вакансія, і проект-батько** approved.
+- `hiring_project.status→active` лише коли проект approved.
+- Submit (draft→pending_approval) — будь-який редактор scope (RLS mp_can_edit_*).
+- Сервер сам проставляє submitted_at/requested_by/approved_by/approved_at (клієнт
+  шле лише approval_status + note).
+- list_state ортогональний до стадії воронки; зміна пише подію `list_state_changed`
+  (metadata {from,to}) в append-only журнал.
+
+### Тест наскрізь (після міграцій)
+1. Проект у draft → «Подати на затвердження» → owner «Затвердити» → активувати проект.
+2. Вакансія: спроба open до approve → помилка гейта; після approve вакансії+проекту → open.
+3. Кандидати: воронка → «→ Long list» / «→ Short list»; вкладка «Списки» — переміщення;
+   матриця порівняння «→ Short list»; перевірити подію в стрічці кандидата.
+
+---
+
 # Хендоф — ATS Metaprofile (стан на 2026-07-07, вечір)
 
 ## ⚠️ ПЕРШЕ ЗАВТРА: закоммітити останній фікс (лежить локально, НЕ в git)

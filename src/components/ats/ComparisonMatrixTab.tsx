@@ -26,10 +26,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ShieldAlert, ShieldCheck, Users } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Star, Users } from "lucide-react";
 import { groupCompetencies } from "@/hooks/ats/use-competencies";
 import { useComparisonMatrix, type CandidateComparisonColumn } from "@/hooks/ats/use-comparison";
-import { useSetShortlistOverride } from "@/hooks/ats/use-applications";
+import { useSetShortlistOverride, useSetListState } from "@/hooks/ats/use-applications";
 import type { ScoreVerdict } from "@/hooks/ats/use-competency-scores";
 
 interface ComparisonMatrixTabProps {
@@ -51,6 +51,7 @@ const scoreBadgeClass: Record<number, string> = {
 export function ComparisonMatrixTab({ vacancyId }: ComparisonMatrixTabProps) {
   const { competencies, scoredColumns, unscoredColumns, isLoading, hasMatrix } = useComparisonMatrix(vacancyId);
   const setOverride = useSetShortlistOverride();
+  const setListState = useSetListState();
 
   const groups = useMemo(() => groupCompetencies(competencies), [competencies]);
 
@@ -149,6 +150,28 @@ export function ComparisonMatrixTab({ vacancyId }: ComparisonMatrixTabProps) {
                       >
                         {col.shortlistOverride ? "Змінити override" : "Ручний вибір у short-list"}
                       </Button>
+                      {col.listState === "short_list" ? (
+                        <Badge className="text-[10px] gap-1 bg-amber-100 text-amber-800">
+                          <Star className="h-3 w-3" />У short list
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-[11px] px-2 text-amber-700"
+                          disabled={setListState.isPending}
+                          onClick={() =>
+                            setListState.mutate({
+                              applicationId: col.applicationId,
+                              vacancyId,
+                              listState: "short_list",
+                            })
+                          }
+                        >
+                          <Star className="h-3 w-3 mr-1" />
+                          → Short list
+                        </Button>
+                      )}
                     </div>
                   </TableHead>
                 ))}

@@ -8,6 +8,7 @@ export type Application = Database["public"]["Tables"]["applications"]["Row"];
 export type ApplicationInsert = Database["public"]["Tables"]["applications"]["Insert"];
 export type ApplicationEvent = Database["public"]["Tables"]["application_events"]["Row"];
 export type ApplicationEventType = Database["public"]["Enums"]["application_event_type"];
+export type ListState = Database["public"]["Enums"]["list_state"];
 
 export type ApplicationWithCandidate = Application & {
   candidate: (AtsCandidate & { source: { id: string; name: string } | null }) | null;
@@ -259,6 +260,53 @@ export function useSetShortlistOverride() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: applicationsByVacancyKey(variables.vacancyId) });
       toast.success(variables.override ? "Кандидата додано в short list (ручний override)" : "Override знято");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+const listStateToast: Record<ListState, string> = {
+  none: "Кандидата прибрано зі списків",
+  long_list: "Кандидата додано в long list",
+  short_list: "Кандидата додано в short list",
+};
+
+/**
+ * Перенесення заявки між станами списку (none/long_list/short_list) — Long/Short
+ * list як стани (roadmap-ATS-platform.md розділ 2). Ортогонально до стадії
+ * воронки: змінює лише applications.list_state. Серверні тригери
+ * (mp_applications_list_state_stamp / mp_log_list_state_change) проставляють
+ * listed_at/listed_by і пишуть подію 'list_state_changed' у append-only журнал —
+ * тут нічого додатково логувати не треба. RLS: applications_update →
+ * mp_can_edit_vacancy(vacancy_id) (той самий гейт, що й переміщення заявки).
+ */
+export function useSetListState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      applicationId,
+      listState,
+    }: {
+      applicationId: string;
+      vacancyId: string;
+      listState: ListState;
+    }): Promise<Application> => {
+      const { data, error } = await supabase
+        .from("applications")
+        .update({ list_state: listState })
+        .eq("id", applicationId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      qc.invalidateQueries({ queryKey: applicationsByVacancyKey(variables.vacancyId) });
+      qc.invalidateQueries({ queryKey: eventsByApplicationKey(variables.applicationId) });
+      qc.invalidateQueries({ queryKey: applicationsByCandidateKey(data.candidate_id) });
+      toast.success(listStateToast[variables.listState]);
     },
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));

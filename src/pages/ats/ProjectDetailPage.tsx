@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Briefcase, Building2, Calendar, Users, Plus } from "lucide-react";
-import { useHiringProject } from "@/hooks/ats/use-hiring-projects";
+import { useHiringProject, useSetProjectApproval } from "@/hooks/ats/use-hiring-projects";
 import { useVacanciesByProject, useCreateVacancy } from "@/hooks/ats/use-vacancies";
+import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
+import { useAuthV2 } from "@/hooks/useAuthV2";
 import type { Database } from "@/integrations/supabase/types";
 
 type HiringProjectStatus = Database["public"]["Enums"]["hiring_project_status"];
@@ -88,7 +90,12 @@ const ProjectDetailPage = () => {
   const { data: project, isLoading, isError, error } = useHiringProject(id);
   const { data: vacancies, isLoading: vacanciesLoading } = useVacanciesByProject(id);
   const createVacancy = useCreateVacancy();
+  const setApproval = useSetProjectApproval();
+  const { user, hasRole } = useAuthV2();
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const isWorkspaceAdmin = hasRole("owner") || hasRole("admin");
+  const isInternal = isWorkspaceAdmin || hasRole("recruiter") || hasRole("assistant");
 
   const form = useForm<VacancyFormValues>({
     resolver: zodResolver(vacancyFormSchema),
@@ -179,32 +186,48 @@ const ProjectDetailPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Briefcase className="h-4 w-4" />
-                Реквізити
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {project.description && (
-                <div>
-                  <span className="text-muted-foreground">Опис: </span>
-                  {project.description}
+          <div className="lg:col-span-1 space-y-6">
+            <RequisitionPanel
+              level="project"
+              approvalStatus={project.approval_status}
+              approvalNote={project.approval_note}
+              submittedAt={project.submitted_at}
+              approvedAt={project.approved_at}
+              canApprove={isWorkspaceAdmin || (!!user && user.id === project.created_by)}
+              canEdit={isInternal}
+              isBusy={setApproval.isPending}
+              onSubmit={() => id && setApproval.mutate({ id, approvalStatus: "pending_approval" })}
+              onDecide={(status, note) => id && setApproval.mutate({ id, approvalStatus: status, note })}
+              onReturnToDraft={() => id && setApproval.mutate({ id, approvalStatus: "draft", note: null })}
+            />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Briefcase className="h-4 w-4" />
+                  Реквізити
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {project.description && (
+                  <div>
+                    <span className="text-muted-foreground">Опис: </span>
+                    {project.description}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Старт: </span>
+                  {project.start_date ? new Date(project.start_date).toLocaleDateString("uk-UA") : "—"}
                 </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Старт: </span>
-                {project.start_date ? new Date(project.start_date).toLocaleDateString("uk-UA") : "—"}
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Дедлайн: </span>
-                {project.target_date ? new Date(project.target_date).toLocaleDateString("uk-UA") : "—"}
-              </div>
-            </CardContent>
-          </Card>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Дедлайн: </span>
+                  {project.target_date ? new Date(project.target_date).toLocaleDateString("uk-UA") : "—"}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">

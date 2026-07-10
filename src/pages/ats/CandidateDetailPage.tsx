@@ -89,6 +89,7 @@ const eventTypeLabel: Record<ApplicationEventType, string> = {
   withdrawn: "Кандидат відкликав заявку",
   reactivated: "Відновлено",
   assessment_linked: "Привʼязано оцінку",
+  list_state_changed: "Зміна списку (long/short)",
 };
 
 const commStatusLabel: Record<CommStatus, string> = {

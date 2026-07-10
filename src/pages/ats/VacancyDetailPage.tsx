@@ -30,19 +30,23 @@ import {
   ChevronRight,
   ClipboardList,
   Copy,
+  ListChecks,
   MapPin,
   Plus,
+  Star,
   Users,
   Video,
 } from "lucide-react";
-import { useVacancy } from "@/hooks/ats/use-vacancies";
+import { useVacancy, useSetVacancyApproval } from "@/hooks/ats/use-vacancies";
 import { usePipelineStages, useSeedVacancyStages } from "@/hooks/ats/use-pipeline";
 import {
   useApplicationsByStage,
   useCreateApplication,
   useMoveApplication,
+  useSetListState,
   type ApplicationWithCandidate,
 } from "@/hooks/ats/use-applications";
+import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useCandidates, useCandidateSources, useCreateCandidate, useSearchCandidates } from "@/hooks/ats/use-candidates";
 import { useAssignRecruiter, useProfilesList } from "@/hooks/ats/use-grants";
 import {
@@ -55,6 +59,8 @@ import { BriefTab } from "@/components/ats/BriefTab";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
 import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
+import { ListsTab } from "@/components/ats/ListsTab";
+import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
@@ -116,6 +122,9 @@ const VacancyDetailPage = () => {
   const seedStages = useSeedVacancyStages();
   const createApplication = useCreateApplication();
   const moveApplicationMutation = useMoveApplication();
+  const setListState = useSetListState();
+  const setApproval = useSetVacancyApproval();
+  const { user, hasRole } = useAuthV2();
   const createCandidate = useCreateCandidate();
   const { data: sources } = useCandidateSources();
   const { data: profiles } = useProfilesList();
@@ -167,6 +176,9 @@ const VacancyDetailPage = () => {
       facebook: "",
     },
   });
+
+  const isWorkspaceAdmin = hasRole("owner") || hasRole("admin");
+  const isInternal = isWorkspaceAdmin || hasRole("recruiter") || hasRole("assistant");
 
   const sortedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.position - b.position), [stages]);
 
@@ -492,9 +504,42 @@ const VacancyDetailPage = () => {
           )}
         </div>
 
+        {(() => {
+          const responsibleIds = [
+            vacancy.assigned_recruiter_id,
+            vacancy.hiring_manager_id,
+            vacancy.created_by,
+          ].filter(Boolean) as string[];
+          const canApprove = isWorkspaceAdmin || (!!user && responsibleIds.includes(user.id));
+          const projectApproved = vacancy.hiring_project?.approval_status === "approved";
+          const gateHint =
+            vacancy.approval_status === "approved" && !projectApproved
+              ? "Вакансію затверджено, але проект-батько ще не затверджений — відкрити вакансію можна лише після approve проекту."
+              : undefined;
+          return (
+            <div className="mb-6">
+              <RequisitionPanel
+                level="vacancy"
+                approvalStatus={vacancy.approval_status}
+                approvalNote={vacancy.approval_note}
+                submittedAt={vacancy.submitted_at}
+                approvedAt={vacancy.approved_at}
+                canApprove={canApprove}
+                canEdit={isInternal}
+                isBusy={setApproval.isPending}
+                onSubmit={() => id && setApproval.mutate({ id, approvalStatus: "pending_approval" })}
+                onDecide={(status, note) => id && setApproval.mutate({ id, approvalStatus: status, note })}
+                onReturnToDraft={() => id && setApproval.mutate({ id, approvalStatus: "draft", note: null })}
+                gateHint={gateHint}
+              />
+            </div>
+          );
+        })()}
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="pipeline">Воронка</TabsTrigger>
+            <TabsTrigger value="lists">Списки</TabsTrigger>
             <TabsTrigger value="brief">Бріф</TabsTrigger>
             <TabsTrigger value="competencies">Компетенції</TabsTrigger>
             <TabsTrigger value="comparison">Порівняння</TabsTrigger>
@@ -590,6 +635,54 @@ const VacancyDetailPage = () => {
                                       ).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                                     </Badge>
                                   )}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {application.list_state === "long_list" && (
+                                      <Badge className="text-[10px] gap-1 bg-purple-100 text-purple-800">
+                                        <ListChecks className="h-3 w-3" />
+                                        Long list
+                                      </Badge>
+                                    )}
+                                    {application.list_state === "short_list" && (
+                                      <Badge className="text-[10px] gap-1 bg-amber-100 text-amber-800">
+                                        <Star className="h-3 w-3" />
+                                        Short list
+                                      </Badge>
+                                    )}
+                                    {application.list_state !== "short_list" ? (
+                                      <button
+                                        type="button"
+                                        className="text-[11px] text-primary hover:underline disabled:opacity-50"
+                                        disabled={setListState.isPending}
+                                        onClick={() =>
+                                          id &&
+                                          setListState.mutate({
+                                            applicationId: application.id,
+                                            vacancyId: id,
+                                            listState:
+                                              application.list_state === "long_list" ? "short_list" : "long_list",
+                                          })
+                                        }
+                                      >
+                                        {application.list_state === "long_list" ? "→ Short list" : "→ Long list"}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="text-[11px] text-muted-foreground hover:underline disabled:opacity-50"
+                                        disabled={setListState.isPending}
+                                        onClick={() =>
+                                          id &&
+                                          setListState.mutate({
+                                            applicationId: application.id,
+                                            vacancyId: id,
+                                            listState: "none",
+                                          })
+                                        }
+                                      >
+                                        прибрати
+                                      </button>
+                                    )}
+                                  </div>
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -672,6 +765,10 @@ const VacancyDetailPage = () => {
                 </Card>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="lists" className="pt-4">
+            {id && <ListsTab vacancyId={id} />}
           </TabsContent>
 
           <TabsContent value="brief" className="pt-4">

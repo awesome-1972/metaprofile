@@ -148,6 +148,9 @@ export type Database = {
           created_by: string | null
           current_stage_id: string | null
           id: string
+          list_state: Database["public"]["Enums"]["list_state"]
+          listed_at: string | null
+          listed_by: string | null
           shortlist_override: boolean
           shortlist_override_reason: string | null
           status: Database["public"]["Enums"]["application_status"]
@@ -162,6 +165,9 @@ export type Database = {
           created_by?: string | null
           current_stage_id?: string | null
           id?: string
+          list_state?: Database["public"]["Enums"]["list_state"]
+          listed_at?: string | null
+          listed_by?: string | null
           shortlist_override?: boolean
           shortlist_override_reason?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -176,6 +182,9 @@ export type Database = {
           created_by?: string | null
           current_stage_id?: string | null
           id?: string
+          list_state?: Database["public"]["Enums"]["list_state"]
+          listed_at?: string | null
+          listed_by?: string | null
           shortlist_override?: boolean
           shortlist_override_reason?: string | null
           status?: Database["public"]["Enums"]["application_status"]
@@ -927,6 +936,10 @@ export type Database = {
       }
       hiring_projects: {
         Row: {
+          approval_note: string | null
+          approval_status: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at: string | null
+          approved_by: string | null
           client_id: string
           code: string | null
           created_at: string
@@ -934,12 +947,18 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          requested_by: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["hiring_project_status"]
+          submitted_at: string | null
           target_date: string | null
           updated_at: string
         }
         Insert: {
+          approval_note?: string | null
+          approval_status?: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           client_id: string
           code?: string | null
           created_at?: string
@@ -947,12 +966,18 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          requested_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["hiring_project_status"]
+          submitted_at?: string | null
           target_date?: string | null
           updated_at?: string
         }
         Update: {
+          approval_note?: string | null
+          approval_status?: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           client_id?: string
           code?: string | null
           created_at?: string
@@ -960,8 +985,10 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          requested_by?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["hiring_project_status"]
+          submitted_at?: string | null
           target_date?: string | null
           updated_at?: string
         }
@@ -1531,6 +1558,10 @@ export type Database = {
       }
       vacancies: {
         Row: {
+          approval_note: string | null
+          approval_status: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at: string | null
+          approved_by: string | null
           assigned_recruiter_id: string | null
           closed_at: string | null
           created_at: string
@@ -1546,11 +1577,17 @@ export type Database = {
           location: string | null
           opened_at: string | null
           position_ref: string | null
+          requested_by: string | null
           status: Database["public"]["Enums"]["vacancy_status"]
+          submitted_at: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          approval_note?: string | null
+          approval_status?: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_recruiter_id?: string | null
           closed_at?: string | null
           created_at?: string
@@ -1566,11 +1603,17 @@ export type Database = {
           location?: string | null
           opened_at?: string | null
           position_ref?: string | null
+          requested_by?: string | null
           status?: Database["public"]["Enums"]["vacancy_status"]
+          submitted_at?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          approval_note?: string | null
+          approval_status?: Database["public"]["Enums"]["requisition_approval_status"]
+          approved_at?: string | null
+          approved_by?: string | null
           assigned_recruiter_id?: string | null
           closed_at?: string | null
           created_at?: string
@@ -1586,7 +1629,9 @@ export type Database = {
           location?: string | null
           opened_at?: string | null
           position_ref?: string | null
+          requested_by?: string | null
           status?: Database["public"]["Enums"]["vacancy_status"]
+          submitted_at?: string | null
           title?: string
           updated_at?: string
         }
@@ -1894,6 +1939,14 @@ export type Database = {
         Args: { p_vacancy_id: string }
         Returns: boolean
       }
+      mp_can_approve_project: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      mp_can_approve_vacancy: {
+        Args: { p_vacancy_id: string }
+        Returns: boolean
+      }
       mp_can_edit_candidate: {
         Args: { p_candidate_id: string }
         Returns: boolean
@@ -1936,6 +1989,7 @@ export type Database = {
         | "withdrawn"
         | "reactivated"
         | "assessment_linked"
+        | "list_state_changed"
       application_status:
         | "active"
         | "hired"
@@ -1982,6 +2036,7 @@ export type Database = {
         | "culture_fit"
         | "final"
         | "other"
+      list_state: "none" | "long_list" | "short_list"
       offer_status:
         | "draft"
         | "sent"
@@ -1999,6 +2054,12 @@ export type Database = {
         | "better_candidate"
         | "no_show"
         | "other"
+      requisition_approval_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "changes_requested"
+        | "rejected"
       stage_type:
         | "sourced"
         | "screening"
@@ -2167,6 +2228,7 @@ export const Constants = {
         "withdrawn",
         "reactivated",
         "assessment_linked",
+        "list_state_changed",
       ],
       application_status: [
         "active",
@@ -2220,6 +2282,7 @@ export const Constants = {
         "final",
         "other",
       ],
+      list_state: ["none", "long_list", "short_list"],
       offer_status: [
         "draft",
         "sent",
@@ -2238,6 +2301,13 @@ export const Constants = {
         "better_candidate",
         "no_show",
         "other",
+      ],
+      requisition_approval_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "changes_requested",
+        "rejected",
       ],
       stage_type: [
         "sourced",
