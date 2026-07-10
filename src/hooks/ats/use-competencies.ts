@@ -20,6 +20,27 @@ export interface CompetencyGroup {
   competencies: VacancyCompetency[];
 }
 
+/** Рубрика опису балів 1..3 для конкретної компетенції (Interview Kit). */
+export type CompetencyRubric = { "1"?: string; "2"?: string; "3"?: string };
+
+/** jsonb-масив рядків (probes/red_flags/questions) → string[], стійко до сміття у стовпці. */
+export function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+}
+
+/** jsonb-об'єкт рубрики → CompetencyRubric, стійко до сміття у стовпці. */
+export function toRubric(value: unknown): CompetencyRubric {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const obj = value as Record<string, unknown>;
+  const rubric: CompetencyRubric = {};
+  for (const level of ["1", "2", "3"] as const) {
+    const description = obj[level];
+    if (typeof description === "string" && description.trim()) rubric[level] = description;
+  }
+  return rubric;
+}
+
 const competenciesByVacancyKey = (vacancyId: string) => ["ats", "vacancy_competencies", "vacancy", vacancyId] as const;
 
 function isPermissionDeniedError(error: { code?: string; message?: string } | null): boolean {

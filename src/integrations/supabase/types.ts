@@ -1059,44 +1059,65 @@ export type Database = {
       interviews: {
         Row: {
           application_id: string
+          calendar_event_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
+          duration_minutes: number
           id: string
           interview_type: Database["public"]["Enums"]["interview_type"]
           interviewer_id: string | null
+          meet_link: string | null
           notes: string | null
+          organizer_email: string | null
           outcome: Database["public"]["Enums"]["interview_outcome"]
           rating: number | null
           scheduled_at: string | null
+          transcript: string | null
+          transcript_doc_id: string | null
+          transcript_fetched_at: string | null
           updated_at: string
         }
         Insert: {
           application_id: string
+          calendar_event_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          duration_minutes?: number
           id?: string
           interview_type?: Database["public"]["Enums"]["interview_type"]
           interviewer_id?: string | null
+          meet_link?: string | null
           notes?: string | null
+          organizer_email?: string | null
           outcome?: Database["public"]["Enums"]["interview_outcome"]
           rating?: number | null
           scheduled_at?: string | null
+          transcript?: string | null
+          transcript_doc_id?: string | null
+          transcript_fetched_at?: string | null
           updated_at?: string
         }
         Update: {
           application_id?: string
+          calendar_event_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          duration_minutes?: number
           id?: string
           interview_type?: Database["public"]["Enums"]["interview_type"]
           interviewer_id?: string | null
+          meet_link?: string | null
           notes?: string | null
+          organizer_email?: string | null
           outcome?: Database["public"]["Enums"]["interview_outcome"]
           rating?: number | null
           scheduled_at?: string | null
+          transcript?: string | null
+          transcript_doc_id?: string | null
+          transcript_fetched_at?: string | null
           updated_at?: string
         }
         Relationships: [

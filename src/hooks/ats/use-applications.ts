@@ -227,6 +227,46 @@ export function useMoveApplication() {
 }
 
 /**
+ * Ручний override short-list-рішення в Comparison matrix (must-have gate /
+ * автоматичний вердикт зваженого бала). RLS: applications_update →
+ * mp_can_edit_vacancy(vacancy_id) (той самий гейт, що й переміщення заявки).
+ * UI (ComparisonMatrixTab) вимагає непорожню причину перед викликом — тут
+ * лише персистенція, без додаткової валідації (внутрішній інструмент).
+ */
+export function useSetShortlistOverride() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      applicationId,
+      vacancyId,
+      override,
+      reason,
+    }: {
+      applicationId: string;
+      vacancyId: string;
+      override: boolean;
+      reason: string | null;
+    }): Promise<Application> => {
+      const { data, error } = await supabase
+        .from("applications")
+        .update({ shortlist_override: override, shortlist_override_reason: reason })
+        .eq("id", applicationId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: applicationsByVacancyKey(variables.vacancyId) });
+      toast.success(variables.override ? "Кандидата додано в short list (ручний override)" : "Override знято");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+/**
  * Ручний запис події (нотатка тощо) через Edge `log-application-event`.
  * Автоматичні події (created/stage_changed) пише серверний тригер — цей хук
  * використовується лише для нотаток/ручних подій з бізнес-контекстом.

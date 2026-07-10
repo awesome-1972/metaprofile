@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,13 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles, ShieldAlert } from "lucide-react";
 import {
   useVacancyCompetencies,
   groupCompetencies,
   useCreateCompetency,
   useUpdateCompetency,
   useDeleteCompetency,
+  toStringList,
+  toRubric,
   STANDARD_COMPETENCY_GROUPS,
   type VacancyCompetency,
 } from "@/hooks/ats/use-competencies";
@@ -41,6 +44,12 @@ interface CompetencyFormState {
   name: string;
   nameEn: string;
   questionsText: string;
+  probesText: string;
+  redFlagsText: string;
+  rubric1: string;
+  rubric2: string;
+  rubric3: string;
+  isMustHave: boolean;
   weight: string;
   position: string;
 }
@@ -52,6 +61,12 @@ const emptyForm = (groupName = "", groupWeight = "0.25"): CompetencyFormState =>
   name: "",
   nameEn: "",
   questionsText: "",
+  probesText: "",
+  redFlagsText: "",
+  rubric1: "",
+  rubric2: "",
+  rubric3: "",
+  isMustHave: false,
   weight: "0.20",
   position: "0",
 });
@@ -87,6 +102,9 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
 
   const openEditDialog = (c: VacancyCompetency) => {
     const questions = Array.isArray(c.questions) ? (c.questions as unknown[]).map(String) : [];
+    const probes = toStringList(c.probes);
+    const redFlags = toStringList(c.red_flags);
+    const rubric = toRubric(c.rubric);
     setForm({
       id: c.id,
       groupName: c.group_name,
@@ -94,6 +112,12 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
       name: c.name,
       nameEn: c.name_en ?? "",
       questionsText: questions.join("\n"),
+      probesText: probes.join("\n"),
+      redFlagsText: redFlags.join("\n"),
+      rubric1: rubric["1"] ?? "",
+      rubric2: rubric["2"] ?? "",
+      rubric3: rubric["3"] ?? "",
+      isMustHave: c.is_must_have,
       weight: String(c.weight),
       position: String(c.position),
     });
@@ -108,6 +132,18 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
       .split("\n")
       .map((q) => q.trim())
       .filter(Boolean);
+    const probes = form.probesText
+      .split("\n")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    const redFlags = form.redFlagsText
+      .split("\n")
+      .map((q) => q.trim())
+      .filter(Boolean);
+    const rubric: Record<string, string> = {};
+    if (form.rubric1.trim()) rubric["1"] = form.rubric1.trim();
+    if (form.rubric2.trim()) rubric["2"] = form.rubric2.trim();
+    if (form.rubric3.trim()) rubric["3"] = form.rubric3.trim();
 
     if (!form.groupName.trim() || !form.name.trim() || !Number.isFinite(groupWeight) || !Number.isFinite(weight)) {
       return;
@@ -124,6 +160,10 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
             name: form.name.trim(),
             name_en: form.nameEn.trim() || null,
             questions,
+            probes,
+            red_flags: redFlags,
+            rubric,
+            is_must_have: form.isMustHave,
             weight,
             position,
           },
@@ -139,6 +179,10 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
           name: form.name.trim(),
           name_en: form.nameEn.trim() || null,
           questions,
+          probes,
+          red_flags: redFlags,
+          rubric,
+          is_must_have: form.isMustHave,
           weight,
           position,
         },
@@ -210,10 +254,16 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
                       return (
                         <div key={c.id} className="flex items-start justify-between gap-2 border rounded-md p-2.5">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium">
+                            <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
                               {c.name}
                               {c.name_en ? <span className="text-muted-foreground"> / {c.name_en}</span> : ""}
-                              <span className="text-xs text-muted-foreground ml-2">вага {c.weight}</span>
+                              <span className="text-xs text-muted-foreground">вага {c.weight}</span>
+                              {c.is_must_have && (
+                                <Badge variant="destructive" className="text-[10px] gap-1">
+                                  <ShieldAlert className="h-3 w-3" />
+                                  must-have
+                                </Badge>
+                              )}
                             </div>
                             {questions.length > 0 && (
                               <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1 space-y-0.5">
@@ -221,6 +271,16 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
                                   <li key={idx}>{String(q)}</li>
                                 ))}
                               </ul>
+                            )}
+                            {toStringList(c.probes).length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                <span className="font-medium">Probes:</span> {toStringList(c.probes).join(" · ")}
+                              </p>
+                            )}
+                            {toStringList(c.red_flags).length > 0 && (
+                              <p className="text-xs text-amber-700 mt-1">
+                                <span className="font-medium">Red flags:</span> {toStringList(c.red_flags).join(" · ")}
+                              </p>
                             )}
                           </div>
                           <div className="flex gap-1 shrink-0">
@@ -247,7 +307,7 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{form.id ? "Редагувати компетенцію" : "Нова компетенція"}</DialogTitle>
             <DialogDescription>Компетенція належить групі з певною вагою (0–1)</DialogDescription>
@@ -285,6 +345,63 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
                 onChange={(e) => setForm((f) => ({ ...f, questionsText: e.target.value }))}
                 className="min-h-[90px]"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Уточнюючі питання / probes (по одному на рядок)</Label>
+              <Textarea
+                value={form.probesText}
+                onChange={(e) => setForm((f) => ({ ...f, probesText: e.target.value }))}
+                placeholder="Якщо відповідь неповна — задайте..."
+                className="min-h-[70px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Red flags — ознаки невідповідності (по одному на рядок)</Label>
+              <Textarea
+                value={form.redFlagsText}
+                onChange={(e) => setForm((f) => ({ ...f, redFlagsText: e.target.value }))}
+                className="min-h-[70px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Рубрика — що означає кожен бал</Label>
+              <div className="grid gap-2">
+                <div className="flex items-start gap-2">
+                  <Badge variant="outline" className="mt-1.5 shrink-0">1</Badge>
+                  <Input
+                    value={form.rubric1}
+                    onChange={(e) => setForm((f) => ({ ...f, rubric1: e.target.value }))}
+                    placeholder="Опис бала 1 (низька відповідність)"
+                  />
+                </div>
+                <div className="flex items-start gap-2">
+                  <Badge variant="outline" className="mt-1.5 shrink-0">2</Badge>
+                  <Input
+                    value={form.rubric2}
+                    onChange={(e) => setForm((f) => ({ ...f, rubric2: e.target.value }))}
+                    placeholder="Опис бала 2 (часткова відповідність)"
+                  />
+                </div>
+                <div className="flex items-start gap-2">
+                  <Badge variant="outline" className="mt-1.5 shrink-0">3</Badge>
+                  <Input
+                    value={form.rubric3}
+                    onChange={(e) => setForm((f) => ({ ...f, rubric3: e.target.value }))}
+                    placeholder="Опис бала 3 (висока відповідність)"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is-must-have"
+                checked={form.isMustHave}
+                onCheckedChange={(checked) => setForm((f) => ({ ...f, isMustHave: checked === true }))}
+              />
+              <Label htmlFor="is-must-have" className="text-sm font-normal cursor-pointer flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                Must-have (бал нижче 2 блокує автоматичний short list у порівнянні)
+              </Label>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">

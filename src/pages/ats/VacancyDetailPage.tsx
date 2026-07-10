@@ -54,6 +54,7 @@ import { useScheduleInterview, useUpcomingInterviewsByApplications } from "@/hoo
 import { BriefTab } from "@/components/ats/BriefTab";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
+import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
@@ -496,6 +497,7 @@ const VacancyDetailPage = () => {
             <TabsTrigger value="pipeline">Воронка</TabsTrigger>
             <TabsTrigger value="brief">Бріф</TabsTrigger>
             <TabsTrigger value="competencies">Компетенції</TabsTrigger>
+            <TabsTrigger value="comparison">Порівняння</TabsTrigger>
             <TabsTrigger value="reports">Звіти</TabsTrigger>
           </TabsList>
 
@@ -678,6 +680,10 @@ const VacancyDetailPage = () => {
 
           <TabsContent value="competencies" className="pt-4">
             {id && <CompetenciesTab vacancyId={id} />}
+          </TabsContent>
+
+          <TabsContent value="comparison" className="pt-4">
+            {id && <ComparisonMatrixTab vacancyId={id} />}
           </TabsContent>
 
           <TabsContent value="reports" className="pt-4">
