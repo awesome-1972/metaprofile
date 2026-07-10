@@ -148,6 +148,8 @@ export type Database = {
           created_by: string | null
           current_stage_id: string | null
           id: string
+          shortlist_override: boolean
+          shortlist_override_reason: string | null
           status: Database["public"]["Enums"]["application_status"]
           updated_at: string
           vacancy_id: string
@@ -160,6 +162,8 @@ export type Database = {
           created_by?: string | null
           current_stage_id?: string | null
           id?: string
+          shortlist_override?: boolean
+          shortlist_override_reason?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           vacancy_id: string
@@ -172,6 +176,8 @@ export type Database = {
           created_by?: string | null
           current_stage_id?: string | null
           id?: string
+          shortlist_override?: boolean
+          shortlist_override_reason?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           vacancy_id?: string
@@ -1694,10 +1700,14 @@ export type Database = {
           group_name: string
           group_weight: number
           id: string
+          is_must_have: boolean
           name: string
           name_en: string | null
           position: number
+          probes: Json
           questions: Json
+          red_flags: Json
+          rubric: Json
           updated_at: string
           vacancy_id: string
           weight: number
@@ -1708,10 +1718,14 @@ export type Database = {
           group_name: string
           group_weight: number
           id?: string
+          is_must_have?: boolean
           name: string
           name_en?: string | null
           position?: number
+          probes?: Json
           questions?: Json
+          red_flags?: Json
+          rubric?: Json
           updated_at?: string
           vacancy_id: string
           weight: number
@@ -1722,10 +1736,14 @@ export type Database = {
           group_name?: string
           group_weight?: number
           id?: string
+          is_must_have?: boolean
           name?: string
           name_en?: string | null
           position?: number
+          probes?: Json
           questions?: Json
+          red_flags?: Json
+          rubric?: Json
           updated_at?: string
           vacancy_id?: string
           weight?: number
