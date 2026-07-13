@@ -221,6 +221,7 @@ export type Database = {
           candidate_account_id: string | null
           created_at: string
           created_by: string | null
+          current_company: string | null
           email: string | null
           full_name: string
           headline: string | null
@@ -243,6 +244,7 @@ export type Database = {
           candidate_account_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_company?: string | null
           email?: string | null
           full_name: string
           headline?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           candidate_account_id?: string | null
           created_at?: string
           created_by?: string | null
+          current_company?: string | null
           email?: string | null
           full_name?: string
           headline?: string | null

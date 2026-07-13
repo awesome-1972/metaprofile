@@ -40,6 +40,7 @@ import {
   ChevronRight,
   ClipboardList,
   Copy,
+  FileSpreadsheet,
   ListChecks,
   MapPin,
   Plus,
@@ -81,6 +82,8 @@ import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { PhaseNav } from "@/components/ats/PhaseNav";
 import { PreparationPanel } from "@/components/ats/PreparationPanel";
 import { CandidateActionDialog } from "@/components/ats/CandidateActionDialog";
+import { LongListImportDialog } from "@/components/ats/LongListImportDialog";
+import { LongListTable } from "@/components/ats/LongListTable";
 import type { MessageTemplateKind } from "@/hooks/ats/use-message-templates";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -170,6 +173,8 @@ const VacancyDetailPage = () => {
     application: ApplicationWithCandidate;
     kind: MessageTemplateKind;
   } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [phaseView, setPhaseView] = useState<"kanban" | "table">("kanban");
   const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
 
   const [meetingDialogApplication, setMeetingDialogApplication] = useState<ApplicationWithCandidate | null>(null);
@@ -256,6 +261,12 @@ const VacancyDetailPage = () => {
 
   const selectedPhase = sortedPhases.find((p) => p.id === effectivePhaseId) ?? null;
   const phaseStages = effectivePhaseId ? stagesByPhase[effectivePhaseId] ?? [] : [];
+
+  /** Заявки етапу (для табличного вигляду — разом із відмовленими, приглушеними). */
+  const phaseApplications = useMemo(
+    () => phaseStages.flatMap((stage) => applicationsByStage[stage.id] ?? []),
+    [phaseStages, applicationsByStage],
+  );
 
   /**
    * Мʼякий гейт (рішення власника): нічого не блокуємо, лише попереджаємо, коли
@@ -711,6 +722,49 @@ const VacancyDetailPage = () => {
                     </CardContent>
                   </Card>
                 ) : (
+              <>
+                {/* Один етап — два види однакових даних: kanban для руху по
+                    стадіях, таблиця для роботи з лонг-листом на 100+ рядків. */}
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant={phaseView === "kanban" ? "default" : "outline"}
+                      className="h-7 text-xs"
+                      onClick={() => setPhaseView("kanban")}
+                    >
+                      Kanban
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={phaseView === "table" ? "default" : "outline"}
+                      className="h-7 text-xs"
+                      onClick={() => setPhaseView("table")}
+                    >
+                      Таблиця
+                    </Button>
+                  </div>
+                  {selectedPhase?.kind === "longlist" && isInternal && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => setImportOpen(true)}
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
+                      Імпорт лонг-листа з Excel
+                    </Button>
+                  )}
+                </div>
+
+                {phaseView === "table" && id ? (
+                  <LongListTable
+                    vacancyId={id}
+                    applications={phaseApplications}
+                    stages={phaseStages}
+                    canEdit={isInternal}
+                  />
+                ) : (
               <div className="overflow-x-auto pb-4">
                 <div className="flex gap-4 min-w-max">
                   {phaseStages.map((stage) => {
@@ -936,6 +990,8 @@ const VacancyDetailPage = () => {
               </div>
                 )}
               </>
+                )}
+              </>
             )}
 
             {bulkMode && selectedForBulk.size > 0 && (
@@ -976,6 +1032,15 @@ const VacancyDetailPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {id && (
+        <LongListImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          vacancyId={id}
+          stages={phaseStages}
+        />
+      )}
 
       {actionDialog && id && (
         <CandidateActionDialog
