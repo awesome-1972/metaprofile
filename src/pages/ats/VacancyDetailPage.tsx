@@ -698,6 +698,7 @@ const VacancyDetailPage = () => {
                 {selectedPhase?.kind === "preparation" && id ? (
                   <PreparationPanel
                     vacancyId={id}
+                    vacancyTitle={vacancy.title}
                     phases={sortedPhases}
                     approvalStatus={vacancy.approval_status}
                     canEdit={isInternal}

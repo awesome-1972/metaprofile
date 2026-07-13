@@ -1385,6 +1385,109 @@ export type Database = {
           },
         ]
       }
+      vacancy_search_strategies: {
+        Row: {
+          created_at: string
+          focus: string | null
+          id: string
+          industries: Json
+          notes: string | null
+          out_of_scope: string | null
+          profile_musts: Json
+          target_companies: Json
+          target_titles: Json
+          updated_at: string
+          updated_by: string | null
+          vacancy_id: string
+        }
+        Insert: {
+          created_at?: string
+          focus?: string | null
+          id?: string
+          industries?: Json
+          notes?: string | null
+          out_of_scope?: string | null
+          profile_musts?: Json
+          target_companies?: Json
+          target_titles?: Json
+          updated_at?: string
+          updated_by?: string | null
+          vacancy_id: string
+        }
+        Update: {
+          created_at?: string
+          focus?: string | null
+          id?: string
+          industries?: Json
+          notes?: string | null
+          out_of_scope?: string | null
+          profile_musts?: Json
+          target_companies?: Json
+          target_titles?: Json
+          updated_at?: string
+          updated_by?: string | null
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacancy_search_strategies_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: true
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vacancy_public_briefs: {
+        Row: {
+          ai_model: string | null
+          created_at: string
+          generated_at: string | null
+          id: string
+          intro: string | null
+          sections: Json
+          status: Database["public"]["Enums"]["vacancy_brief_status"]
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          vacancy_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          intro?: string | null
+          sections?: Json
+          status?: Database["public"]["Enums"]["vacancy_brief_status"]
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vacancy_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          created_at?: string
+          generated_at?: string | null
+          id?: string
+          intro?: string | null
+          sections?: Json
+          status?: Database["public"]["Enums"]["vacancy_brief_status"]
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacancy_public_briefs_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: true
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_phases: {
         Row: {
           completed_at: string | null
