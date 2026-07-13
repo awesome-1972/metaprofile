@@ -260,7 +260,10 @@ const VacancyDetailPage = () => {
   }, [selectedPhaseId, sortedPhases, countsByPhase]);
 
   const selectedPhase = sortedPhases.find((p) => p.id === effectivePhaseId) ?? null;
-  const phaseStages = effectivePhaseId ? stagesByPhase[effectivePhaseId] ?? [] : [];
+  const phaseStages = useMemo(
+    () => (effectivePhaseId ? stagesByPhase[effectivePhaseId] ?? [] : []),
+    [effectivePhaseId, stagesByPhase],
+  );
 
   /** Заявки етапу (для табличного вигляду — разом із відмовленими, приглушеними). */
   const phaseApplications = useMemo(
