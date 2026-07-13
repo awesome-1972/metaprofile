@@ -146,6 +146,7 @@ export function useCandidate(id: string | undefined) {
         ...row,
         messengers: row.messengers ?? {},
         applications_count: 0,
+        applications_refs: [],
       };
     },
     enabled: !!id,

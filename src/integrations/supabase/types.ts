@@ -1216,6 +1216,9 @@ export type Database = {
           id: string
           is_terminal: boolean
           name: string
+          phase_kind: Database["public"]["Enums"]["search_phase_kind"]
+          phase_name: string | null
+          phase_position: number
           position: number
           stage_type: Database["public"]["Enums"]["stage_type"]
           template_id: string
@@ -1225,6 +1228,9 @@ export type Database = {
           id?: string
           is_terminal?: boolean
           name: string
+          phase_kind?: Database["public"]["Enums"]["search_phase_kind"]
+          phase_name?: string | null
+          phase_position?: number
           position: number
           stage_type?: Database["public"]["Enums"]["stage_type"]
           template_id: string
@@ -1234,6 +1240,9 @@ export type Database = {
           id?: string
           is_terminal?: boolean
           name?: string
+          phase_kind?: Database["public"]["Enums"]["search_phase_kind"]
+          phase_name?: string | null
+          phase_position?: number
           position?: number
           stage_type?: Database["public"]["Enums"]["stage_type"]
           template_id?: string
@@ -1278,6 +1287,7 @@ export type Database = {
           id: string
           is_terminal: boolean
           name: string
+          phase_id: string | null
           position: number
           stage_type: Database["public"]["Enums"]["stage_type"]
           updated_at: string
@@ -1288,6 +1298,7 @@ export type Database = {
           id?: string
           is_terminal?: boolean
           name: string
+          phase_id?: string | null
           position: number
           stage_type?: Database["public"]["Enums"]["stage_type"]
           updated_at?: string
@@ -1298,6 +1309,7 @@ export type Database = {
           id?: string
           is_terminal?: boolean
           name?: string
+          phase_id?: string | null
           position?: number
           stage_type?: Database["public"]["Enums"]["stage_type"]
           updated_at?: string
@@ -1305,7 +1317,70 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "pipeline_stages_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "search_phases"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pipeline_stages_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_phases: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["search_phase_kind"]
+          name: string
+          notes: string | null
+          planned_end: string | null
+          planned_start: string | null
+          position: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["search_phase_status"]
+          updated_at: string
+          vacancy_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["search_phase_kind"]
+          name: string
+          notes?: string | null
+          planned_end?: string | null
+          planned_start?: string | null
+          position: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["search_phase_status"]
+          updated_at?: string
+          vacancy_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["search_phase_kind"]
+          name?: string
+          notes?: string | null
+          planned_end?: string | null
+          planned_start?: string | null
+          position?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["search_phase_status"]
+          updated_at?: string
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_phases_vacancy_id_fkey"
             columns: ["vacancy_id"]
             isOneToOne: false
             referencedRelation: "vacancies"
@@ -1967,6 +2042,10 @@ export type Database = {
         Args: { p_column: string }
         Returns: undefined
       }
+      mp_seed_vacancy_pipeline: {
+        Args: { p_vacancy_id: string; p_template_id?: string | null }
+        Returns: Json
+      }
     }
     Enums: {
       app_role:
@@ -2060,6 +2139,14 @@ export type Database = {
         | "approved"
         | "changes_requested"
         | "rejected"
+      search_phase_kind:
+        | "preparation"
+        | "longlist"
+        | "shortlist"
+        | "client_interviews"
+        | "final"
+        | "offer"
+      search_phase_status: "pending" | "active" | "done"
       stage_type:
         | "sourced"
         | "screening"
@@ -2309,6 +2396,15 @@ export const Constants = {
         "changes_requested",
         "rejected",
       ],
+      search_phase_kind: [
+        "preparation",
+        "longlist",
+        "shortlist",
+        "client_interviews",
+        "final",
+        "offer",
+      ],
+      search_phase_status: ["pending", "active", "done"],
       stage_type: [
         "sourced",
         "screening",

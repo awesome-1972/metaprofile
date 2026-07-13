@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { seedVacancyStagesDirect } from "@/hooks/ats/use-pipeline";
 import type { Database } from "@/integrations/supabase/types";
 
 export type Vacancy = Database["public"]["Tables"]["vacancies"]["Row"];
@@ -122,10 +121,10 @@ export function useVacancy(id: string | undefined) {
 
 /**
  * Створення вакансії — owner/admin, або recruiter з can_edit на проект
- * (RLS: vacancies_insert). Після створення сіє стадії воронки з дефолтного
- * шаблону НАПРЯМУ під RLS (`seedVacancyStagesDirect` — без залежності від
- * деплою Edge). Якщо засів не вдався — не блокуємо створення: кнопка ручного
- * засіву є на сторінці вакансії.
+ * (RLS: vacancies_insert). Після створення сіє 6 етапів пошуку і воронку
+ * кожного етапу з дефолтного шаблону (RPC `mp_seed_vacancy_pipeline`,
+ * security invoker — усе під RLS того, хто створює). Якщо засів не вдався —
+ * не блокуємо створення: кнопка ручного засіву є на сторінці вакансії.
  */
 export function useCreateVacancy() {
   const qc = useQueryClient();
@@ -134,11 +133,13 @@ export function useCreateVacancy() {
       const { data, error } = await supabase.from("vacancies").insert(payload).select().single();
       if (error) throw error;
 
-      try {
-        await seedVacancyStagesDirect(data.id, null);
-      } catch (e) {
-        // Стадії можна засіяти пізніше кнопкою на сторінці вакансії.
-        console.error("Не вдалося засіяти стадії воронки:", (e as Error)?.message);
+      const { error: seedError } = await supabase.rpc("mp_seed_vacancy_pipeline", {
+        p_vacancy_id: data.id,
+        p_template_id: null,
+      });
+      if (seedError) {
+        // Етапи можна засіяти пізніше кнопкою на сторінці вакансії.
+        console.error("Не вдалося засіяти етапи пошуку:", seedError.message);
       }
 
       return data;
@@ -147,6 +148,7 @@ export function useCreateVacancy() {
       qc.invalidateQueries({ queryKey: VACANCIES_KEY });
       qc.invalidateQueries({ queryKey: vacanciesByProjectKey(data.hiring_project_id) });
       qc.invalidateQueries({ queryKey: ["ats", "pipeline_stages", "vacancy", data.id] });
+      qc.invalidateQueries({ queryKey: ["ats", "search_phases", "vacancy", data.id] });
       toast.success("Вакансію створено");
     },
     onError: (error: { code?: string; message?: string }) => {

@@ -19,9 +19,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertTriangle,
   ArrowLeft,
   Briefcase,
   Building2,
@@ -38,7 +48,12 @@ import {
   Video,
 } from "lucide-react";
 import { useVacancy, useSetVacancyApproval } from "@/hooks/ats/use-vacancies";
-import { usePipelineStages, useSeedVacancyStages } from "@/hooks/ats/use-pipeline";
+import { usePipelineStages } from "@/hooks/ats/use-pipeline";
+import {
+  useSearchPhases,
+  useSeedVacancyPipeline,
+  useSetPhaseStatus,
+} from "@/hooks/ats/use-search-phases";
 import {
   useApplicationsByStage,
   useCreateApplication,
@@ -61,6 +76,8 @@ import { ReportsTab } from "@/components/ats/ReportsTab";
 import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
 import { ListsTab } from "@/components/ats/ListsTab";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
+import { PhaseNav } from "@/components/ats/PhaseNav";
+import { PreparationPanel } from "@/components/ats/PreparationPanel";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
@@ -118,8 +135,10 @@ const VacancyDetailPage = () => {
   const navigate = useNavigate();
   const { data: vacancy, isLoading, isError, error } = useVacancy(id);
   const { data: stages, isLoading: stagesLoading } = usePipelineStages(id);
+  const { data: phases, isLoading: phasesLoading } = useSearchPhases(id);
   const { groupedData: applicationsByStage, isLoading: applicationsLoading } = useApplicationsByStage(id);
-  const seedStages = useSeedVacancyStages();
+  const seedPipeline = useSeedVacancyPipeline();
+  const setPhaseStatus = useSetPhaseStatus();
   const createApplication = useCreateApplication();
   const moveApplicationMutation = useMoveApplication();
   const setListState = useSetListState();
@@ -142,6 +161,7 @@ const VacancyDetailPage = () => {
   const [draggedApplicationId, setDraggedApplicationId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pipeline");
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
 
   const [meetingDialogApplication, setMeetingDialogApplication] = useState<ApplicationWithCandidate | null>(null);
@@ -182,10 +202,59 @@ const VacancyDetailPage = () => {
 
   const sortedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.position - b.position), [stages]);
 
+  const sortedPhases = useMemo(
+    () => [...(phases ?? [])].sort((a, b) => a.position - b.position),
+    [phases],
+  );
+
   const allApplicationsFlat = useMemo(
     () => Object.values(applicationsByStage).flat(),
     [applicationsByStage],
   );
+
+  /** Стадії, згруповані за етапом (ключ — phase_id). */
+  const stagesByPhase = useMemo(() => {
+    const map: Record<string, typeof sortedStages> = {};
+    for (const stage of sortedStages) {
+      if (!stage.phase_id) continue;
+      (map[stage.phase_id] ??= []).push(stage);
+    }
+    return map;
+  }, [sortedStages]);
+
+  /** Скільки активних кандидатів стоїть у кожному етапі. */
+  const countsByPhase = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const stage of sortedStages) {
+      if (!stage.phase_id) continue;
+      map[stage.phase_id] = (map[stage.phase_id] ?? 0) + (applicationsByStage[stage.id]?.length ?? 0);
+    }
+    return map;
+  }, [sortedStages, applicationsByStage]);
+
+  /** Стадії без етапу (створені старим шляхом / через API повз шаблон). */
+  const orphanStages = useMemo(() => sortedStages.filter((s) => !s.phase_id), [sortedStages]);
+
+  // Етап за замовчуванням: активний → перший із кандидатами → перший у списку.
+  const effectivePhaseId = useMemo(() => {
+    if (selectedPhaseId && sortedPhases.some((p) => p.id === selectedPhaseId)) return selectedPhaseId;
+    const active = sortedPhases.find((p) => p.status === "active");
+    if (active) return active.id;
+    const withCandidates = sortedPhases.find((p) => (countsByPhase[p.id] ?? 0) > 0);
+    if (withCandidates) return withCandidates.id;
+    return sortedPhases[0]?.id ?? null;
+  }, [selectedPhaseId, sortedPhases, countsByPhase]);
+
+  const selectedPhase = sortedPhases.find((p) => p.id === effectivePhaseId) ?? null;
+  const phaseStages = effectivePhaseId ? stagesByPhase[effectivePhaseId] ?? [] : [];
+
+  /**
+   * Мʼякий гейт (рішення власника): нічого не блокуємо, лише попереджаємо, коли
+   * кандидати вже в роботі, а етап «Підготовка» ще не закритий.
+   */
+  const preparationPhase = sortedPhases.find((p) => p.kind === "preparation") ?? null;
+  const showPreparationWarning =
+    !!preparationPhase && preparationPhase.status !== "done" && allApplicationsFlat.length > 0;
 
   const { data: upcomingInterviewsByApplication } = useUpcomingInterviewsByApplications(
     allApplicationsFlat.map((a) => a.id),
@@ -538,7 +607,7 @@ const VacancyDetailPage = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="pipeline">Воронка</TabsTrigger>
+            <TabsTrigger value="pipeline">Етапи пошуку</TabsTrigger>
             <TabsTrigger value="lists">Списки</TabsTrigger>
             <TabsTrigger value="brief">Бріф</TabsTrigger>
             <TabsTrigger value="competencies">Компетенції</TabsTrigger>
@@ -546,28 +615,77 @@ const VacancyDetailPage = () => {
             <TabsTrigger value="reports">Звіти</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pipeline" className="pt-4">
-            {stagesLoading ? (
+          <TabsContent value="pipeline" className="pt-4 space-y-4">
+            {showPreparationWarning && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Етап «Підготовка» ще не завершено, а кандидати вже в роботі. Пошук це не блокує, але
+                  бріф, матриця компетенцій і план мають бути закриті до скринінгу.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {orphanStages.length > 0 && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Стадій без етапу: {orphanStages.length}. Вони створені до переходу на етапи — кандидати
+                  на них не показані у воронці етапу. Перенесіть кандидатів на стадії етапів.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {stagesLoading || phasesLoading ? (
               <div className="text-center py-12 text-muted-foreground">Завантаження воронки...</div>
-            ) : sortedStages.length === 0 ? (
+            ) : sortedPhases.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
                   <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>У вакансії ще немає стадій воронки</p>
+                  <p>Етапи пошуку ще не створені</p>
                   <Button
                     className="mt-4"
                     variant="outline"
-                    onClick={() => id && seedStages.mutate({ vacancyId: id })}
-                    disabled={seedStages.isPending}
+                    onClick={() => id && seedPipeline.mutate({ vacancyId: id })}
+                    disabled={seedPipeline.isPending}
                   >
-                    {seedStages.isPending ? "Створення..." : "Створити стадії за замовчуванням"}
+                    {seedPipeline.isPending ? "Створення..." : "Створити 6 етапів і воронки"}
                   </Button>
                 </CardContent>
               </Card>
             ) : (
+              <>
+                <PhaseNav
+                  phases={sortedPhases}
+                  selectedPhaseId={effectivePhaseId}
+                  countsByPhase={countsByPhase}
+                  canEdit={isInternal}
+                  isBusy={setPhaseStatus.isPending}
+                  onSelect={setSelectedPhaseId}
+                  onSetStatus={(phaseId, status) =>
+                    id && setPhaseStatus.mutate({ phaseId, vacancyId: id, status })
+                  }
+                />
+
+                {selectedPhase?.kind === "preparation" && id ? (
+                  <PreparationPanel
+                    vacancyId={id}
+                    phases={sortedPhases}
+                    approvalStatus={vacancy.approval_status}
+                    canEdit={isInternal}
+                    onOpenTab={setActiveTab}
+                  />
+                ) : phaseStages.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-muted-foreground">
+                      У цьому етапі немає стадій воронки
+                    </CardContent>
+                  </Card>
+                ) : (
               <div className="overflow-x-auto pb-4">
                 <div className="flex gap-4 min-w-max">
-                  {sortedStages.map((stage, stageIndex) => {
+                  {phaseStages.map((stage) => {
+                    const stageIndex = sortedStages.findIndex((s) => s.id === stage.id);
                     const cards = applicationsByStage[stage.id] ?? [];
                     return (
                       <div key={stage.id} className="w-72 flex-shrink-0">
@@ -719,12 +837,21 @@ const VacancyDetailPage = () => {
                                       <SelectTrigger className="h-7 text-xs flex-1">
                                         <SelectValue />
                                       </SelectTrigger>
+                                      {/* Стадії згруповані за етапами — кандидата можна перевести
+                                          і в межах етапу, і на інший етап. */}
                                       <SelectContent>
-                                        {sortedStages.map((s) => (
-                                          <SelectItem key={s.id} value={s.id} className="text-xs">
-                                            {s.name}
-                                          </SelectItem>
-                                        ))}
+                                        {sortedPhases
+                                          .filter((phase) => (stagesByPhase[phase.id] ?? []).length > 0)
+                                          .map((phase) => (
+                                            <SelectGroup key={phase.id}>
+                                              <SelectLabel className="text-[11px]">{phase.name}</SelectLabel>
+                                              {(stagesByPhase[phase.id] ?? []).map((s) => (
+                                                <SelectItem key={s.id} value={s.id} className="text-xs">
+                                                  {s.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectGroup>
+                                          ))}
                                       </SelectContent>
                                     </Select>
                                     <Button
@@ -748,6 +875,8 @@ const VacancyDetailPage = () => {
                   })}
                 </div>
               </div>
+                )}
+              </>
             )}
 
             {bulkMode && selectedForBulk.size > 0 && (
