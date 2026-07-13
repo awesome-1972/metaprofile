@@ -265,7 +265,6 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
     if (latestInterview?.transcript) {
       setTranscript(latestInterview.transcript);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestInterview?.transcript, latestInterview?.transcript_fetched_at]);
 
   const handleFetchTranscript = () => {

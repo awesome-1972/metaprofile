@@ -24,7 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Users as UsersIcon, Plus, Ban, CheckCircle2, Pencil } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useUsers, useInviteUser, useSetUserActive, type AtsUserRole } from "@/hooks/ats/use-users";
-import { UserRoleBadges, statusBadge, roleLabel } from "@/components/ats/UserRoleBadges";
+import { UserRoleBadges } from "@/components/ats/UserRoleBadges";
+import { statusBadge, roleLabel } from "@/components/ats/user-role-utils";
 
 const ROLE_OPTIONS: AtsUserRole[] = ["owner", "recruiter", "assistant", "admin"];
 

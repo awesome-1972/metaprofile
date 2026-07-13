@@ -89,8 +89,8 @@ export function useInterviewsByApplication(applicationId: string | undefined) {
     queryKey: applicationId ? interviewsByApplicationKey(applicationId) : ["ats", "interviews", "unknown"],
     queryFn: async (): Promise<InterviewRow[]> => {
       if (!applicationId) return [];
-      // TODO: типи після gen types
-      const { data, error } = await (supabase.from("interviews" as never) as any)
+      const { data, error } = await supabase
+        .from("interviews")
         .select("*")
         .eq("application_id", applicationId)
         .order("scheduled_at", { ascending: false });
@@ -117,8 +117,8 @@ export function useUpcomingInterviewsByApplications(applicationIds: string[]) {
     queryFn: async (): Promise<Record<string, InterviewRow>> => {
       if (ids.length === 0) return {};
       const nowIso = new Date().toISOString();
-      // TODO: типи після gen types
-      const { data, error } = await (supabase.from("interviews" as never) as any)
+      const { data, error } = await supabase
+        .from("interviews")
         .select("*")
         .in("application_id", ids)
         .gte("scheduled_at", nowIso)

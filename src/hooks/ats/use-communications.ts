@@ -63,8 +63,8 @@ export function useCommunicationsByCandidate(candidateId: string | undefined) {
     queryKey: candidateId ? communicationsByCandidateKey(candidateId) : ["ats", "candidate_communications", "unknown"],
     queryFn: async (): Promise<CandidateCommunication[]> => {
       if (!candidateId) return [];
-      // TODO: типи після gen types
-      const { data, error } = await (supabase.from("candidate_communications" as never) as any)
+      const { data, error } = await supabase
+        .from("candidate_communications")
         .select("*")
         .eq("candidate_id", candidateId)
         .order("created_at", { ascending: false });
@@ -90,8 +90,7 @@ export function useSaveDraftCommunication() {
       subject?: string;
       body: string;
     }): Promise<void> => {
-      // TODO: типи після gen types
-      const { error } = await (supabase.from("candidate_communications" as never) as any).insert({
+      const { error } = await supabase.from("candidate_communications").insert({
         candidate_id: payload.candidate_id,
         vacancy_id: payload.vacancy_id ?? null,
         channel: payload.channel ?? "email",

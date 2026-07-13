@@ -170,12 +170,13 @@
  
          toast.success("Реєстрація успішна! Перевірте email для підтвердження.");
        }
-     } catch (error: any) {
+     } catch (error) {
        console.error("Sign up error:", error);
-       if (error.message?.includes("already registered")) {
+       const message = error instanceof Error ? error.message : "";
+       if (message.includes("already registered")) {
          toast.error("Цей email вже зареєстрований");
        } else {
-         toast.error(error.message || "Помилка реєстрації");
+         toast.error(message || "Помилка реєстрації");
        }
      } finally {
        setIsLoading(false);
@@ -221,14 +222,15 @@
            navigate("/v2/candidate");
          }
        }
-     } catch (error: any) {
+     } catch (error) {
        console.error("Sign in error:", error);
-       if (error.message?.includes("Invalid login credentials")) {
+       const message = error instanceof Error ? error.message : "";
+       if (message.includes("Invalid login credentials")) {
          toast.error("Невірний email або пароль");
-       } else if (error.message?.includes("Email not confirmed")) {
+       } else if (message.includes("Email not confirmed")) {
          toast.error("Підтвердіть email перед входом");
        } else {
-         toast.error(error.message || "Помилка входу");
+         toast.error(message || "Помилка входу");
        }
      } finally {
        setIsLoading(false);

@@ -23,4 +23,14 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // src/components/ui/** — згенеровані компоненти shadcn/ui. Вони навмисно
+    // експортують поряд із компонентом ще й варіанти (cva) та хелпери, тож
+    // правило Fast Refresh тут дає лише шум і ніколи не буде виправлене:
+    // ці файли не редагуються вручну, а перегенеровуються.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
 );

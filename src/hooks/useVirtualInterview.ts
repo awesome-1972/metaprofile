@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { InterviewerAvatar, InterviewQuestion } from "@/data/interviewData";
+import type { InterviewReportData, StarEvaluation } from "@/types/interview";
 
 interface InterviewMessage {
   role: "interviewer" | "candidate";
@@ -26,9 +27,9 @@ export const useVirtualInterview = ({
   const [messages, setMessages] = useState<InterviewMessage[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [starEvaluations, setStarEvaluations] = useState<any[]>([]);
+  const [starEvaluations, setStarEvaluations] = useState<StarEvaluation[]>([]);
   const [isInterviewComplete, setIsInterviewComplete] = useState(false);
-  const [finalReport, setFinalReport] = useState<any>(null);
+  const [finalReport, setFinalReport] = useState<InterviewReportData | null>(null);
 
   const currentQuestion = questions[currentQuestionIndex];
 

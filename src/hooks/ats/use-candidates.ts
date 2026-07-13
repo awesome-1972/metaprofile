@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export type AtsCandidate = Database["public"]["Tables"]["ats_candidates"]["Row"];
 export type AtsCandidateInsert = Database["public"]["Tables"]["ats_candidates"]["Insert"];
@@ -176,9 +176,8 @@ export function useCandidateSources() {
 
 /**
  * Створення кандидата — будь-який внутрішній користувач (RLS: candidates_insert).
- * `messengers` — опційне поле поверх AtsCandidateInsert (TODO: типи після gen
- * types, колонка ще не в types.ts) — приймаємо окремо і докладаємо `as`-каст
- * лише на сам insert-виклик, щоб не втратити типізацію решти полів.
+ * `messengers` — jsonb-колонка: типізована як Json, тому структурований
+ * CandidateMessengers звужуємо до Json на місці запису.
  */
 export function useCreateCandidate() {
   const qc = useQueryClient();
@@ -186,9 +185,13 @@ export function useCreateCandidate() {
     mutationFn: async (
       payload: AtsCandidateInsert & { messengers?: CandidateMessengers },
     ): Promise<AtsCandidate> => {
-      // TODO: типи після gen types
-      const { data, error } = await (supabase.from("ats_candidates") as any)
-        .insert(payload)
+      const { messengers, ...rest } = payload;
+      const { data, error } = await supabase
+        .from("ats_candidates")
+        .insert({
+          ...rest,
+          ...(messengers ? { messengers: messengers as unknown as Json } : {}),
+        })
         .select()
         .single();
       if (error) throw error;
@@ -240,9 +243,9 @@ export function useUpdateCandidateMessengers() {
       id: string;
       messengers: CandidateMessengers;
     }): Promise<void> => {
-      // TODO: типи після gen types
-      const { error } = await (supabase.from("ats_candidates") as any)
-        .update({ messengers })
+      const { error } = await supabase
+        .from("ats_candidates")
+        .update({ messengers: messengers as unknown as Json })
         .eq("id", id);
       if (error) throw error;
     },

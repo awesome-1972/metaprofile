@@ -5,17 +5,12 @@
 // вмикає/вимикає роль через `admin-invite-user` action: 'set_role'
 // (useSetUserRole, src/hooks/ats/use-users.ts). Самозняття власної ролі
 // admin заборонено (дзеркалить self_lockout на Edge).
+//
+// Константи ролей і `statusBadge` живуть у `user-role-utils.tsx` — цей файл
+// експортує лише компонент (вимога Fast Refresh).
 import { Badge } from "@/components/ui/badge";
 import { useSetUserRole, type AtsUserRole, type AtsUserRow } from "@/hooks/ats/use-users";
-
-export const roleLabel: Record<AtsUserRole, string> = {
-  owner: "Керівний партнер",
-  recruiter: "Рекрутер",
-  assistant: "Асистент",
-  admin: "Адміністратор",
-};
-
-export const ROLE_OPTIONS: AtsUserRole[] = ["owner", "recruiter", "assistant", "admin"];
+import { ROLE_OPTIONS, roleLabel } from "@/components/ats/user-role-utils";
 
 interface UserRoleBadgesProps {
   user: AtsUserRow;
@@ -58,14 +53,4 @@ export function UserRoleBadges({ user, currentUserId }: UserRoleBadgesProps) {
       })}
     </div>
   );
-}
-
-export function statusBadge(user: AtsUserRow) {
-  if (user.banned) {
-    return <Badge variant="destructive">Деактивований</Badge>;
-  }
-  if (!user.confirmed) {
-    return <Badge variant="outline">Запрошений</Badge>;
-  }
-  return <Badge variant="secondary">Активний</Badge>;
 }

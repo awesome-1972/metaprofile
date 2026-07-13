@@ -12,11 +12,19 @@ import {
   TrendingUp, TrendingDown, Lightbulb, Loader2,
 } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
-import { useCandidateAssignments, analyzeSubmission, type AssignmentRow, type AIAnalysisResult } from "@/hooks/useCases";
+import {
+  useCandidateAssignments,
+  analyzeSubmission,
+  type AssignmentRow,
+  type RawAssignmentRow,
+  type AIAnalysisResult,
+} from "@/hooks/useCases";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-
-const db = supabase as any;
 import { toast } from "sonner";
+
+// Нетипізований клієнт для таблиць V1-демо (див. коментар у useCases.ts).
+const db = supabase as unknown as SupabaseClient;
 
 const difficultyLabel: Record<string, string> = {
   junior: "Junior", middle: "Middle", senior: "Senior",
@@ -74,21 +82,23 @@ const CaseWorkPage = () => {
       return;
     }
 
+    // PostgREST віддає вкладені звʼязки або обʼєктом, або масивом — нормалізуємо.
+    const row = data as unknown as RawAssignmentRow;
     const mapped: AssignmentRow = {
-      ...data,
-      cases: data.cases
+      ...row,
+      cases: row.cases
         ? {
-            ...data.cases,
-            tasks: (data.cases.tasks as unknown as { id: string; title: string; description?: string }[]) || [],
-            companies: Array.isArray(data.cases.companies)
-              ? data.cases.companies[0] ?? null
-              : (data.cases.companies as { id: string; name: string } | null),
+            ...row.cases,
+            tasks: row.cases.tasks ?? [],
+            companies: Array.isArray(row.cases.companies)
+              ? row.cases.companies[0] ?? null
+              : row.cases.companies,
           }
         : null,
     };
 
     setAssignment(mapped);
-    if (data.status === "pending") await markInProgress(assignmentId!);
+    if (row.status === "pending") await markInProgress(assignmentId!);
     setIsLoading(false);
   };
 

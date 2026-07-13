@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -43,6 +44,34 @@ export interface AssignmentRow {
   } | null;
 }
 
+/**
+ * Сира відповідь Supabase на `case_assignments → cases → companies`.
+ * PostgREST повертає вкладені звʼязки або обʼєктом, або масивом (залежно від
+ * кардинальності), тому нормалізуємо вручну в `AssignmentRow`.
+ */
+export interface RawAssignmentRow {
+  id: string;
+  candidate_id: string;
+  status: string;
+  deadline: string | null;
+  message: string | null;
+  created_at: string;
+  case_id: string;
+  cases:
+    | {
+        id: string;
+        title: string;
+        description: string;
+        context: string | null;
+        tasks: CaseTask[] | null;
+        difficulty: string;
+        duration_minutes: number | null;
+        position_title: string | null;
+        companies: { id: string; name: string } | { id: string; name: string }[] | null;
+      }
+    | null;
+}
+
 export interface AIAnalysisResult {
   overallScore: number;
   recommendation: "strong_hire" | "hire" | "maybe" | "no_hire";
@@ -56,8 +85,10 @@ export interface AIAnalysisResult {
   summary: string;
 }
 
-// Helper: typed-bypass for tables not yet in generated types
-const db = supabase as any;
+// Кейси V1-демо живуть у схемі, яку generated-типи описують не повністю
+// (join-и cases→companies тощо). Тому працюємо через нетипізований клієнт —
+// але саме нетипізований, а не `any`: жодних німих кастів у прикладних місцях.
+const db = supabase as unknown as SupabaseClient;
 
 // ── Company: manage cases ──────────────────────────────────────
 
@@ -78,7 +109,7 @@ export const useCompanyCases = (companyId: string | null) => {
       toast.error("Помилка завантаження кейсів");
     } else {
       setCases(
-        (data || []).map((c: any) => ({
+        (data || []).map((c: CaseRow) => ({
           ...c,
           tasks: (c.tasks as CaseTask[]) || [],
         }))
@@ -253,16 +284,17 @@ export const useCandidateAssignments = (userId: string | null) => {
     if (error) {
       toast.error("Помилка завантаження кейсів");
     } else {
+      const rows = (data ?? []) as unknown as RawAssignmentRow[];
       setAssignments(
-        (data || []).map((a: any) => ({
+        rows.map((a) => ({
           ...a,
           cases: a.cases
             ? {
                 ...a.cases,
-                tasks: (a.cases.tasks as CaseTask[]) || [],
+                tasks: a.cases.tasks ?? [],
                 companies: Array.isArray(a.cases.companies)
                   ? a.cases.companies[0] ?? null
-                  : (a.cases.companies as { id: string; name: string } | null),
+                  : a.cases.companies,
               }
             : null,
         }))

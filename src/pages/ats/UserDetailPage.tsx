@@ -26,7 +26,8 @@ import { ArrowLeft, Pencil, Check, X, Ban, CheckCircle2, ShieldCheck, Trash2, Br
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { supabase } from "@/integrations/supabase/client";
 import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset, useDeleteUser } from "@/hooks/ats/use-users";
-import { UserRoleBadges, statusBadge } from "@/components/ats/UserRoleBadges";
+import { UserRoleBadges } from "@/components/ats/UserRoleBadges";
+import { statusBadge } from "@/components/ats/user-role-utils";
 import { useGrants, useRevokeGrant, type GrantScopeType } from "@/hooks/ats/use-grants";
 import type { Database } from "@/integrations/supabase/types";
 

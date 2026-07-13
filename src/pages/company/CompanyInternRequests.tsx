@@ -26,11 +26,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+/** Типи офісу й ролі віртуального співробітника — збігаються з опціями Select. */
+type OfficeType = "headquarters" | "branch" | "department";
+type EmployeeRole = "manager" | "buddy" | "colleague";
+
 interface VirtualEmployee {
   id: string;
   name: string;
   position: string;
-  role: "manager" | "buddy" | "colleague";
+  role: EmployeeRole;
   avatar: string;
   personality: string;
 }
@@ -77,17 +81,27 @@ const CompanyInternRequests = () => {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState<string | null>(null);
 
-  const [newOffice, setNewOffice] = useState({
+  const [newOffice, setNewOffice] = useState<{
+    name: string;
+    type: OfficeType;
+    cultureValues: string;
+    processes: string;
+  }>({
     name: "",
-    type: "department" as const,
+    type: "department",
     cultureValues: "",
     processes: ""
   });
 
-  const [newEmployee, setNewEmployee] = useState({
+  const [newEmployee, setNewEmployee] = useState<{
+    name: string;
+    position: string;
+    role: EmployeeRole;
+    personality: string;
+  }>({
     name: "",
     position: "",
-    role: "colleague" as const,
+    role: "colleague",
     personality: ""
   });
 
@@ -194,7 +208,7 @@ const CompanyInternRequests = () => {
                   <Label>Тип</Label>
                   <Select 
                     value={newOffice.type} 
-                    onValueChange={(v) => setNewOffice({ ...newOffice, type: v as any })}
+                    onValueChange={(v) => setNewOffice({ ...newOffice, type: v as OfficeType })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -564,7 +578,7 @@ const CompanyInternRequests = () => {
                 <Label>Роль у стажуванні</Label>
                 <Select 
                   value={newEmployee.role} 
-                  onValueChange={(v) => setNewEmployee({ ...newEmployee, role: v as any })}
+                  onValueChange={(v) => setNewEmployee({ ...newEmployee, role: v as EmployeeRole })}
                 >
                   <SelectTrigger>
                     <SelectValue />

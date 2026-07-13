@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
+import type { InterviewCompletionResult } from "@/types/interview";
+import {
   Send, 
   Mic, 
   MicOff, 
@@ -25,7 +26,7 @@ interface InterviewScreenProps {
   positionTitle: string;
   questions: InterviewQuestion[];
   interviewType: "training" | "real";
-  onComplete: (result: any) => void;
+  onComplete: (result: InterviewCompletionResult) => void;
   onExit: () => void;
 }
 

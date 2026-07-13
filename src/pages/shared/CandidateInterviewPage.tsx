@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { InterviewCompletionResult } from "@/types/interview";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +52,7 @@ export const CandidateInterviewPage = ({ role }: CandidateInterviewPageProps) =>
   const [isPreparingInterview, setIsPreparingInterview] = useState(false);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [showReport, setShowReport] = useState(false);
-  const [interviewResult, setInterviewResult] = useState<any>(null);
+  const [interviewResult, setInterviewResult] = useState<InterviewCompletionResult | null>(null);
 
   const roleConfig = {
     student: { title: "Студент", icon: GraduationCap },
@@ -64,7 +65,7 @@ export const CandidateInterviewPage = ({ role }: CandidateInterviewPageProps) =>
     setIsInterviewActive(true);
   };
 
-  const handleInterviewComplete = (result: any) => {
+  const handleInterviewComplete = (result: InterviewCompletionResult) => {
     setInterviewResult(result);
     setIsInterviewActive(false);
     setShowReport(true);
@@ -124,7 +125,7 @@ export const CandidateInterviewPage = ({ role }: CandidateInterviewPageProps) =>
     );
   }
 
-  if (showReport && interviewResult) {
+  if (showReport && interviewResult?.report) {
     const company = companiesWithInterviews.find((c) => c.id === selectedCompany);
     
     return (
