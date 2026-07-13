@@ -1210,6 +1210,59 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          body: string
+          channel: Database["public"]["Enums"]["comm_channel"]
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["message_template_kind"]
+          name: string
+          phase_kind: Database["public"]["Enums"]["search_phase_kind"] | null
+          subject: string | null
+          updated_at: string
+          vacancy_id: string | null
+        }
+        Insert: {
+          body: string
+          channel?: Database["public"]["Enums"]["comm_channel"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["message_template_kind"]
+          name: string
+          phase_kind?: Database["public"]["Enums"]["search_phase_kind"] | null
+          subject?: string | null
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: Database["public"]["Enums"]["comm_channel"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["message_template_kind"]
+          name?: string
+          phase_kind?: Database["public"]["Enums"]["search_phase_kind"] | null
+          subject?: string | null
+          updated_at?: string
+          vacancy_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stage_template_items: {
         Row: {
           created_at: string
@@ -2116,6 +2169,7 @@ export type Database = {
         | "final"
         | "other"
       list_state: "none" | "long_list" | "short_list"
+      message_template_kind: "rejection" | "invitation"
       offer_status:
         | "draft"
         | "sent"
@@ -2370,6 +2424,7 @@ export const Constants = {
         "other",
       ],
       list_state: ["none", "long_list", "short_list"],
+      message_template_kind: ["rejection", "invitation"],
       offer_status: [
         "draft",
         "sent",

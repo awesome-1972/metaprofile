@@ -43,7 +43,9 @@ import {
   ListChecks,
   MapPin,
   Plus,
+  Send,
   Star,
+  UserX,
   Users,
   Video,
 } from "lucide-react";
@@ -78,6 +80,8 @@ import { ListsTab } from "@/components/ats/ListsTab";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { PhaseNav } from "@/components/ats/PhaseNav";
 import { PreparationPanel } from "@/components/ats/PreparationPanel";
+import { CandidateActionDialog } from "@/components/ats/CandidateActionDialog";
+import type { MessageTemplateKind } from "@/hooks/ats/use-message-templates";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Database } from "@/integrations/supabase/types";
@@ -162,6 +166,10 @@ const VacancyDetailPage = () => {
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("pipeline");
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [actionDialog, setActionDialog] = useState<{
+    application: ApplicationWithCandidate;
+    kind: MessageTemplateKind;
+  } | null>(null);
   const [scoreDialogApplication, setScoreDialogApplication] = useState<ApplicationWithCandidate | null>(null);
 
   const [meetingDialogApplication, setMeetingDialogApplication] = useState<ApplicationWithCandidate | null>(null);
@@ -222,12 +230,13 @@ const VacancyDetailPage = () => {
     return map;
   }, [sortedStages]);
 
-  /** Скільки активних кандидатів стоїть у кожному етапі. */
+  /** Скільки активних кандидатів стоїть у кожному етапі (відмовлені не рахуються). */
   const countsByPhase = useMemo(() => {
     const map: Record<string, number> = {};
     for (const stage of sortedStages) {
       if (!stage.phase_id) continue;
-      map[stage.phase_id] = (map[stage.phase_id] ?? 0) + (applicationsByStage[stage.id]?.length ?? 0);
+      const active = (applicationsByStage[stage.id] ?? []).filter((a) => a.status === "active").length;
+      map[stage.phase_id] = (map[stage.phase_id] ?? 0) + active;
     }
     return map;
   }, [sortedStages, applicationsByStage]);
@@ -255,6 +264,25 @@ const VacancyDetailPage = () => {
   const preparationPhase = sortedPhases.find((p) => p.kind === "preparation") ?? null;
   const showPreparationWarning =
     !!preparationPhase && preparationPhase.status !== "done" && allApplicationsFlat.length > 0;
+
+  /** Етап, на якому зараз стоїть заявка (для вибору шаблону листа). */
+  const phaseKindOf = (application: ApplicationWithCandidate) => {
+    const stage = sortedStages.find((s) => s.id === application.current_stage_id);
+    const phase = stage?.phase_id ? sortedPhases.find((p) => p.id === stage.phase_id) : null;
+    return phase?.kind ?? null;
+  };
+
+  /** Наступна стадія по порядку воронки (перетікає в наступний етап автоматично). */
+  const nextStageIdOf = (application: ApplicationWithCandidate) => {
+    const index = sortedStages.findIndex((s) => s.id === application.current_stage_id);
+    if (index < 0) return sortedStages[0]?.id ?? null;
+    return sortedStages[index + 1]?.id ?? null;
+  };
+
+  const recruiterName =
+    (profiles ?? []).find((p) => p.user_id === user?.id)?.full_name ||
+    (profiles ?? []).find((p) => p.user_id === user?.id)?.email ||
+    null;
 
   const { data: upcomingInterviewsByApplication } = useUpcomingInterviewsByApplications(
     allApplicationsFlat.map((a) => a.id),
@@ -686,14 +714,22 @@ const VacancyDetailPage = () => {
                 <div className="flex gap-4 min-w-max">
                   {phaseStages.map((stage) => {
                     const stageIndex = sortedStages.findIndex((s) => s.id === stage.id);
-                    const cards = applicationsByStage[stage.id] ?? [];
+                    const stageApplications = applicationsByStage[stage.id] ?? [];
+                    // Відмовлені/зняті не займають місце у воронці — лише лічильник.
+                    const cards = stageApplications.filter((a) => a.status === "active");
+                    const closedCount = stageApplications.length - cards.length;
                     return (
                       <div key={stage.id} className="w-72 flex-shrink-0">
                         <div className="flex items-center justify-between mb-2 px-1">
                           <h3 className="font-medium text-sm text-foreground">{stage.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            {cards.length}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            {closedCount > 0 && (
+                              <span className="text-[10px] text-muted-foreground">−{closedCount}</span>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {cards.length}
+                            </Badge>
+                          </div>
                         </div>
                         <div
                           className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${
@@ -819,6 +855,28 @@ const VacancyDetailPage = () => {
                                     <Video className="h-3.5 w-3.5 mr-1.5" />
                                     Зустріч
                                   </Button>
+                                  {/* Дії етапу: лист-запрошення на наступний етап або
+                                      відмова за шаблоном (обидві — з AI-чернеткою). */}
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs"
+                                      onClick={() => setActionDialog({ application, kind: "invitation" })}
+                                    >
+                                      <Send className="h-3.5 w-3.5 mr-1" />
+                                      Далі
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs text-destructive hover:text-destructive"
+                                      onClick={() => setActionDialog({ application, kind: "rejection" })}
+                                    >
+                                      <UserX className="h-3.5 w-3.5 mr-1" />
+                                      Відмова
+                                    </Button>
+                                  </div>
                                   <div className="flex items-center justify-between gap-1 pt-1">
                                     <Button
                                       size="icon"
@@ -917,6 +975,25 @@ const VacancyDetailPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {actionDialog && id && (
+        <CandidateActionDialog
+          open={!!actionDialog}
+          onOpenChange={(open) => {
+            if (!open) setActionDialog(null);
+          }}
+          kind={actionDialog.kind}
+          application={actionDialog.application}
+          vacancyId={id}
+          vacancyTitle={vacancy.title}
+          clientName={vacancy.hiring_project?.client?.name ?? null}
+          recruiterName={recruiterName}
+          currentPhaseKind={phaseKindOf(actionDialog.application)}
+          phases={sortedPhases}
+          stages={sortedStages}
+          defaultNextStageId={nextStageIdOf(actionDialog.application)}
+        />
+      )}
 
       {scoreDialogApplication && id && (
         <CompetencyScoreDialog
