@@ -56,7 +56,18 @@ import {
   useSearchPhases,
   useSeedVacancyPipeline,
   useSetPhaseStatus,
+  phaseColor,
 } from "@/hooks/ats/use-search-phases";
+import { FunnelEditor } from "@/components/ats/FunnelEditor";
+import { StuckPanel } from "@/components/ats/StuckPanel";
+import {
+  candidateSla,
+  phaseSla,
+  worstFlag,
+  slaDotClass,
+  slaFlagLabel,
+  type SlaFlag,
+} from "@/hooks/ats/use-sla";
 import {
   useApplicationsByStage,
   useCreateApplication,
@@ -718,10 +729,10 @@ const VacancyDetailPage = () => {
                     canEdit={isInternal}
                     onOpenTab={setActiveTab}
                   />
-                ) : phaseStages.length === 0 ? (
+                ) : sortedStages.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center text-muted-foreground">
-                      У цьому етапі немає стадій воронки
+                      У воронці ще немає стадій
                     </CardContent>
                   </Card>
                 ) : (
@@ -747,17 +758,22 @@ const VacancyDetailPage = () => {
                       Таблиця
                     </Button>
                   </div>
-                  {selectedPhase?.kind === "longlist" && isInternal && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs"
-                      onClick={() => setImportOpen(true)}
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
-                      Імпорт лонг-листа з Excel
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {selectedPhase?.kind === "longlist" && isInternal && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => setImportOpen(true)}
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
+                        Імпорт лонг-листа з Excel
+                      </Button>
+                    )}
+                    {isInternal && id && (
+                      <FunnelEditor vacancyId={id} countsByPhase={countsByPhase} />
+                    )}
+                  </div>
                 </div>
 
                 {phaseView === "table" && id ? (
@@ -768,9 +784,61 @@ const VacancyDetailPage = () => {
                     canEdit={isInternal}
                   />
                 ) : (
-              <div className="overflow-x-auto pb-4">
-                <div className="flex gap-4 min-w-max">
-                  {phaseStages.map((stage) => {
+              <div>
+                {/* Тайм-трекер: зведення завислих кандидатів по всій воронці. */}
+                <StuckPanel applicationsByStage={applicationsByStage} stages={sortedStages} />
+                <div className="overflow-x-auto pb-4">
+                {/* Наскрізна воронка: усі стадії всіх етапів одним рядом,
+                    етапи розрізняються кольором заголовка (рішення власника 26.07). */}
+                <div className="flex gap-6 min-w-max items-start">
+                  {sortedPhases
+                    .filter(
+                      (phase) =>
+                        phase.kind !== "preparation" && (stagesByPhase[phase.id] ?? []).length > 0,
+                    )
+                    .map((phase) => {
+                      const color = phaseColor(phase);
+                      // Агрегат світлофора етапу: найгірше з планового прапорця
+                      // (planned_end) і прапорців кандидатів на його стадіях.
+                      const pSla = phaseSla(phase);
+                      const phaseStageList = stagesByPhase[phase.id] ?? [];
+                      const candidateFlags: SlaFlag[] = phaseStageList.flatMap((s) =>
+                        (applicationsByStage[s.id] ?? [])
+                          .filter((a) => a.status === "active")
+                          .map((a) => candidateSla(a, s).flag),
+                      );
+                      const phaseFlag = worstFlag([pSla.flag, ...candidateFlags]);
+                      return (
+                        <div key={phase.id} className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPhaseId(phase.id)}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left transition-shadow ${
+                              effectivePhaseId === phase.id ? "ring-1 ring-inset" : ""
+                            }`}
+                            style={{
+                              backgroundColor: `${color}18`,
+                              borderLeft: `3px solid ${color}`,
+                            }}
+                            title="Клік — обрати етап (для панелі підготовки / таблиці)"
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${slaDotClass[phaseFlag]}`}
+                              title={
+                                pSla.overdue
+                                  ? `Етап прострочено на ${Math.abs(pSla.daysToPlanned ?? 0)} дн.`
+                                  : slaFlagLabel[phaseFlag]
+                              }
+                            />
+                            <span className="text-xs font-semibold" style={{ color }}>
+                              {phase.name}
+                            </span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {countsByPhase[phase.id] ?? 0}
+                            </Badge>
+                          </button>
+                          <div className="flex gap-4">
+                  {(stagesByPhase[phase.id] ?? []).map((stage) => {
                     const stageIndex = sortedStages.findIndex((s) => s.id === stage.id);
                     const stageApplications = applicationsByStage[stage.id] ?? [];
                     // Відмовлені/зняті не займають місце у воронці — лише лічильник.
@@ -837,7 +905,19 @@ const VacancyDetailPage = () => {
                                   </div>
                                   <div className="text-xs text-muted-foreground space-y-0.5">
                                     <div>{application.candidate?.source?.name ?? "Джерело невідоме"}</div>
-                                    <div>{daysSince(application.applied_at)} дн. на стадії/у процесі</div>
+                                    {(() => {
+                                      // Тайм-трекер SLA: крапка-світлофор + днів на стадії.
+                                      const sla = candidateSla(application, stage);
+                                      return (
+                                        <div className="flex items-center gap-1.5">
+                                          <span
+                                            className={`h-2 w-2 rounded-full ${slaDotClass[sla.flag]}`}
+                                            title={`${slaFlagLabel[sla.flag]} · поріг ${sla.yellowAt}/${sla.redAt} дн.`}
+                                          />
+                                          <span>{sla.days} дн. на стадії</span>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                   {upcomingInterviewsByApplication?.[application.id] && (
                                     <Badge variant="outline" className="text-xs gap-1 font-normal">
@@ -989,7 +1069,12 @@ const VacancyDetailPage = () => {
                       </div>
                     );
                   })}
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
+              </div>
               </div>
                 )}
               </>

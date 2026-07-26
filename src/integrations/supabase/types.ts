@@ -153,6 +153,7 @@ export type Database = {
           listed_by: string | null
           shortlist_override: boolean
           shortlist_override_reason: string | null
+          stage_entered_at: string | null
           status: Database["public"]["Enums"]["application_status"]
           updated_at: string
           vacancy_id: string
@@ -170,6 +171,7 @@ export type Database = {
           listed_by?: string | null
           shortlist_override?: boolean
           shortlist_override_reason?: string | null
+          stage_entered_at?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           vacancy_id: string
@@ -187,6 +189,7 @@ export type Database = {
           listed_by?: string | null
           shortlist_override?: boolean
           shortlist_override_reason?: string | null
+          stage_entered_at?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           updated_at?: string
           vacancy_id?: string
@@ -1345,6 +1348,8 @@ export type Database = {
           name: string
           phase_id: string | null
           position: number
+          sla_red_days: number | null
+          sla_yellow_days: number | null
           stage_type: Database["public"]["Enums"]["stage_type"]
           updated_at: string
           vacancy_id: string
@@ -1356,6 +1361,8 @@ export type Database = {
           name: string
           phase_id?: string | null
           position: number
+          sla_red_days?: number | null
+          sla_yellow_days?: number | null
           stage_type?: Database["public"]["Enums"]["stage_type"]
           updated_at?: string
           vacancy_id: string
@@ -1367,6 +1374,8 @@ export type Database = {
           name?: string
           phase_id?: string | null
           position?: number
+          sla_red_days?: number | null
+          sla_yellow_days?: number | null
           stage_type?: Database["public"]["Enums"]["stage_type"]
           updated_at?: string
           vacancy_id?: string
@@ -1493,6 +1502,7 @@ export type Database = {
       }
       search_phases: {
         Row: {
+          color: string | null
           completed_at: string | null
           created_at: string
           id: string
@@ -1508,6 +1518,7 @@ export type Database = {
           vacancy_id: string
         }
         Insert: {
+          color?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -1523,6 +1534,7 @@ export type Database = {
           vacancy_id: string
         }
         Update: {
+          color?: string | null
           completed_at?: string | null
           created_at?: string
           id?: string
@@ -2306,6 +2318,7 @@ export type Database = {
         | "client_interviews"
         | "final"
         | "offer"
+        | "custom"
       search_phase_status: "pending" | "active" | "done"
       stage_type:
         | "sourced"
@@ -2564,6 +2577,7 @@ export const Constants = {
         "client_interviews",
         "final",
         "offer",
+        "custom",
       ],
       search_phase_status: ["pending", "active", "done"],
       stage_type: [

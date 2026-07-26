@@ -15,6 +15,7 @@ export const searchPhaseKindLabel: Record<SearchPhaseKind, string> = {
   client_interviews: "Співбесіди з замовником",
   final: "Кейси і фінал",
   offer: "Офер",
+  custom: "Власний етап",
 };
 
 export const searchPhaseStatusLabel: Record<SearchPhaseStatus, string> = {
@@ -162,4 +163,185 @@ export function useUpdatePhasePlan() {
       toast.error(toFriendlyMessage(error ?? null));
     },
   });
+}
+
+// ------------------------------------------------------------
+// Гнучке налаштування воронки: CRUD етапів
+// ------------------------------------------------------------
+
+/**
+ * Додати ДОВІЛЬНИЙ етап у кінець воронки вакансії (kind='custom').
+ * Позиція — max(position)+1 серед наявних етапів. RLS: mp_can_edit_vacancy.
+ */
+export function useAddPhase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      vacancyId,
+      name,
+      color,
+    }: {
+      vacancyId: string;
+      name: string;
+      color?: string | null;
+    }): Promise<SearchPhase> => {
+      const { data: last, error: posErr } = await supabase
+        .from("search_phases")
+        .select("position")
+        .eq("vacancy_id", vacancyId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (posErr) throw posErr;
+      const nextPosition = (last?.position ?? 0) + 1;
+
+      const { data, error } = await supabase
+        .from("search_phases")
+        .insert({
+          vacancy_id: vacancyId,
+          kind: "custom",
+          name,
+          color: color ?? null,
+          position: nextPosition,
+          status: "pending",
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as SearchPhase;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: phasesKey(variables.vacancyId) });
+      toast.success("Етап додано");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(toFriendlyMessage(error ?? null));
+    },
+  });
+}
+
+/** Перейменувати етап та/або змінити його колір. */
+export function useUpdatePhase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      phaseId,
+      vacancyId: _vacancyId,
+      name,
+      color,
+    }: {
+      phaseId: string;
+      vacancyId: string;
+      name?: string;
+      color?: string | null;
+    }): Promise<SearchPhase> => {
+      const patch: Database["public"]["Tables"]["search_phases"]["Update"] = {};
+      if (name !== undefined) patch.name = name;
+      if (color !== undefined) patch.color = color;
+
+      const { data, error } = await supabase
+        .from("search_phases")
+        .update(patch)
+        .eq("id", phaseId)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data as SearchPhase;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: phasesKey(variables.vacancyId) });
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(toFriendlyMessage(error ?? null));
+    },
+  });
+}
+
+/**
+ * Видалити етап. `on delete set null` на pipeline_stages.phase_id — стадії не
+ * зникають, а стають «без етапу» (їх видно в наскрізному вигляді окремою групою).
+ * Тому перед видаленням етапу варто перенести/видалити його стадії у UI.
+ */
+export function useDeletePhase() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      phaseId,
+      vacancyId: _vacancyId,
+    }: {
+      phaseId: string;
+      vacancyId: string;
+    }) => {
+      const { error } = await supabase.from("search_phases").delete().eq("id", phaseId);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: phasesKey(variables.vacancyId) });
+      qc.invalidateQueries({ queryKey: ["ats", "pipeline_stages", "vacancy", variables.vacancyId] });
+      toast.success("Етап видалено");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(toFriendlyMessage(error ?? null));
+    },
+  });
+}
+
+/**
+ * Перевпорядкувати етапи: приймає масив id у новому порядку, проставляє
+ * position 1..N. Щоб не впертись у unique(vacancy_id, position) під час
+ * проміжних станів, зсуваємо всі позиції у «високий» діапазон, тоді фінал.
+ */
+export function useReorderPhases() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      vacancyId,
+      orderedIds,
+    }: {
+      vacancyId: string;
+      orderedIds: string[];
+    }) => {
+      // Крок 1: тимчасові високі позиції (уникаємо конфлікту unique).
+      for (let i = 0; i < orderedIds.length; i += 1) {
+        const { error } = await supabase
+          .from("search_phases")
+          .update({ position: 1000 + i })
+          .eq("id", orderedIds[i]);
+        if (error) throw error;
+      }
+      // Крок 2: фінальні позиції 1..N.
+      for (let i = 0; i < orderedIds.length; i += 1) {
+        const { error } = await supabase
+          .from("search_phases")
+          .update({ position: i + 1 })
+          .eq("id", orderedIds[i]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: phasesKey(variables.vacancyId) });
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(toFriendlyMessage(error ?? null));
+    },
+  });
+}
+
+/** Детермінована палітра кольорів етапів (fallback, коли color не заданий). */
+export const PHASE_PALETTE = [
+  "#6366f1", // indigo
+  "#0ea5e9", // sky
+  "#10b981", // emerald
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#14b8a6", // teal
+];
+
+/** Колір етапу: власний color або з палітри за позицією. */
+export function phaseColor(phase: Pick<SearchPhase, "color" | "position">): string {
+  if (phase.color) return phase.color;
+  const index = Math.max(0, phase.position - 1) % PHASE_PALETTE.length;
+  return PHASE_PALETTE[index];
 }
