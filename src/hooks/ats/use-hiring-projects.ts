@@ -150,6 +150,42 @@ export function useUpdateHiringProject() {
   });
 }
 
+/**
+ * Архівувати / відновити проект (status archived ↔ active). Архів прибирає
+ * проект з активних списків, не втручаючись у closed/cancelled. Дані й вакансії
+ * лишаються, доступні через фільтр «Архів».
+ */
+export function useArchiveHiringProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      archived,
+    }: {
+      id: string;
+      archived: boolean;
+    }): Promise<HiringProject> => {
+      const { data, error } = await supabase
+        .from("hiring_projects")
+        .update({ status: archived ? "archived" : "active" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: projectKey(data.id) });
+      qc.invalidateQueries({ queryKey: projectsByClientKey(data.client_id) });
+      toast.success(variables.archived ? "Проект архівовано" : "Проект відновлено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
 const projectApprovalToast: Record<RequisitionApprovalStatus, string> = {
   draft: "Requisition повернуто в чернетку",
   pending_approval: "Заявку подано на затвердження",

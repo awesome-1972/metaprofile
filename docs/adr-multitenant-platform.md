@@ -197,7 +197,34 @@ artifact_result, artifact_link, notes
 
 ## 5. Рольова модель
 
-Рішення власника: **Адмін=admin, Партнер=owner, Рекрутер=recruiter, Відвідувач=нова**.
+Рішення власника: **Адмін=admin, Партнер=owner, Рекрутер=recruiter, Відвідувач=нова**,
+ПЛЮС кастомні ролі під запит (RBAC).
+
+### Модель прав (узгоджено 2026-07-27)
+
+Право = флаг `домен.дія`. Кастомна роль = набір флагів; системні ролі — пресети.
+Два виміри розділені: **роль = ЩО можна** (права), **грант access_grants = НАД ЧИМ**
+(scope: які клієнти/вакансії). Рекрутер із `vacancies.edit` редагує лише вакансії
+свого scope.
+
+Домени й дії:
+`clients.{view,edit,archive}`, `projects.{view,edit,archive}`,
+`vacancies.{view,edit,create}`, `funnel.edit`, `candidates.{view,edit,erase}`,
+`applications.manage`, `communications.send`, `financials.view`, `reports.generate`,
+`files.manage`, `users.manage`, `roles.manage`, `tenant.settings`.
+
+Пресети системних ролей:
+- **Адмін**: усі права.
+- **Партнер (owner)**: усе, крім `users.manage`/`roles.manage`/`tenant.settings`
+  (та їх може мати за потреби).
+- **Рекрутер**: view/edit vacancies, candidates, funnel, applications, communications,
+  reports — у межах scope; без financials/users.
+- **Асистент**: `*.view` + обмежене edit.
+- **Відвідувач**: лише `*.view`.
+
+Реалізація: таблиця `roles`(tenant_id, name, is_system, permissions jsonb) +
+`user_roles.role_id` (гібрид із наявним enum). Перевірка права — helper
+`mp_has_permission(perm text)`. Це наступний крок фази 2 після архівування.
 
 | Роль | Наявна | Права |
 |---|---|---|

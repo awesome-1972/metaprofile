@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AtsLayout } from "@/components/layout/AtsLayout";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Briefcase } from "lucide-react";
 import { useHiringProjects } from "@/hooks/ats/use-hiring-projects";
 import type { Database } from "@/integrations/supabase/types";
@@ -15,6 +17,7 @@ const statusLabel: Record<HiringProjectStatus, string> = {
   on_hold: "На паузі",
   closed: "Закрито",
   cancelled: "Скасовано",
+  archived: "Архів",
 };
 
 const statusColor: Record<HiringProjectStatus, string> = {
@@ -23,18 +26,30 @@ const statusColor: Record<HiringProjectStatus, string> = {
   on_hold: "bg-yellow-100 text-yellow-800",
   closed: "bg-blue-100 text-blue-800",
   cancelled: "bg-red-100 text-red-700",
+  archived: "bg-muted text-muted-foreground",
 };
 
 const ProjectsListPage = () => {
   const navigate = useNavigate();
   const { data: projects, isLoading, isError, error } = useHiringProjects();
+  const [showArchived, setShowArchived] = useState(false);
+
+  const visibleProjects = (projects ?? []).filter(
+    (p) => showArchived || p.status !== "archived",
+  );
 
   return (
     <AtsLayout>
       <div className="p-6 lg:p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-foreground">Проекти найму</h1>
-          <p className="text-muted-foreground mt-1">Усі проекти найму, доступні вам</p>
+        <div className="mb-8 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Проекти найму</h1>
+            <p className="text-muted-foreground mt-1">Усі проекти найму, доступні вам</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <Checkbox checked={showArchived} onCheckedChange={(v) => setShowArchived(v === true)} />
+            Показати архів
+          </label>
         </div>
 
         {isLoading ? (
@@ -45,7 +60,7 @@ const ProjectsListPage = () => {
               {error instanceof Error ? error.message : "Не вдалося завантажити проекти найму"}
             </CardContent>
           </Card>
-        ) : !projects || projects.length === 0 ? (
+        ) : visibleProjects.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <Briefcase className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -66,7 +81,7 @@ const ProjectsListPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projects.map((project) => (
+                {visibleProjects.map((project) => (
                   <TableRow
                     key={project.id}
                     className="cursor-pointer"

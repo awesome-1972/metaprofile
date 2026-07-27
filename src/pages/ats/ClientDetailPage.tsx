@@ -21,6 +21,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Building2, Briefcase, Mail, Phone, Globe, Plus } from "lucide-react";
 import { useClient } from "@/hooks/ats/use-clients";
+import { useAuthV2 } from "@/hooks/useAuthV2";
+import { ClientActions } from "@/components/ats/ClientActions";
 import { useHiringProjectsByClient, useCreateHiringProject } from "@/hooks/ats/use-hiring-projects";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -39,6 +41,7 @@ const projectStatusLabel: Record<HiringProjectStatus, string> = {
   on_hold: "На паузі",
   closed: "Закрито",
   cancelled: "Скасовано",
+  archived: "Архів",
 };
 
 const projectStatusColor: Record<HiringProjectStatus, string> = {
@@ -47,6 +50,7 @@ const projectStatusColor: Record<HiringProjectStatus, string> = {
   on_hold: "bg-yellow-100 text-yellow-800",
   closed: "bg-blue-100 text-blue-800",
   cancelled: "bg-red-100 text-red-700",
+  archived: "bg-muted text-muted-foreground",
 };
 
 const projectFormSchema = z.object({
@@ -66,6 +70,8 @@ const ClientDetailPage = () => {
   const { data: client, isLoading, isError, error } = useClient(id);
   const { data: projects, isLoading: projectsLoading } = useHiringProjectsByClient(id);
   const createProject = useCreateHiringProject();
+  const { hasRole } = useAuthV2();
+  const isInternal = hasRole("owner") || hasRole("admin") || hasRole("recruiter");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const form = useForm<ProjectFormValues>({
@@ -135,14 +141,18 @@ const ClientDetailPage = () => {
           До списку клієнтів
         </Button>
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold text-foreground">{client.name}</h1>
               {client.is_internal && <Badge variant="outline">внутрішній</Badge>}
+              {client.status === "archived" && (
+                <Badge className="bg-muted text-muted-foreground">Архів</Badge>
+              )}
             </div>
             <Badge className="mt-2">{clientStatusLabel[client.status]}</Badge>
           </div>
+          <ClientActions client={client} canEdit={isInternal} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -278,7 +288,7 @@ const ClientDetailPage = () => {
                 <Label>Статус</Label>
                 <Select
                   value={form.watch("status")}
-                  onValueChange={(v) => form.setValue("status", v as HiringProjectStatus)}
+                  onValueChange={(v) => form.setValue("status", v as ProjectFormValues["status"])}
                 >
                   <SelectTrigger>
                     <SelectValue />

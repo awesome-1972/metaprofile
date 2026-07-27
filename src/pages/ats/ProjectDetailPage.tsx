@@ -21,6 +21,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Briefcase, Building2, Calendar, Users, Plus } from "lucide-react";
 import { useHiringProject, useSetProjectApproval } from "@/hooks/ats/use-hiring-projects";
+import { ProjectActions } from "@/components/ats/ProjectActions";
 import { useVacanciesByProject, useCreateVacancy } from "@/hooks/ats/use-vacancies";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { useAuthV2 } from "@/hooks/useAuthV2";
@@ -74,6 +75,7 @@ const statusLabel: Record<HiringProjectStatus, string> = {
   on_hold: "На паузі",
   closed: "Закрито",
   cancelled: "Скасовано",
+  archived: "Архів",
 };
 
 const statusColor: Record<HiringProjectStatus, string> = {
@@ -82,6 +84,7 @@ const statusColor: Record<HiringProjectStatus, string> = {
   on_hold: "bg-yellow-100 text-yellow-800",
   closed: "bg-blue-100 text-blue-800",
   cancelled: "bg-red-100 text-red-700",
+  archived: "bg-muted text-muted-foreground",
 };
 
 const ProjectDetailPage = () => {
@@ -183,6 +186,7 @@ const ProjectDetailPage = () => {
             )}
             <Badge className={`${statusColor[project.status]} mt-2`}>{statusLabel[project.status]}</Badge>
           </div>
+          <ProjectActions project={project} canEdit={isInternal} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

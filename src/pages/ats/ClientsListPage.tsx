@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Building2 } from "lucide-react";
 import { useClients, useCreateClient } from "@/hooks/ats/use-clients";
 import type { Database } from "@/integrations/supabase/types";
@@ -56,6 +57,12 @@ const ClientsListPage = () => {
   const { data: clients, isLoading, isError, error } = useClients();
   const createClient = useCreateClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
+  // Архівні клієнти сховані за замовчуванням; тумблер «Показати архів» їх повертає.
+  const visibleClients = (clients ?? []).filter(
+    (c) => showArchived || c.status !== "archived",
+  );
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -100,10 +107,19 @@ const ClientsListPage = () => {
             <h1 className="text-2xl font-semibold text-foreground">Клієнти</h1>
             <p className="text-muted-foreground mt-1">Компанії, для яких ведеться найм</p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Новий клієнт
-          </Button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <Checkbox
+                checked={showArchived}
+                onCheckedChange={(v) => setShowArchived(v === true)}
+              />
+              Показати архів
+            </label>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Новий клієнт
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -114,7 +130,7 @@ const ClientsListPage = () => {
               {error instanceof Error ? error.message : "Не вдалося завантажити клієнтів"}
             </CardContent>
           </Card>
-        ) : !clients || clients.length === 0 ? (
+        ) : visibleClients.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
@@ -134,7 +150,7 @@ const ClientsListPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
+                {visibleClients.map((client) => (
                   <TableRow
                     key={client.id}
                     className="cursor-pointer"

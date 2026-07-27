@@ -123,3 +123,32 @@ export function useUpdateClient() {
     },
   });
 }
+
+/**
+ * Архівувати / відновити клієнта (status archived ↔ active). Архів прибирає
+ * клієнта з активних списків, не видаляючи даних (RLS: mp_can_edit — власне
+ * update). Проекти й вакансії лишаються, але доступні через фільтр «Архів».
+ */
+export function useArchiveClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }): Promise<Client> => {
+      const { data, error } = await supabase
+        .from("clients")
+        .update({ status: archived ? "archived" : "active" })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data, variables) => {
+      qc.invalidateQueries({ queryKey: CLIENTS_KEY });
+      qc.invalidateQueries({ queryKey: clientKey(data.id) });
+      toast.success(variables.archived ? "Клієнта архівовано" : "Клієнта відновлено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}

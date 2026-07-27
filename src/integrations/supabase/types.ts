@@ -2272,6 +2272,7 @@ export type Database = {
         | "on_hold"
         | "closed"
         | "cancelled"
+        | "archived"
       interview_outcome:
         | "pending"
         | "strong_yes"
@@ -2525,6 +2526,7 @@ export const Constants = {
         "on_hold",
         "closed",
         "cancelled",
+        "archived",
       ],
       interview_outcome: [
         "pending",
