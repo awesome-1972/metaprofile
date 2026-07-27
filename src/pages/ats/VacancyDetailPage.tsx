@@ -792,10 +792,7 @@ const VacancyDetailPage = () => {
                     етапи розрізняються кольором заголовка (рішення власника 26.07). */}
                 <div className="flex gap-6 min-w-max items-start">
                   {sortedPhases
-                    .filter(
-                      (phase) =>
-                        phase.kind !== "preparation" && (stagesByPhase[phase.id] ?? []).length > 0,
-                    )
+                    .filter((phase) => phase.kind !== "preparation")
                     .map((phase) => {
                       const color = phaseColor(phase);
                       // Агрегат світлофора етапу: найгірше з планового прапорця
@@ -838,6 +835,11 @@ const VacancyDetailPage = () => {
                             </Badge>
                           </button>
                           <div className="flex gap-4">
+                  {(stagesByPhase[phase.id] ?? []).length === 0 ? (
+                    <div className="w-72 flex-shrink-0 rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
+                      У цьому етапі ще немає стадій. Відкрийте «Налаштувати воронку», щоб додати.
+                    </div>
+                  ) : null}
                   {(stagesByPhase[phase.id] ?? []).map((stage) => {
                     const stageIndex = sortedStages.findIndex((s) => s.id === stage.id);
                     const stageApplications = applicationsByStage[stage.id] ?? [];
