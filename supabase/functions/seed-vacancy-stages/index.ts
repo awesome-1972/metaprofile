@@ -86,11 +86,25 @@ Deno.serve(async (req) => {
       templateId = body.template_id;
     }
 
+    // --- 2b. Тенант викликача — guard для owner/admin bypass (мультитенант).
+    const { data: callerProfile, error: callerTenantErr } = await supabaseService
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    if (callerTenantErr) {
+      console.error("seed-vacancy-stages caller tenant error:", callerTenantErr.message);
+      return json({ error: "server_error" }, 500);
+    }
+    const callerTenantId = (callerProfile as { tenant_id: string | null } | null)?.tenant_id ?? null;
+    if (!callerTenantId) return json({ error: "forbidden" }, 403);
+
     // --- 3. Load vacancy (need hiring_project_id for the authz check) -----
     const { data: vacancy, error: vacErr } = await supabaseService
       .from("vacancies")
       .select("id, hiring_project_id")
       .eq("id", vacancyId)
+      .eq("tenant_id", callerTenantId)
       .maybeSingle();
     if (vacErr) {
       console.error("seed-vacancy-stages vacancy lookup error:", vacErr.message);

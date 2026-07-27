@@ -160,6 +160,21 @@ Deno.serve(async (req) => {
     }
     if (!authorized) return json({ error: "forbidden" }, 403);
 
+    // --- 2b. Тенант викликача (мультитенант) — фільтр service_role-вибірок --
+    // Функція читає під service_role (обходить RLS), тому tenant-ізоляцію
+    // застосовуємо явно: усі вибірки/вставки — лише в межах тенанта викликача.
+    const { data: callerProfile, error: callerTenantErr } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    if (callerTenantErr) {
+      console.error("grant-management caller tenant error:", callerTenantErr.message);
+      return json({ error: "server_error" }, 500);
+    }
+    const callerTenantId = (callerProfile as { tenant_id: string | null } | null)?.tenant_id ?? null;
+    if (!callerTenantId) return json({ error: "forbidden" }, 403);
+
     // --- 3. Parse body ---------------------------------------------------
     let body: Record<string, unknown>;
     try {
@@ -173,6 +188,7 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase
         .from("access_grants")
         .select("id, user_id, scope_type, scope_id, can_edit, can_view_financials, permissions, is_active, granted_by, created_at, updated_at")
+        .eq("tenant_id", callerTenantId)
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) {
@@ -241,16 +257,28 @@ Deno.serve(async (req) => {
       // Валідація існування scope_id у відповідній таблиці (декларативний FK
       // на три таблиці неможливий — це відповідальність цієї функції).
       const table = scopeType === "client" ? "clients" : scopeType === "hiring_project" ? "hiring_projects" : "vacancies";
+      // Ресурс має належати тенанту викликача (інакше owner видав би грант на
+      // чужий тенант). Усі три таблиці мають tenant_id (isolation-міграція).
       const { data: scopeRow, error: scopeErr } = await supabase
         .from(table)
         .select("id")
         .eq("id", scopeId)
+        .eq("tenant_id", callerTenantId)
         .maybeSingle();
       if (scopeErr) {
         console.error("grant-management scope lookup error:", scopeErr.message);
         return json({ error: "server_error" }, 500);
       }
       if (!scopeRow) return json({ error: "scope_not_found" }, 404);
+
+      // Користувач, якому видаємо грант, теж має бути в тенанті викликача.
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .eq("tenant_id", callerTenantId)
+        .maybeSingle();
+      if (!targetProfile) return json({ error: "user_not_found" }, 404);
 
       // Upsert за унікальним (user_id, scope_type, scope_id) — повторна видача
       // = оновлення існуючого гранта (реактивація/зміна прав), не дублікат.
@@ -304,6 +332,7 @@ Deno.serve(async (req) => {
         .from("access_grants")
         .update(patch)
         .eq("id", grantId)
+        .eq("tenant_id", callerTenantId)
         .select("id, is_active")
         .maybeSingle();
       if (updateErr) {
@@ -323,6 +352,7 @@ Deno.serve(async (req) => {
         .from("access_grants")
         .update({ is_active: false })
         .eq("id", grantId)
+        .eq("tenant_id", callerTenantId)
         .select("id, is_active")
         .maybeSingle();
       if (revokeErr) {
@@ -353,6 +383,7 @@ Deno.serve(async (req) => {
         .from("vacancies")
         .select("id, assigned_recruiter_id")
         .eq("id", vacancyId)
+        .eq("tenant_id", callerTenantId)
         .maybeSingle();
       if (vacErr) {
         console.error("grant-management assign_recruiter vacancy lookup error:", vacErr.message);

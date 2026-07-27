@@ -99,6 +99,21 @@ Deno.serve(async (req) => {
       reason = body.reason.trim() || null;
     }
 
+    // --- 2b. Тенант викликача — мультитенант-guard для owner/admin bypass.
+    //         Owner/admin гілка нижче обходить mp_can_*, тому ресурс має бути
+    //         в тенанті викликача, інакше owner тенанта A стер би кандидата B.
+    const { data: callerProfile, error: callerTenantErr } = await supabaseService
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    if (callerTenantErr) {
+      console.error("erase-candidate caller tenant error:", callerTenantErr.message);
+      return json({ error: "server_error" }, 500);
+    }
+    const callerTenantId = (callerProfile as { tenant_id: string | null } | null)?.tenant_id ?? null;
+    if (!callerTenantId) return json({ error: "forbidden" }, 403);
+
     // --- 3. Load candidate under service_role (bypasses RLS, but we do our
     //        own explicit authorization check below — never trust RLS alone
     //        for an operation this sensitive) -----------------------------
@@ -106,6 +121,7 @@ Deno.serve(async (req) => {
       .from("ats_candidates")
       .select("id, created_by, is_anonymized")
       .eq("id", candidateId)
+      .eq("tenant_id", callerTenantId)
       .maybeSingle();
     if (candErr) {
       console.error("erase-candidate candidate lookup error:", candErr.message);

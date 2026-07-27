@@ -170,6 +170,22 @@ Deno.serve(async (req) => {
     }
     if (!authorized) return json({ error: "forbidden" }, 403);
 
+    // --- 2b. Тенант викликача (мультитенант) -----------------------------
+    // Профіль/роль запрошеного створюються під service_role — BEFORE-тригер
+    // mp_stamp_tenant НЕ спрацює (auth.uid()=NULL). Тому проставляємо tenant_id
+    // явно = тенант того, хто інвайтить. Без цього новий користувач мав би
+    // profiles.tenant_id=NULL → mp_current_tenant()=NULL → нічого не бачить.
+    const { data: callerProfile, error: callerTenantErr } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    if (callerTenantErr) {
+      console.error("admin-invite-user caller tenant error:", callerTenantErr.message);
+      return json({ error: "server_error" }, 500);
+    }
+    const callerTenantId = (callerProfile as { tenant_id: string | null } | null)?.tenant_id ?? null;
+
     // --- 3. Parse body ---------------------------------------------------
     let body: Record<string, unknown>;
     try {
@@ -214,7 +230,7 @@ Deno.serve(async (req) => {
       const { error: profileErr } = await supabase
         .from("profiles")
         .upsert(
-          { user_id: userId, email, full_name: fullName || null },
+          { user_id: userId, email, full_name: fullName || null, tenant_id: callerTenantId },
           { onConflict: "user_id" },
         );
       if (profileErr) {
@@ -225,7 +241,7 @@ Deno.serve(async (req) => {
 
       const { error: roleErr } = await supabase
         .from("user_roles")
-        .insert({ user_id: userId, role });
+        .insert({ user_id: userId, role, tenant_id: callerTenantId });
       if (roleErr && !/duplicate/i.test(roleErr.message)) {
         console.error("admin-invite-user role insert error:", roleErr.message);
         return json({ error: "server_error" }, 500);
@@ -283,11 +299,16 @@ Deno.serve(async (req) => {
       // Відновлення профілю, ролей і грантів на новий user_id (best-effort).
       const { error: profErr } = await supabase
         .from("profiles")
-        .upsert({ user_id: newId, email, full_name: fullName || null }, { onConflict: "user_id" });
+        .upsert(
+          { user_id: newId, email, full_name: fullName || null, tenant_id: callerTenantId },
+          { onConflict: "user_id" },
+        );
       if (profErr) console.error("admin-invite-user resend profile error:", profErr.message);
 
       for (const r of (roles ?? []) as Array<{ role: string }>) {
-        const { error: rErr } = await supabase.from("user_roles").insert({ user_id: newId, role: r.role });
+        const { error: rErr } = await supabase
+          .from("user_roles")
+          .insert({ user_id: newId, role: r.role, tenant_id: callerTenantId });
         if (rErr && !/duplicate/i.test(rErr.message)) {
           console.error("admin-invite-user resend role error:", rErr.message);
         }
@@ -488,6 +509,7 @@ Deno.serve(async (req) => {
           user_id: userId,
           email: targetUser.user.email ?? "",
           full_name: fullName,
+          tenant_id: callerTenantId,
         });
         if (insertErr) {
           console.error("admin-invite-user update_profile insert error:", insertErr.message);
