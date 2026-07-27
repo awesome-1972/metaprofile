@@ -254,6 +254,30 @@ git-еталоні) → міграція в прод через SQL Editor (CLI 
 - Продаж за 0.5 року → RLS-ізоляція тенантів має бути завершена й проаудитована
   задовго до того; фаза 1 стає критичною за якістю.
 
+### Статус фази 1 (станом на 2026-07-27)
+
+Реалізовано трьома міграціями (парсяться, RLS-поведінка для єдиного тенанта
+незмінна — усе в MetaVision):
+- `20260727090000` foundation — `tenants`, `tenant_id` на кореневих,
+  `mp_current_tenant()`, `mp_stamp_tenant()`.
+- `20260727091000` isolation — денормалізація `tenant_id` на 27 таблиць,
+  RESTRICTIVE `<table>_tenant_isolation` gate, stamp-тригери.
+- `20260727092000` hardening — після аудиту безпеки: tenant-guard у 10 `mp_can_*`
+  helper'ах (закрито C1-корінь: admin більше не пройде на чужий ресурс), tenant-gate
+  на `profiles`/`user_roles` (закрито C2).
+
+**Залишок фази 1 (обов'язково ПЕРЕД 2-м тенантом, не блокує 1 тенанта):**
+- **C3/C4** — Edge-функції з ПРЯМИМИ `service_role`-вибірками без `mp_can_*` перед
+  ними (`grant-management` list, `erase-candidate`, `seed-vacancy-stages`): додати
+  явний tenant-фільтр у коді функцій. Більшість Edge (generate-candidate-report,
+  send-communication, parse-resume, draft-communication, generate-public-brief,
+  log-application-event, schedule-interview) авторизуються через `mp_can_*` — тепер
+  вони tenant-gated, тож C1 для них закрито.
+- **Інвайти**: `admin-invite-user` має проставляти `tenant_id` новому користувачу
+  (інакше `mp_current_tenant()`=NULL → fail-closed, користувач нічого не бачить).
+- **types.ts**: оновити (tenants + tenant_id) коли UI почне використовувати тенант
+  (фаза 2 / адмін-інтерфейс).
+
 ### Інкрементальна стратегія фази 1 (щоб не зламати живе)
 Оскільки тенант поки один (MetaVision), робимо у два під-кроки:
 - **1a — структура без ізоляції:** `tenants`, `tenant_id` на всіх кореневих +
