@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, FolderSymlink, Plus, Trash2 } from "lucide-react";
 import { usePermissions } from "@/hooks/ats/use-permissions";
 import {
   FILE_CATEGORIES,
@@ -24,6 +24,7 @@ import {
   useAddVacancyFile,
   useDeleteVacancyFile,
   useDeleteVacancyFiles,
+  useMoveVacancyFiles,
   useImportDriveFolder,
   useVacancyFiles,
   type VacancyFile,
@@ -38,13 +39,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const addFile = useAddVacancyFile();
   const deleteFile = useDeleteVacancyFile();
   const deleteFiles = useDeleteVacancyFiles();
+  const moveFiles = useMoveVacancyFiles();
   const importFolder = useImportDriveFolder();
   const { can } = usePermissions();
   const canEdit = can("files.manage");
 
-  // Вибір файлів для масових операцій (напр. видалення).
+  // Вибір файлів для масових операцій (видалення / переміщення).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveTarget, setMoveTarget] = useState<string>(FILE_CATEGORIES[0].key);
 
   const allIds = useMemo(() => (files ?? []).map((f) => f.id), [files]);
   const allSelected = allIds.length > 0 && selected.size === allIds.length;
@@ -69,6 +73,18 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
       {
         onSuccess: () => {
           setConfirmBulkOpen(false);
+          clearSelection();
+        },
+      },
+    );
+  };
+
+  const handleBulkMove = () => {
+    moveFiles.mutate(
+      { ids: Array.from(selected), category: moveTarget, vacancyId },
+      {
+        onSuccess: () => {
+          setMoveDialogOpen(false);
           clearSelection();
         },
       },
@@ -176,16 +192,26 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
               <Button size="sm" variant="ghost" onClick={clearSelection}>
                 Зняти вибір
               </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="ml-auto"
-                onClick={() => setConfirmBulkOpen(true)}
-                disabled={deleteFiles.isPending}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Видалити обрані ({selected.size})
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMoveDialogOpen(true)}
+                  disabled={moveFiles.isPending}
+                >
+                  <FolderSymlink className="h-4 w-4 mr-2" />
+                  Перемістити ({selected.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setConfirmBulkOpen(true)}
+                  disabled={deleteFiles.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Видалити ({selected.size})
+                </Button>
+              </div>
             </>
           )}
         </div>
@@ -380,6 +406,40 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
             </Button>
             <Button onClick={handleImportFolder} disabled={!folderLink.trim() || importFolder.isPending}>
               {importFolder.isPending ? "Імпорт..." : "Імпортувати файли"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Перемістити в папку</DialogTitle>
+            <DialogDescription>
+              Обрано файлів: {selected.size}. Оберіть категорію-папку, куди перемістити.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Папка</Label>
+            <Select value={moveTarget} onValueChange={setMoveTarget}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FILE_CATEGORIES.map((c) => (
+                  <SelectItem key={c.key} value={c.key}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setMoveDialogOpen(false)}>
+              Скасувати
+            </Button>
+            <Button onClick={handleBulkMove} disabled={moveFiles.isPending}>
+              {moveFiles.isPending ? "Переміщення..." : "Перемістити"}
             </Button>
           </DialogFooter>
         </DialogContent>
