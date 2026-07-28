@@ -199,3 +199,22 @@ export function useDeleteVacancyFile() {
     },
   });
 }
+
+/** Масове видалення файлів вакансії за списком id (RLS: mp_can_edit_vacancy). */
+export function useDeleteVacancyFiles() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ids }: { ids: string[]; vacancyId: string }) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase.from("vacancy_files").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: filesKey(variables.vacancyId) });
+      toast.success(`Видалено файлів: ${variables.ids.length}`);
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}

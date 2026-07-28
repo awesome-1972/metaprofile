@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, Plus, Trash2 } from "lucide-react";
 import { usePermissions } from "@/hooks/ats/use-permissions";
 import {
@@ -22,6 +23,7 @@ import {
   parseDriveFileId,
   useAddVacancyFile,
   useDeleteVacancyFile,
+  useDeleteVacancyFiles,
   useImportDriveFolder,
   useVacancyFiles,
   type VacancyFile,
@@ -35,9 +37,43 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const { data: files, isLoading } = useVacancyFiles(vacancyId);
   const addFile = useAddVacancyFile();
   const deleteFile = useDeleteVacancyFile();
+  const deleteFiles = useDeleteVacancyFiles();
   const importFolder = useImportDriveFolder();
   const { can } = usePermissions();
   const canEdit = can("files.manage");
+
+  // Вибір файлів для масових операцій (напр. видалення).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+
+  const allIds = useMemo(() => (files ?? []).map((f) => f.id), [files]);
+  const allSelected = allIds.length > 0 && selected.size === allIds.length;
+  const someSelected = selected.size > 0;
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+  const toggleAll = (checked: boolean) => {
+    setSelected(checked ? new Set(allIds) : new Set());
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const handleBulkDelete = () => {
+    deleteFiles.mutate(
+      { ids: Array.from(selected), vacancyId },
+      {
+        onSuccess: () => {
+          setConfirmBulkOpen(false);
+          clearSelection();
+        },
+      },
+    );
+  };
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [category, setCategory] = useState<string>(FILE_CATEGORIES[0].key);
@@ -125,6 +161,36 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
         )}
       </div>
 
+      {canEdit && allIds.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap rounded-md border bg-muted/30 px-3 py-2">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <Checkbox
+              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              onCheckedChange={(v) => toggleAll(v === true)}
+            />
+            Обрати всі
+          </label>
+          {someSelected && (
+            <>
+              <span className="text-sm text-muted-foreground">Обрано: {selected.size}</span>
+              <Button size="sm" variant="ghost" onClick={clearSelection}>
+                Зняти вибір
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="ml-auto"
+                onClick={() => setConfirmBulkOpen(true)}
+                disabled={deleteFiles.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Видалити обрані ({selected.size})
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Завантаження...</div>
       ) : (
@@ -148,8 +214,15 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
                       {list.map((f) => (
                         <li
                           key={f.id}
-                          className="flex items-center gap-2 pl-6 text-sm group"
+                          className="flex items-center gap-2 pl-2 text-sm group"
                         >
+                          {canEdit && (
+                            <Checkbox
+                              className="flex-shrink-0"
+                              checked={selected.has(f.id)}
+                              onCheckedChange={(v) => toggleOne(f.id, v === true)}
+                            />
+                          )}
                           <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           {f.web_view_link ? (
                             <a
@@ -307,6 +380,26 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
             </Button>
             <Button onClick={handleImportFolder} disabled={!folderLink.trim() || importFolder.isPending}>
               {importFolder.isPending ? "Імпорт..." : "Імпортувати файли"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmBulkOpen} onOpenChange={setConfirmBulkOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Видалити обрані файли?</DialogTitle>
+            <DialogDescription>
+              Буде видалено записів: {selected.size}. Це прибирає лінки з вакансії — самі
+              файли в Google Drive лишаються.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmBulkOpen(false)}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deleteFiles.isPending}>
+              {deleteFiles.isPending ? "Видалення..." : `Видалити (${selected.size})`}
             </Button>
           </DialogFooter>
         </DialogContent>
