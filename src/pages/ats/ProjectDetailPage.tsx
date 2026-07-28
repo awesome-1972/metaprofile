@@ -186,7 +186,7 @@ const ProjectDetailPage = () => {
             )}
             <Badge className={`${statusColor[project.status]} mt-2`}>{statusLabel[project.status]}</Badge>
           </div>
-          <ProjectActions project={project} canEdit={isInternal} />
+          <ProjectActions project={project} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

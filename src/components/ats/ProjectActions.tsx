@@ -31,6 +31,7 @@ import {
   useArchiveHiringProject,
   type HiringProject,
 } from "@/hooks/ats/use-hiring-projects";
+import { usePermissions } from "@/hooks/ats/use-permissions";
 
 const editSchema = z.object({
   name: z.string().min(1, "Назва обов'язкова"),
@@ -43,16 +44,13 @@ const editSchema = z.object({
 type EditValues = z.infer<typeof editSchema>;
 
 /** Кнопки «Редагувати» і «Архівувати/Відновити» для проекту найму. */
-export function ProjectActions({
-  project,
-  canEdit,
-}: {
-  project: HiringProject;
-  canEdit: boolean;
-}) {
+export function ProjectActions({ project }: { project: HiringProject }) {
   const [editOpen, setEditOpen] = useState(false);
   const updateProject = useUpdateHiringProject();
   const archiveProject = useArchiveHiringProject();
+  const { can } = usePermissions();
+  const canEditProject = can("projects.edit");
+  const canArchiveProject = can("projects.archive");
   const isArchived = project.status === "archived";
 
   const form = useForm<EditValues>({
@@ -82,15 +80,18 @@ export function ProjectActions({
     );
   });
 
-  if (!canEdit) return null;
+  if (!canEditProject && !canArchiveProject) return null;
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-        <Pencil className="h-4 w-4 mr-2" />
-        Редагувати
-      </Button>
+      {canEditProject && (
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Редагувати
+        </Button>
+      )}
 
+      {canArchiveProject && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="outline" size="sm">
@@ -128,6 +129,7 @@ export function ProjectActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">

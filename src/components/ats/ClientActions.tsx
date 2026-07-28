@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Archive, ArchiveRestore, Pencil } from "lucide-react";
 import { useUpdateClient, useArchiveClient, type Client } from "@/hooks/ats/use-clients";
+import { usePermissions } from "@/hooks/ats/use-permissions";
 
 const editSchema = z.object({
   name: z.string().min(1, "Назва обов'язкова"),
@@ -41,10 +42,13 @@ const editSchema = z.object({
 type EditValues = z.infer<typeof editSchema>;
 
 /** Кнопки «Редагувати» і «Архівувати/Відновити» для клієнта (лише для internal). */
-export function ClientActions({ client, canEdit }: { client: Client; canEdit: boolean }) {
+export function ClientActions({ client }: { client: Client }) {
   const [editOpen, setEditOpen] = useState(false);
   const updateClient = useUpdateClient();
   const archiveClient = useArchiveClient();
+  const { can } = usePermissions();
+  const canEditClient = can("clients.edit");
+  const canArchiveClient = can("clients.archive");
   const isArchived = client.status === "archived";
 
   const form = useForm<EditValues>({
@@ -78,15 +82,19 @@ export function ClientActions({ client, canEdit }: { client: Client; canEdit: bo
     );
   });
 
-  if (!canEdit) return null;
+  // Кнопки гейтяться правами RBAC: редагування — clients.edit, архів — clients.archive.
+  if (!canEditClient && !canArchiveClient) return null;
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-        <Pencil className="h-4 w-4 mr-2" />
-        Редагувати
-      </Button>
+      {canEditClient && (
+        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Редагувати
+        </Button>
+      )}
 
+      {canArchiveClient && (
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button variant="outline" size="sm">
@@ -124,6 +132,7 @@ export function ClientActions({ client, canEdit }: { client: Client; canEdit: bo
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">

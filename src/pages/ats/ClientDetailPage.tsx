@@ -21,7 +21,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Building2, Briefcase, Mail, Phone, Globe, Plus } from "lucide-react";
 import { useClient } from "@/hooks/ats/use-clients";
-import { useAuthV2 } from "@/hooks/useAuthV2";
 import { ClientActions } from "@/components/ats/ClientActions";
 import { useHiringProjectsByClient, useCreateHiringProject } from "@/hooks/ats/use-hiring-projects";
 import type { Database } from "@/integrations/supabase/types";
@@ -70,8 +69,6 @@ const ClientDetailPage = () => {
   const { data: client, isLoading, isError, error } = useClient(id);
   const { data: projects, isLoading: projectsLoading } = useHiringProjectsByClient(id);
   const createProject = useCreateHiringProject();
-  const { hasRole } = useAuthV2();
-  const isInternal = hasRole("owner") || hasRole("admin") || hasRole("recruiter");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const form = useForm<ProjectFormValues>({
@@ -152,7 +149,7 @@ const ClientDetailPage = () => {
             </div>
             <Badge className="mt-2">{clientStatusLabel[client.status]}</Badge>
           </div>
-          <ClientActions client={client} canEdit={isInternal} />
+          <ClientActions client={client} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
