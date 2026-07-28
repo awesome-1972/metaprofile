@@ -1397,6 +1397,62 @@ export type Database = {
           },
         ]
       }
+      vacancy_files: {
+        Row: {
+          category: string
+          content_hash: string | null
+          created_at: string
+          drive_file_id: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          note: string | null
+          size_bytes: number | null
+          tenant_id: string | null
+          uploaded_by: string | null
+          vacancy_id: string
+          web_view_link: string | null
+        }
+        Insert: {
+          category?: string
+          content_hash?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          note?: string | null
+          size_bytes?: number | null
+          tenant_id?: string | null
+          uploaded_by?: string | null
+          vacancy_id: string
+          web_view_link?: string | null
+        }
+        Update: {
+          category?: string
+          content_hash?: string | null
+          created_at?: string
+          drive_file_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          note?: string | null
+          size_bytes?: number | null
+          tenant_id?: string | null
+          uploaded_by?: string | null
+          vacancy_id?: string
+          web_view_link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacancy_files_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacancy_stop_list: {
         Row: {
           company: string | null

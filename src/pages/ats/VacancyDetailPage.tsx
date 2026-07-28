@@ -90,6 +90,7 @@ import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
 import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
 import { ListsTab } from "@/components/ats/ListsTab";
+import { FilesTab } from "@/components/ats/FilesTab";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { PhaseNav } from "@/components/ats/PhaseNav";
 import { PreparationPanel } from "@/components/ats/PreparationPanel";
@@ -683,6 +684,7 @@ const VacancyDetailPage = () => {
             <TabsTrigger value="competencies">Компетенції</TabsTrigger>
             <TabsTrigger value="comparison">Порівняння</TabsTrigger>
             <TabsTrigger value="reports">Звіти</TabsTrigger>
+            <TabsTrigger value="files">Файли</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline" className="pt-4 space-y-4">
@@ -1136,6 +1138,10 @@ const VacancyDetailPage = () => {
 
           <TabsContent value="reports" className="pt-4">
             {id && <ReportsTab vacancyId={id} applications={allApplicationsFlat} />}
+          </TabsContent>
+
+          <TabsContent value="files" className="pt-4">
+            {id && <FilesTab vacancyId={id} />}
           </TabsContent>
         </Tabs>
       </div>
