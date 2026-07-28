@@ -161,6 +161,68 @@ export function useUpdateRole() {
   });
 }
 
+/** Кастомні ролі (role_id), призначені конкретному користувачу. */
+export function useUserCustomRoles(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["ats", "user_custom_roles", userId],
+    queryFn: async (): Promise<string[]> => {
+      if (!userId) return [];
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role_id")
+        .eq("user_id", userId)
+        .not("role_id", "is", null);
+      if (error) {
+        if (isPermissionDeniedError(error)) throw new Error("Немає доступу");
+        throw error;
+      }
+      return (data ?? []).map((r) => r.role_id as string).filter(Boolean);
+    },
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Призначити / зняти кастомну роль користувачу (рядок user_roles з role_id,
+ * role NULL). RLS: user_roles ALL — лише admin; tenant_id — тригер stamp.
+ */
+export function useSetUserCustomRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      userId,
+      roleId,
+      assigned,
+    }: {
+      userId: string;
+      roleId: string;
+      assigned: boolean;
+    }) => {
+      if (assigned) {
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role_id: roleId });
+        if (error && !/duplicate/i.test(error.message)) throw error;
+      } else {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId)
+          .eq("role_id", roleId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ["ats", "user_custom_roles", variables.userId] });
+      toast.success(variables.assigned ? "Роль призначено" : "Роль знято");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
 /** Видалити кастомну роль (системні захищені на рівні UI). */
 export function useDeleteRole() {
   const qc = useQueryClient();

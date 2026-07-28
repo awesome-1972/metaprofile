@@ -27,6 +27,7 @@ import { useAuthV2 } from "@/hooks/useAuthV2";
 import { supabase } from "@/integrations/supabase/client";
 import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset, useDeleteUser } from "@/hooks/ats/use-users";
 import { UserRoleBadges } from "@/components/ats/UserRoleBadges";
+import { UserCustomRoles } from "@/components/ats/UserCustomRoles";
 import { statusBadge } from "@/components/ats/user-role-utils";
 import { useGrants, useRevokeGrant, type GrantScopeType } from "@/hooks/ats/use-grants";
 import type { Database } from "@/integrations/supabase/types";
@@ -276,8 +277,13 @@ const UserDetailPage = () => {
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Ролі</p>
+              <p className="text-sm text-muted-foreground mb-2">Системні ролі</p>
               <UserRoleBadges user={user} currentUserId={currentUser?.id} />
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Кастомні ролі</p>
+              <UserCustomRoles userId={user.id} />
             </div>
           </CardContent>
         </Card>
