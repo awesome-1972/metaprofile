@@ -21,3 +21,23 @@
 drop policy if exists profiles_tenant_isolation   on public.profiles;
 drop policy if exists user_roles_tenant_isolation  on public.user_roles;
 drop policy if exists roles_tenant_isolation       on public.roles;
+
+-- ------------------------------------------------------------
+-- mp_current_tenant() з fallback на MetaVision
+-- ------------------------------------------------------------
+-- Пастка: якщо auth-акаунт не має рядка в profiles (напр. створений поза
+-- інвайт-флоу), mp_current_tenant() = NULL → RLS ховає ВСІ дані. Поки тенант
+-- один, робимо запобіжник: немає профілю → MetaVision. Прибрати fallback перед
+-- 2-м тенантом (тоді відсутність профілю має fail-closed, а не default-tenant).
+create or replace function public.mp_current_tenant()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (select tenant_id from public.profiles where user_id = auth.uid() limit 1),
+    '11111111-1111-1111-1111-111111111111'::uuid
+  );
+$$;
