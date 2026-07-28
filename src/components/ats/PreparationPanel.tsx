@@ -12,6 +12,7 @@ import { useSearchStrategy, usePublicBrief, toStringArray } from "@/hooks/ats/us
 import { useUpdatePhasePlan, type SearchPhase } from "@/hooks/ats/use-search-phases";
 import { SearchStrategyCard } from "@/components/ats/SearchStrategyCard";
 import { PublicBriefCard } from "@/components/ats/PublicBriefCard";
+import { StopListCard } from "@/components/ats/StopListCard";
 import type { Database } from "@/integrations/supabase/types";
 
 type RequisitionApprovalStatus = Database["public"]["Enums"]["requisition_approval_status"];
@@ -122,6 +123,7 @@ export function PreparationPanel({
         </TabsTrigger>
         <TabsTrigger value="strategy">Стратегія пошуку</TabsTrigger>
         <TabsTrigger value="public-brief">Бріф для кандидатів</TabsTrigger>
+        <TabsTrigger value="stop-list">Стоп-лист</TabsTrigger>
       </TabsList>
 
       <TabsContent value="checklist" className="pt-4">
@@ -240,6 +242,10 @@ export function PreparationPanel({
 
       <TabsContent value="public-brief" className="pt-4">
         <PublicBriefCard vacancyId={vacancyId} vacancyTitle={vacancyTitle} canEdit={canEdit} />
+      </TabsContent>
+
+      <TabsContent value="stop-list" className="pt-4">
+        <StopListCard vacancyId={vacancyId} canEdit={canEdit} />
       </TabsContent>
     </Tabs>
   );

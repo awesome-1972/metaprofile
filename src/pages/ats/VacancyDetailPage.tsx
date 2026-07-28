@@ -60,6 +60,7 @@ import {
 } from "@/hooks/ats/use-search-phases";
 import { FunnelEditor } from "@/components/ats/FunnelEditor";
 import { StuckPanel } from "@/components/ats/StuckPanel";
+import { useStopList, matchStopList } from "@/hooks/ats/use-stop-list";
 import {
   candidateSla,
   phaseSla,
@@ -206,6 +207,15 @@ const VacancyDetailPage = () => {
   const { data: searchResults } = useSearchCandidates(search);
   const candidateOptions = search.trim() ? searchResults ?? [] : allCandidates ?? [];
 
+  // Стоп-лист вакансії: попередження, якщо кандидат, якого додають, збігається
+  // за ПІБ із забороненими клієнтом.
+  const { data: stopList } = useStopList(id);
+  const selectedCandidate = candidateOptions.find((c) => c.id === selectedCandidateId) ?? null;
+  const existingStopMatch =
+    mode === "existing" && selectedCandidate
+      ? matchStopList({ full_name: selectedCandidate.full_name }, stopList ?? [])
+      : [];
+
   const newCandidateForm = useForm<NewCandidateFormValues>({
     resolver: zodResolver(newCandidateFormSchema),
     defaultValues: {
@@ -223,6 +233,13 @@ const VacancyDetailPage = () => {
 
   const isWorkspaceAdmin = hasRole("owner") || hasRole("admin");
   const isInternal = isWorkspaceAdmin || hasRole("recruiter") || hasRole("assistant");
+
+  // Стоп-лист для режиму «Новий кандидат» — після оголошення форми.
+  const newNameWatch = newCandidateForm.watch("full_name");
+  const newStopMatch =
+    mode === "new" && newNameWatch
+      ? matchStopList({ full_name: newNameWatch }, stopList ?? [])
+      : [];
 
   const sortedStages = useMemo(() => [...(stages ?? [])].sort((a, b) => a.position - b.position), [stages]);
 
@@ -1278,6 +1295,20 @@ const VacancyDetailPage = () => {
             <DialogTitle>Додати кандидата</DialogTitle>
             <DialogDescription>Оберіть наявного кандидата або створіть нового</DialogDescription>
           </DialogHeader>
+
+          {/* Стоп-лист: попередження про збіг ПІБ із забороненими клієнтом. */}
+          {(existingStopMatch.length > 0 || newStopMatch.length > 0) && (
+            <Alert className="border-red-300">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <AlertDescription className="text-sm">
+                <span className="font-medium">У стоп-листі клієнта.</span>{" "}
+                {(existingStopMatch[0] ?? newStopMatch[0])?.reason
+                  ? `Причина: ${(existingStopMatch[0] ?? newStopMatch[0])?.reason}. `
+                  : ""}
+                Перевірте перед додаванням — можливо, це та сама людина, яку клієнт заборонив.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <Tabs value={mode} onValueChange={(v) => setMode(v as "existing" | "new")}>
             <TabsList className="grid grid-cols-2 w-full">

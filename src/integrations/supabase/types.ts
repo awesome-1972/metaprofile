@@ -1397,6 +1397,47 @@ export type Database = {
           },
         ]
       }
+      vacancy_stop_list: {
+        Row: {
+          company: string | null
+          created_at: string
+          created_by: string | null
+          full_name: string
+          id: string
+          reason: string | null
+          tenant_id: string | null
+          vacancy_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          full_name: string
+          id?: string
+          reason?: string | null
+          tenant_id?: string | null
+          vacancy_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          full_name?: string
+          id?: string
+          reason?: string | null
+          tenant_id?: string | null
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacancy_stop_list_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacancy_search_strategies: {
         Row: {
           created_at: string
