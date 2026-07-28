@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.fetch-meet-transcript]
 verify_jwt = true
+
+[functions.import-drive-folder]
+verify_jwt = true

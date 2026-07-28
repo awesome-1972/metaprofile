@@ -15,13 +15,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, ExternalLink, FileText, Folder, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, Plus, Trash2 } from "lucide-react";
 import { usePermissions } from "@/hooks/ats/use-permissions";
 import {
   FILE_CATEGORIES,
   parseDriveFileId,
   useAddVacancyFile,
   useDeleteVacancyFile,
+  useImportDriveFolder,
   useVacancyFiles,
   type VacancyFile,
 } from "@/hooks/ats/use-vacancy-files";
@@ -34,6 +35,7 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const { data: files, isLoading } = useVacancyFiles(vacancyId);
   const addFile = useAddVacancyFile();
   const deleteFile = useDeleteVacancyFile();
+  const importFolder = useImportDriveFolder();
   const { can } = usePermissions();
   const canEdit = can("files.manage");
 
@@ -42,6 +44,23 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [note, setNote] = useState("");
+
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+  const [folderCategory, setFolderCategory] = useState<string>(FILE_CATEGORIES[0].key);
+  const [folderLink, setFolderLink] = useState("");
+
+  const handleImportFolder = () => {
+    if (!folderLink.trim()) return;
+    importFolder.mutate(
+      { vacancy_id: vacancyId, category: folderCategory, folder_url_or_id: folderLink.trim() },
+      {
+        onSuccess: () => {
+          setFolderDialogOpen(false);
+          setFolderLink("");
+        },
+      },
+    );
+  };
 
   // Файли за категорією-папкою.
   const byCategory = useMemo(() => {
@@ -94,10 +113,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
           Файли вакансії за папками. Drive — сховище, тут — метадані й лінки.
         </p>
         {canEdit && (
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Додати файл
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setFolderDialogOpen(true)}>
+              <FolderInput className="h-4 w-4 mr-2" />
+              Прив'язати папку Drive
+            </Button>
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Додати файл
+            </Button>
+          </div>
         )}
       </div>
 
@@ -244,6 +269,58 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
             </Button>
             <Button onClick={handleAdd} disabled={!name.trim() || duplicate === "drive" || addFile.isPending}>
               {addFile.isPending ? "Додавання..." : "Додати"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={folderDialogOpen}
+        onOpenChange={(open) => {
+          setFolderDialogOpen(open);
+          if (!open) setFolderLink("");
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Прив'язати папку Google Drive</DialogTitle>
+            <DialogDescription>
+              Усі файли з папки додадуться в обрану категорію одразу. Дублі (за файлом Drive)
+              пропускаються. Папка має бути доступна вам у Workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Папка (категорія)</Label>
+              <Select value={folderCategory} onValueChange={setFolderCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FILE_CATEGORIES.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="vf-folder-link">Лінк на папку Drive</Label>
+              <Input
+                id="vf-folder-link"
+                value={folderLink}
+                onChange={(e) => setFolderLink(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setFolderDialogOpen(false)}>
+              Скасувати
+            </Button>
+            <Button onClick={handleImportFolder} disabled={!folderLink.trim() || importFolder.isPending}>
+              {importFolder.isPending ? "Імпорт..." : "Імпортувати файли"}
             </Button>
           </DialogFooter>
         </DialogContent>

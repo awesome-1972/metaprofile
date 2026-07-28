@@ -123,6 +123,64 @@ export function useAddVacancyFile() {
   });
 }
 
+export interface ImportDriveFolderResult {
+  ok: boolean;
+  added: number;
+  skipped: number;
+  total: number;
+}
+
+/**
+ * Імпорт усіх файлів із папки Google Drive у категорію вакансії за один виклик
+ * (Edge import-drive-folder). Сервісний акаунт читає папку через імперсонацію
+ * викликача; дедуп за drive_file_id — на боці функції.
+ */
+export function useImportDriveFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      vacancy_id: string;
+      category: string;
+      folder_url_or_id: string;
+    }): Promise<ImportDriveFolderResult> => {
+      const { data, error } = await supabase.functions.invoke("import-drive-folder", {
+        body: payload,
+      });
+      if (error) {
+        // Edge повертає деталь у тілі відповіді (non-2xx → error.context).
+        let detail = "";
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) {
+            const parsed = await ctx.json();
+            detail = parsed.detail || parsed.error || "";
+          }
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail || error.message || "Не вдалося імпортувати папку");
+      }
+      return data as ImportDriveFolderResult;
+    },
+    onSuccess: (data, variables) => {
+      qc.invalidateQueries({ queryKey: filesKey(variables.vacancy_id) });
+      if (data.added > 0) {
+        toast.success(
+          `Імпортовано ${data.added} файл(ів)` +
+            (data.skipped > 0 ? `, пропущено дублів: ${data.skipped}` : ""),
+        );
+      } else if (data.total === 0) {
+        toast.info("У папці немає файлів");
+      } else {
+        toast.info("Нових файлів немає — усі вже додані");
+      }
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message || "Не вдалося імпортувати папку");
+    },
+  });
+}
+
 /** Видалити файл вакансії (RLS: mp_can_edit_vacancy). */
 export function useDeleteVacancyFile() {
   const qc = useQueryClient();
