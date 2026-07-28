@@ -178,9 +178,11 @@ Deno.serve(async (req) => {
     }
     const vacancyId = body.vacancy_id;
     if (!isUuid(vacancyId)) return json({ error: "invalid_vacancy_id" }, 422);
+    // Категорія за замовчуванням для файлів у корені / нерозпізнаних підпапках.
+    // Не обовʼязкова: підпапки розкладаються по категоріях автоматично, тож
+    // fallback типово 'other'.
     const fallbackCategory =
-      typeof body.category === "string" && body.category.trim() ? body.category.trim() : null;
-    if (!fallbackCategory) return json({ error: "invalid_category" }, 422);
+      typeof body.category === "string" && body.category.trim() ? body.category.trim() : "other";
     const folderInput = body.folder_url_or_id;
     if (typeof folderInput !== "string" || !folderInput.trim()) return json({ error: "invalid_folder" }, 422);
     const rootFolderId = extractFolderId(folderInput);

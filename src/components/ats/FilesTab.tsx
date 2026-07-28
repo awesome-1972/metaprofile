@@ -46,13 +46,12 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const [note, setNote] = useState("");
 
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [folderCategory, setFolderCategory] = useState<string>(FILE_CATEGORIES[0].key);
   const [folderLink, setFolderLink] = useState("");
 
   const handleImportFolder = () => {
     if (!folderLink.trim()) return;
     importFolder.mutate(
-      { vacancy_id: vacancyId, category: folderCategory, folder_url_or_id: folderLink.trim() },
+      { vacancy_id: vacancyId, folder_url_or_id: folderLink.trim() },
       {
         onSuccess: () => {
           setFolderDialogOpen(false);
@@ -285,30 +284,13 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
           <DialogHeader>
             <DialogTitle>Прив'язати папку Google Drive</DialogTitle>
             <DialogDescription>
-              Обхід рекурсивний: усі підпапки провалюються вглиб, а файли розкладаються
-              по категоріях за назвою підпапки (Long List, CVs, Reports…). Дублі за файлом
-              Drive пропускаються. Папка має бути доступна вам у Workspace.
+              Вставте корінь папки вакансії. Обхід рекурсивний: усі підпапки провалюються
+              вглиб, а файли самі розкладаються по категоріях за назвою підпапки (Long List,
+              CVs, Reports…); нерозпізнане — у «Інше». Дублі за файлом Drive пропускаються.
+              Папка має бути доступна вам у Workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Категорія за замовчуванням</Label>
-              <p className="text-xs text-muted-foreground">
-                Для файлів у корені та в нерозпізнаних підпапках.
-              </p>
-              <Select value={folderCategory} onValueChange={setFolderCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FILE_CATEGORIES.map((c) => (
-                    <SelectItem key={c.key} value={c.key}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-1.5">
               <Label htmlFor="vf-folder-link">Лінк на папку Drive</Label>
               <Input

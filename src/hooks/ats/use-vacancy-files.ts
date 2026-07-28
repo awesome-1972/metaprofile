@@ -141,8 +141,8 @@ export function useImportDriveFolder() {
   return useMutation({
     mutationFn: async (payload: {
       vacancy_id: string;
-      category: string;
       folder_url_or_id: string;
+      category?: string;
     }): Promise<ImportDriveFolderResult> => {
       const { data, error } = await supabase.functions.invoke("import-drive-folder", {
         body: payload,
