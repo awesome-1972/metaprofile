@@ -128,6 +128,7 @@ export interface ImportDriveFolderResult {
   added: number;
   skipped: number;
   total: number;
+  folders_scanned?: number;
 }
 
 /**

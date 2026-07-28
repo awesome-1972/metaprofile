@@ -285,13 +285,17 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
           <DialogHeader>
             <DialogTitle>Прив'язати папку Google Drive</DialogTitle>
             <DialogDescription>
-              Усі файли з папки додадуться в обрану категорію одразу. Дублі (за файлом Drive)
-              пропускаються. Папка має бути доступна вам у Workspace.
+              Обхід рекурсивний: усі підпапки провалюються вглиб, а файли розкладаються
+              по категоріях за назвою підпапки (Long List, CVs, Reports…). Дублі за файлом
+              Drive пропускаються. Папка має бути доступна вам у Workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Папка (категорія)</Label>
+              <Label>Категорія за замовчуванням</Label>
+              <p className="text-xs text-muted-foreground">
+                Для файлів у корені та в нерозпізнаних підпапках.
+              </p>
               <Select value={folderCategory} onValueChange={setFolderCategory}>
                 <SelectTrigger>
                   <SelectValue />

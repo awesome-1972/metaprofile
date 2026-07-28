@@ -17,17 +17,25 @@
 //     у спільному Workspace-домені metavision.ua).
 //
 // ── CONTRACT ──────────────────────────────────────────────────────────────
-//   POST { vacancy_id: uuid, category: string, folder_url_or_id: string }
+//   POST { vacancy_id: uuid, category: string, folder_url_or_id: string,
+//          map_subfolders?: boolean (default true) }
 //     folder_url_or_id — повний лінк виду
 //       https://drive.google.com/drive/folders/<FOLDER_ID> (з ?usp=... тощо),
 //       або сам <FOLDER_ID>.
+//     map_subfolders — якщо true (типово), обхід РЕКУРСИВНИЙ углиб по підпапках,
+//       і кожен файл лягає в категорію за назвою його підпапки
+//       (Long List→long_list, CVs→cvs, Reports→reports…); нерозпізнані підпапки
+//       і файли в корені → category (fallback). Якщо false — усі файли пласко
+//       в передану category.
 //     Дії:
 //       1. mp_can_edit_vacancy(vacancy_id).
 //       2. Витяг folderId; читання vacancies.tenant_id (для явного stamp).
 //       3. getGoogleAccessToken(callerEmail, [drive.readonly]).
-//       4. Drive files.list (пагінація) — файли в папці (підпапки пропускаються).
+//       4. Рекурсивний обхід папки (BFS, пагінація) — файли з категорією за
+//          назвою батьківської підпапки.
 //       5. Дедуп проти наявних drive_file_id вакансії → insert нових.
-//     200 { ok: true, added: number, skipped: number, total: number }
+//     200 { ok: true, added: number, skipped: number, total: number,
+//           folders_scanned: number }
 //
 //   401 unauthorized · 403 forbidden · 404 vacancy_not_found ·
 //   422 invalid_body|invalid_vacancy_id|invalid_folder|invalid_category ·
@@ -55,7 +63,33 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // domain-wide delegation (див. _shared/google-auth.ts).
 const DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
 const FOLDER_MIME = "application/vnd.google-apps.folder";
-const MAX_FILES = 1000; // запобіжник від нескінченної пагінації
+const MAX_FILES = 2000; // запобіжник від нескінченного обходу
+const MAX_FOLDERS = 200; // запобіжник рекурсії (кількість відвіданих папок)
+const MAX_DEPTH = 6;
+
+// Мапінг назви підпапки Drive → категорія vacancy_files. Дзеркалить
+// FILE_CATEGORIES у src/hooks/ats/use-vacancy-files.ts (folder → key). Матч —
+// за нормалізованою назвою (lowercase, trim), точний або за включенням аліасу.
+const FOLDER_CATEGORY_ALIASES: Array<{ key: string; aliases: string[] }> = [
+  { key: "long_list", aliases: ["long list", "longlist", "лонг-лист", "лонг лист"] },
+  { key: "cvs", aliases: ["cvs", "cv", "резюме", "resume"] },
+  { key: "competency_matrix", aliases: ["competency matrix", "матриця компетенцій", "матриця", "competencies"] },
+  { key: "reports", aliases: ["reports", "report", "звіти", "звіт"] },
+  { key: "presentation", aliases: ["presentation to client", "presentation", "презентація", "презентація клієнту"] },
+  { key: "contracts", aliases: ["contracts", "contract", "договори", "договір"] },
+  { key: "from_client", aliases: ["from client", "від клієнта"] },
+  { key: "voice_to_text", aliases: ["voice-to-text", "voice to text", "транскрипти", "транскрипт", "transcripts"] },
+];
+
+/** Категорія за назвою підпапки; null — якщо не розпізнано (→ fallback). */
+function categoryForFolderName(name: string | null): string | null {
+  if (!name) return null;
+  const n = name.trim().toLowerCase();
+  for (const { key, aliases } of FOLDER_CATEGORY_ALIASES) {
+    if (aliases.some((a) => n === a || n.includes(a))) return key;
+  }
+  return null;
+}
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -144,12 +178,16 @@ Deno.serve(async (req) => {
     }
     const vacancyId = body.vacancy_id;
     if (!isUuid(vacancyId)) return json({ error: "invalid_vacancy_id" }, 422);
-    const category = typeof body.category === "string" && body.category.trim() ? body.category.trim() : null;
-    if (!category) return json({ error: "invalid_category" }, 422);
+    const fallbackCategory =
+      typeof body.category === "string" && body.category.trim() ? body.category.trim() : null;
+    if (!fallbackCategory) return json({ error: "invalid_category" }, 422);
     const folderInput = body.folder_url_or_id;
     if (typeof folderInput !== "string" || !folderInput.trim()) return json({ error: "invalid_folder" }, 422);
-    const folderId = extractFolderId(folderInput);
-    if (!folderId) return json({ error: "invalid_folder" }, 422);
+    const rootFolderId = extractFolderId(folderInput);
+    if (!rootFolderId) return json({ error: "invalid_folder" }, 422);
+    // map_subfolders типово true: провалюватись у підпапки й розкладати по
+    // категоріях за їхніми назвами.
+    const mapSubfolders = body.map_subfolders !== false;
 
     // --- 3. Guard: право редагувати вакансію -----------------------------
     const { data: canEdit, error: editErr } = await supabaseAuth.rpc("mp_can_edit_vacancy", {
@@ -184,53 +222,80 @@ Deno.serve(async (req) => {
       return json({ error: "google_error", detail }, 502);
     }
 
-    const collected: DriveFile[] = [];
-    let pageToken: string | undefined = undefined;
-    do {
-      const params = new URLSearchParams({
-        q: `'${folderId}' in parents and trashed = false`,
-        fields: "nextPageToken, files(id, name, mimeType, webViewLink, size)",
-        pageSize: "200",
-        supportsAllDrives: "true",
-        includeItemsFromAllDrives: "true",
-        orderBy: "name",
-      });
-      if (pageToken) params.set("pageToken", pageToken);
+    // Кожен зібраний файл несе свою категорію (за назвою батьківської підпапки).
+    const collected: Array<DriveFile & { category: string }> = [];
+    // BFS-черга папок: root (без назви → fallback), далі підпапки з їхніми назвами.
+    const queue: Array<{ id: string; name: string | null; depth: number }> = [
+      { id: rootFolderId, name: null, depth: 0 },
+    ];
+    let foldersScanned = 0;
+    let googleFail: { detail: string } | null = null;
 
-      let driveResp: Response;
-      try {
-        driveResp = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
+    outer: while (queue.length > 0 && foldersScanned < MAX_FOLDERS && collected.length < MAX_FILES) {
+      const current = queue.shift()!;
+      foldersScanned += 1;
+      // Категорія для файлів цієї папки: за назвою підпапки, інакше fallback.
+      const folderCategory =
+        (mapSubfolders ? categoryForFolderName(current.name) : null) ?? fallbackCategory;
+
+      let pageToken: string | undefined = undefined;
+      do {
+        const params = new URLSearchParams({
+          q: `'${current.id}' in parents and trashed = false`,
+          fields: "nextPageToken, files(id, name, mimeType, webViewLink, size)",
+          pageSize: "200",
+          supportsAllDrives: "true",
+          includeItemsFromAllDrives: "true",
+          orderBy: "folder,name",
         });
-      } catch (err) {
-        console.error("import-drive-folder Drive fetch error:", (err as Error).message);
-        return json({ error: "google_error", detail: "Не вдалося звʼязатися з Google Drive API" }, 502);
-      }
+        if (pageToken) params.set("pageToken", pageToken);
 
-      let listResp: DriveListResponse;
-      try {
-        listResp = await driveResp.json();
-      } catch {
-        return json({ error: "google_error", detail: `Drive API повернув невалідний JSON (HTTP ${driveResp.status})` }, 502);
-      }
-      if (!driveResp.ok) {
-        let detail = listResp.error?.message || `HTTP ${driveResp.status}`;
-        if (driveResp.status === 401 || driveResp.status === 403) {
-          detail +=
-            " — перевірте domain-wide delegation (scope drive.readonly) і що ви маєте доступ до цієї папки у Workspace.";
+        let driveResp: Response;
+        try {
+          driveResp = await fetch(`https://www.googleapis.com/drive/v3/files?${params.toString()}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        } catch (err) {
+          console.error("import-drive-folder Drive fetch error:", (err as Error).message);
+          googleFail = { detail: "Не вдалося звʼязатися з Google Drive API" };
+          break outer;
         }
-        if (driveResp.status === 404) detail += " — папку не знайдено (перевірте посилання).";
-        console.error("import-drive-folder Drive API error:", detail);
-        return json({ error: "google_error", detail }, 502);
-      }
 
-      for (const f of listResp.files ?? []) {
-        if (f.mimeType === FOLDER_MIME) continue; // підпапки пропускаємо (лише файли)
-        collected.push(f);
-        if (collected.length >= MAX_FILES) break;
-      }
-      pageToken = listResp.nextPageToken;
-    } while (pageToken && collected.length < MAX_FILES);
+        let listResp: DriveListResponse;
+        try {
+          listResp = await driveResp.json();
+        } catch {
+          googleFail = { detail: `Drive API повернув невалідний JSON (HTTP ${driveResp.status})` };
+          break outer;
+        }
+        if (!driveResp.ok) {
+          let detail = listResp.error?.message || `HTTP ${driveResp.status}`;
+          if (driveResp.status === 401 || driveResp.status === 403) {
+            detail +=
+              " — перевірте domain-wide delegation (scope drive.readonly) і що ви маєте доступ до цієї папки у Workspace.";
+          }
+          if (driveResp.status === 404) detail += " — папку не знайдено (перевірте посилання).";
+          console.error("import-drive-folder Drive API error:", detail);
+          googleFail = { detail };
+          break outer;
+        }
+
+        for (const f of listResp.files ?? []) {
+          if (f.mimeType === FOLDER_MIME) {
+            // Підпапка → у чергу (лише якщо розкладаємо й не перевищено глибину).
+            if (mapSubfolders && current.depth + 1 <= MAX_DEPTH) {
+              queue.push({ id: f.id, name: f.name, depth: current.depth + 1 });
+            }
+            continue;
+          }
+          collected.push({ ...f, category: folderCategory });
+          if (collected.length >= MAX_FILES) break;
+        }
+        pageToken = listResp.nextPageToken;
+      } while (pageToken && collected.length < MAX_FILES);
+    }
+
+    if (googleFail) return json({ error: "google_error", detail: googleFail.detail }, 502);
 
     const total = collected.length;
 
@@ -251,7 +316,7 @@ Deno.serve(async (req) => {
       .map((f) => ({
         vacancy_id: vacancyId,
         tenant_id: tenantId,
-        category,
+        category: f.category,
         name: f.name,
         drive_file_id: f.id,
         web_view_link: f.webViewLink ?? `https://drive.google.com/file/d/${f.id}/view`,
@@ -272,7 +337,7 @@ Deno.serve(async (req) => {
       added = count ?? rows.length;
     }
 
-    return json({ ok: true, added, skipped: total - added, total });
+    return json({ ok: true, added, skipped: total - added, total, folders_scanned: foldersScanned });
   } catch (error) {
     console.error("import-drive-folder unhandled error:", (error as Error).message);
     return json({ error: "server_error" }, 500);
