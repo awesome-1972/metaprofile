@@ -10,7 +10,7 @@
 -- ------------------------------------------------------------
 -- 1. Таблиця ролей (системні + кастомні, per tenant)
 -- ------------------------------------------------------------
-create table public.roles (
+create table if not exists public.roles (
   id          uuid primary key default gen_random_uuid(),
   tenant_id   uuid not null references public.tenants(id) on delete cascade,
   -- key для системних ролей = значення app_role (owner/admin/...); NULL — кастомна.
@@ -22,11 +22,12 @@ create table public.roles (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
-create unique index uq_roles_tenant_key on public.roles (tenant_id, key) where key is not null;
-create index idx_roles_tenant on public.roles (tenant_id);
+create unique index if not exists uq_roles_tenant_key on public.roles (tenant_id, key) where key is not null;
+create index if not exists idx_roles_tenant on public.roles (tenant_id);
 
 alter table public.roles enable row level security;
 
+drop trigger if exists set_updated_at_roles on public.roles;
 create trigger set_updated_at_roles
   before update on public.roles
   for each row execute function public.update_updated_at_column();
@@ -37,15 +38,18 @@ create trigger trg_stamp_tenant before insert on public.roles
 
 -- Читати ролі — будь-який внутрішній користувач; керувати — лише хто має право
 -- roles.manage (перевірка у застосунку/адмін-UI; тут базова гілка admin).
+drop policy if exists roles_select on public.roles;
 create policy roles_select on public.roles
   for select to authenticated
   using (public.mp_is_internal());
 
+drop policy if exists roles_write on public.roles;
 create policy roles_write on public.roles
   for all to authenticated
   using (public.mp_is_workspace_admin())
   with check (public.mp_is_workspace_admin());
 
+drop policy if exists roles_tenant_isolation on public.roles;
 create policy roles_tenant_isolation on public.roles
   as restrictive for all to authenticated
   using (tenant_id = public.mp_current_tenant())
@@ -83,7 +87,8 @@ insert into public.roles (tenant_id, key, name, is_system, permissions) values
   ]),
   ('11111111-1111-1111-1111-111111111111', 'visitor', 'Відвідувач', true, array[
     'clients.view','projects.view','vacancies.view','candidates.view'
-  ]);
+  ])
+on conflict (tenant_id, key) where key is not null do nothing;
 
 -- ------------------------------------------------------------
 -- 3. Звʼязок користувач ↔ роль (гібрид: enum АБО кастомна role_id)

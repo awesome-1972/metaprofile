@@ -38,6 +38,7 @@ on conflict (id) do nothing;
 
 -- Читати тенанти може будь-який автентифікований (у Фазі 1b звузимо до свого).
 -- Поки — DENY на запис клієнтом (лише service_role/admin через майбутній UI).
+drop policy if exists tenants_select on public.tenants;
 create policy tenants_select on public.tenants
   for select to authenticated using (true);
 
