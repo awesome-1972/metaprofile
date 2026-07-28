@@ -222,9 +222,19 @@ artifact_result, artifact_link, notes
 - **Асистент**: `*.view` + обмежене edit.
 - **Відвідувач**: лише `*.view`.
 
-Реалізація: таблиця `roles`(tenant_id, name, is_system, permissions jsonb) +
+Реалізація: таблиця `roles`(tenant_id, name, is_system, permissions text[]) +
 `user_roles.role_id` (гібрид із наявним enum). Перевірка права — helper
-`mp_has_permission(perm text)`. Це наступний крок фази 2 після архівування.
+`mp_has_permission(perm text)`, `mp_my_permissions()`.
+
+**Статус (2026-07-27): RBAC-фундамент + адмін-UI ЗРОБЛЕНО.**
+- Міграції `20260727095000` (enum visitor), `20260727095100` (roles + seed 5
+  системних + user_roles.role_id + helper'и).
+- Хуки `use-permissions` (`can(perm)`), `use-roles` (CRUD + PERMISSION_CATALOG).
+- Сторінка `/ats/roles` — редактор ролей і прав галочками, створення/видалення
+  кастомних (навігація «Ролі та права», admin/owner).
+- **Залишок**: застосувати `can()` у UI замість грубого `isInternal` (гейтинг
+  кнопок архів/фінанси/керування); призначення кастомних ролей користувачам
+  (user_roles.role_id) у картці користувача.
 
 | Роль | Наявна | Права |
 |---|---|---|
