@@ -1827,21 +1827,71 @@ export type Database = {
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          role_id: string | null
+          tenant_id: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          role_id?: string | null
+          tenant_id?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          role_id?: string | null
+          tenant_id?: string | null
           user_id?: string
         }
         Relationships: []
+      }
+      roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_system: boolean
+          key: string | null
+          name: string
+          permissions: string[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          key?: string | null
+          name: string
+          permissions?: string[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_system?: boolean
+          key?: string | null
+          name?: string
+          permissions?: string[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vacancies: {
         Row: {
@@ -2248,6 +2298,9 @@ export type Database = {
         Args: { p_vacancy_id: string }
         Returns: boolean
       }
+      mp_current_tenant: { Args: never; Returns: string }
+      mp_has_permission: { Args: { p_perm: string }; Returns: boolean }
+      mp_my_permissions: { Args: never; Returns: string[] }
       mp_is_internal: { Args: never; Returns: boolean }
       mp_is_workspace_admin: { Args: never; Returns: boolean }
       mp_reject_scope_key_change: {
@@ -2267,6 +2320,7 @@ export type Database = {
         | "owner"
         | "recruiter"
         | "assistant"
+        | "visitor"
       application_event_type:
         | "created"
         | "stage_changed"
@@ -2516,6 +2570,7 @@ export const Constants = {
         "owner",
         "recruiter",
         "assistant",
+        "visitor",
       ],
       application_event_type: [
         "created",
