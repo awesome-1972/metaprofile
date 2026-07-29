@@ -97,6 +97,7 @@ import { PreparationPanel } from "@/components/ats/PreparationPanel";
 import { CandidateActionDialog } from "@/components/ats/CandidateActionDialog";
 import { LongListImportDialog } from "@/components/ats/LongListImportDialog";
 import { LongListTable } from "@/components/ats/LongListTable";
+import { PhaseExportButton } from "@/components/ats/PhaseExportButton";
 import type { MessageTemplateKind } from "@/hooks/ats/use-message-templates";
 import { CompetencyScoreDialog } from "@/components/ats/CompetencyScoreDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -788,6 +789,13 @@ const VacancyDetailPage = () => {
                         <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
                         Імпорт лонг-листа з Excel
                       </Button>
+                    )}
+                    {isInternal && (
+                      <PhaseExportButton
+                        vacancyTitle={vacancy.title}
+                        phaseName={selectedPhase?.name ?? "Етап"}
+                        applications={phaseApplications}
+                      />
                     )}
                     {isInternal && id && (
                       <FunnelEditor vacancyId={id} countsByPhase={countsByPhase} />

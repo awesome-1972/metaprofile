@@ -139,23 +139,44 @@ Deno.serve(async (req) => {
     // --- 5. Додати у воронку (опційно) -----------------------------------
     let addedToFunnel = false;
     if (addToFunnel) {
+      // Перша стадія воронки — інакше заявка з current_stage_id=null не
+      // показується в жодній kanban-колонці (мірор useCreateApplication).
+      const { data: firstStage } = await admin
+        .from("pipeline_stages")
+        .select("id")
+        .eq("vacancy_id", vacancyId)
+        .order("position", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const firstStageId = (firstStage as unknown as { id: string } | null)?.id ?? null;
+
       // Чи вже є заявка цього кандидата на цю вакансію?
       const { data: existingApp } = await admin
         .from("applications")
-        .select("id")
+        .select("id, current_stage_id")
         .eq("vacancy_id", vacancyId)
         .eq("candidate_id", candidateId)
         .maybeSingle();
+
       if (!existingApp) {
         const { error: appErr } = await admin
           .from("applications")
-          .insert({ vacancy_id: vacancyId, candidate_id: candidateId, tenant_id: tenantId });
+          .insert({ vacancy_id: vacancyId, candidate_id: candidateId, tenant_id: tenantId, current_stage_id: firstStageId });
         if (appErr) {
-          // Не критично: кандидат збережений; лишаємо у базі, воронку можна додати вручну.
+          // Не критично: кандидат збережений; воронку можна додати вручну.
           console.error("save-cv-candidate application insert error:", appErr.message);
         } else {
           addedToFunnel = true;
         }
+      } else if (!(existingApp as unknown as { current_stage_id: string | null }).current_stage_id && firstStageId) {
+        // Заявка вже є, але без стадії (створена раніше без current_stage_id) —
+        // дозаповнюємо, щоб зʼявилась у kanban.
+        const { error: fixErr } = await admin
+          .from("applications")
+          .update({ current_stage_id: firstStageId })
+          .eq("id", (existingApp as unknown as { id: string }).id);
+        if (fixErr) console.error("save-cv-candidate application stage fix error:", fixErr.message);
+        else addedToFunnel = true;
       }
     }
 
