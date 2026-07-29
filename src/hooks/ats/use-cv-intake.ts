@@ -54,6 +54,56 @@ function cvErrorMessage(code: string | undefined, detail?: string): string {
   return detail || "Не вдалося розпізнати CV";
 }
 
+export interface SaveCvCandidateResult {
+  ok: boolean;
+  candidate_id: string;
+  added_to_funnel: boolean;
+}
+
+/**
+ * Виклик Edge `save-cv-candidate` — створює/оновлює кандидата з розпізнаного CV
+ * і опційно додає у воронку (service_role, tenant явно від вакансії). Обходить
+ * крайові випадки RLS при клієнтській вставці.
+ */
+export function useSaveCvCandidate() {
+  return useMutation({
+    mutationFn: async (payload: {
+      vacancy_id: string;
+      mode: "create" | "update";
+      candidate_id?: string;
+      full_name: string;
+      email?: string | null;
+      phone?: string | null;
+      messengers?: Record<string, string>;
+      resume_parsed?: Record<string, unknown>;
+      add_to_funnel?: boolean;
+    }): Promise<SaveCvCandidateResult> => {
+      const { data, error } = await supabase.functions.invoke("save-cv-candidate", {
+        body: payload,
+      });
+      if (error) {
+        let code: string | undefined;
+        let detail: string | undefined;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) {
+            const parsed = await ctx.json();
+            code = parsed.error;
+            detail = parsed.detail;
+          }
+        } catch {
+          /* ignore */
+        }
+        throw new Error(cvErrorMessage(code, detail) || error.message);
+      }
+      return data as SaveCvCandidateResult;
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося зберегти кандидата");
+    },
+  });
+}
+
 /**
  * Виклик Edge `parse-cv-preview` — розпізнає CV у поля БЕЗ запису в кандидата
  * (превʼю) + повертає можливі збіги для дедупу. Джерело — або текст (витягнутий

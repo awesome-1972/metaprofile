@@ -16,10 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { extractTextFromFile, ResumeParseError } from "@/lib/resume-parse-client";
-import { useParseCvPreview, type ParsedCv, type CvMatch } from "@/hooks/ats/use-cv-intake";
-import { useCreateCandidate, useUpdateCandidate } from "@/hooks/ats/use-candidates";
-import { useCreateApplication } from "@/hooks/ats/use-applications";
+import { useParseCvPreview, useSaveCvCandidate, type ParsedCv, type CvMatch } from "@/hooks/ats/use-cv-intake";
 
 export type CvIntakeSource =
   | { kind: "drive"; driveFileId: string; fileName: string }
@@ -34,9 +33,8 @@ interface CvIntakeDialogProps {
 
 export function CvIntakeDialog({ open, onOpenChange, vacancyId, source }: CvIntakeDialogProps) {
   const parseCv = useParseCvPreview();
-  const createCandidate = useCreateCandidate();
-  const updateCandidate = useUpdateCandidate();
-  const createApplication = useCreateApplication();
+  const saveCandidate = useSaveCvCandidate();
+  const qc = useQueryClient();
 
   const [phase, setPhase] = useState<"parsing" | "review">("parsing");
   const [parsed, setParsed] = useState<ParsedCv | null>(null);
@@ -101,45 +99,27 @@ export function CvIntakeDialog({ open, onOpenChange, vacancyId, source }: CvInta
     }
     setSaving(true);
     try {
-      // resume_parsed — структурований результат для картки кандидата.
-      const resumeParsed = parsed as unknown as Record<string, unknown>;
-      const messengers = parsed.messengers ?? {};
-
-      let candidateId: string;
-      if (target === "new") {
-        const created = await createCandidate.mutateAsync({
-          full_name: fullName.trim(),
-          email: email.trim() || null,
-          phone: phone.trim() || null,
-          messengers,
-          resume_parsed: resumeParsed,
-        } as unknown as Parameters<typeof createCandidate.mutateAsync>[0]);
-        candidateId = created.id;
-      } else {
-        const updated = await updateCandidate.mutateAsync({
-          id: target,
-          patch: {
-            full_name: fullName.trim(),
-            email: email.trim() || null,
-            phone: phone.trim() || null,
-            resume_parsed: resumeParsed,
-          } as unknown as Parameters<typeof updateCandidate.mutateAsync>[0]["patch"],
-        });
-        candidateId = updated.id;
-      }
-
-      if (addToFunnel) {
-        try {
-          await createApplication.mutateAsync({ vacancy_id: vacancyId, candidate_id: candidateId });
-        } catch {
-          // Якщо кандидат уже у воронці — не критично.
-        }
-      }
-
-      toast.success(target === "new" ? "Кандидата створено" : "Кандидата оновлено");
+      const res = await saveCandidate.mutateAsync({
+        vacancy_id: vacancyId,
+        mode: target === "new" ? "create" : "update",
+        candidate_id: target === "new" ? undefined : target,
+        full_name: fullName.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        messengers: parsed.messengers ?? {},
+        resume_parsed: parsed as unknown as Record<string, unknown>,
+        add_to_funnel: addToFunnel,
+      });
+      // Оновити списки кандидатів і воронку вакансії.
+      qc.invalidateQueries({ queryKey: ["ats", "candidates"] });
+      qc.invalidateQueries({ queryKey: ["ats", "applications", "vacancy", vacancyId] });
+      toast.success(
+        (target === "new" ? "Кандидата створено" : "Кандидата оновлено") +
+          (res.added_to_funnel ? " і додано у воронку" : ""),
+      );
       resetAndClose();
     } catch {
-      // помилки показані через onError хуків
+      // помилка показана через onError хука
     } finally {
       setSaving(false);
     }

@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.parse-cv-preview]
 verify_jwt = true
+
+[functions.save-cv-candidate]
+verify_jwt = true
