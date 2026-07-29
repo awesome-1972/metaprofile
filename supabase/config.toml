@@ -50,3 +50,6 @@ verify_jwt = true
 
 [functions.import-drive-folder]
 verify_jwt = true
+
+[functions.parse-cv-preview]
+verify_jwt = true

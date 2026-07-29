@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, FolderSymlink, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, FolderSymlink, Plus, ScanText, Trash2, Upload } from "lucide-react";
 import { usePermissions } from "@/hooks/ats/use-permissions";
+import { CvIntakeDialog, type CvIntakeSource } from "@/components/ats/CvIntakeDialog";
 import {
   FILE_CATEGORIES,
   parseDriveFileId,
@@ -49,6 +50,23 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveTarget, setMoveTarget] = useState<string>(FILE_CATEGORIES[0].key);
+
+  // Розпізнавання CV (крок 2): джерело — Drive-файл або завантаження.
+  const [cvSource, setCvSource] = useState<CvIntakeSource | null>(null);
+  const [cvDialogOpen, setCvDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openCvFromDrive = (driveFileId: string, fileName: string) => {
+    setCvSource({ kind: "drive", driveFileId, fileName });
+    setCvDialogOpen(true);
+  };
+  const handleUploadCv = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // дозволити повторний вибір того самого файлу
+    if (!file) return;
+    setCvSource({ kind: "upload", file });
+    setCvDialogOpen(true);
+  };
 
   const allIds = useMemo(() => (files ?? []).map((f) => f.id), [files]);
   const allSelected = allIds.length > 0 && selected.size === allIds.length;
@@ -175,6 +193,17 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
         </p>
         {canEdit && (
           <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx"
+              className="hidden"
+              onChange={handleUploadCv}
+            />
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Розпізнати CV
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setFolderDialogOpen(true)}>
               <FolderInput className="h-4 w-4 mr-2" />
               Прив'язати папку Drive
@@ -289,6 +318,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
                           <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
                             {new Date(f.created_at).toLocaleDateString("uk-UA")}
                           </span>
+                          {canEdit && f.drive_file_id && (
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Розпізнати CV у поля кандидата"
+                              onClick={() => openCvFromDrive(f.drive_file_id!, f.name)}
+                            >
+                              <ScanText className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           {canEdit && (
                             <button
                               type="button"
@@ -484,6 +523,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CvIntakeDialog
+        open={cvDialogOpen}
+        onOpenChange={(o) => {
+          setCvDialogOpen(o);
+          if (!o) setCvSource(null);
+        }}
+        vacancyId={vacancyId}
+        source={cvSource}
+      />
     </div>
   );
 }
