@@ -65,6 +65,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const toggleAll = (checked: boolean) => {
     setSelected(checked ? new Set(allIds) : new Set());
   };
+  const toggleMany = (ids: string[], checked: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (checked) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
   const clearSelection = () => setSelected(new Set());
 
   const handleBulkDelete = () => {
@@ -223,10 +233,20 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
         <div className="space-y-4">
           {FILE_CATEGORIES.map((cat) => {
             const list = byCategory[cat.key] ?? [];
+            const catIds = list.map((f) => f.id);
+            const allCatSelected = catIds.length > 0 && catIds.every((id) => selected.has(id));
+            const someCatSelected = catIds.some((id) => selected.has(id));
             return (
               <Card key={cat.key}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
+                    {canEdit && list.length > 0 && (
+                      <Checkbox
+                        checked={allCatSelected ? true : someCatSelected ? "indeterminate" : false}
+                        onCheckedChange={(v) => toggleMany(catIds, v === true)}
+                        title="Обрати все в цій папці"
+                      />
+                    )}
                     <Folder className="h-4 w-4 text-muted-foreground" />
                     <h3 className="font-medium text-sm">{cat.label}</h3>
                     <Badge variant="outline" className="text-xs">
