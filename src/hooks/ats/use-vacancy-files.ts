@@ -182,6 +182,50 @@ export function useImportDriveFolder() {
   });
 }
 
+export interface CreateVacancyFoldersResult {
+  ok: boolean;
+  vacancy_folder_id: string;
+  vacancy_folder_link: string;
+  folders: Record<string, { id: string; link: string }>;
+}
+
+/**
+ * Створює структуру папок вакансії в Google Drive (Edge create-vacancy-folders):
+ * MetaVision ATS → Клієнт → Проєкт → Вакансія → 8 підпапок-категорій. Ідемпотентно.
+ */
+export function useCreateVacancyFolders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { vacancy_id: string }): Promise<CreateVacancyFoldersResult> => {
+      const { data, error } = await supabase.functions.invoke("create-vacancy-folders", {
+        body: payload,
+      });
+      if (error) {
+        let detail = "";
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) {
+            const parsed = await ctx.json();
+            detail = parsed.detail || parsed.error || "";
+          }
+        } catch {
+          /* ignore */
+        }
+        throw new Error(detail || error.message || "Не вдалося створити папки");
+      }
+      return data as CreateVacancyFoldersResult;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: filesKey(variables.vacancy_id) });
+      qc.invalidateQueries({ queryKey: ["ats", "vacancies", variables.vacancy_id] });
+      toast.success("Структуру папок створено в Drive");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error.message || "Не вдалося створити папки");
+    },
+  });
+}
+
 /** Видалити файл вакансії (RLS: mp_can_edit_vacancy). */
 export function useDeleteVacancyFile() {
   const qc = useQueryClient();

@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.save-cv-candidate]
 verify_jwt = true
+
+[functions.create-vacancy-folders]
+verify_jwt = true

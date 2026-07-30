@@ -78,8 +78,11 @@ kanban-воронка з DnD → кандидати → комунікації (
   Статус), «Статус» — випадаючий список (16 значень, префіл за стадією/списком), аркуш
   «Дашборд» з COUNTIF за статусом. Генерація на клієнті через ExcelJS (dynamic import).
   Потрібна залежність `exceljs` (`npm i exceljs`).
-- **Крок 3 (далі):** авто-створення структури папок Drive сервісним акаунтом при
-  створенні вакансії (потрібен scope `drive`, зараз `drive.readonly`).
+- **Крок 3 (зроблено, чекає scope+деплой):** Edge `create-vacancy-folders` — ідемпотентно
+  будує в Drive: MetaVision ATS → Клієнт → Проєкт → Вакансія → 8 підпапок-категорій
+  (find-or-create), зберігає id/лінки на вакансії (`drive_folder_id`/`drive_folders`).
+  Кнопка «Створити папки в Drive» на вкладці «Файли». **Потрібен scope
+  `https://www.googleapis.com/auth/drive` у domain-wide delegation** (зараз `drive.readonly`).
 Drive — сховище, Postgres — джерело правди. Сервісний акаунт уже налаштований (Calendar/Meet);
 для запису в Drive знадобиться scope `drive` (зараз лише `drive.readonly`).
 

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, FolderSymlink, Plus, ScanText, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Folder, FolderInput, FolderPlus, FolderSymlink, Plus, ScanText, Trash2, Upload } from "lucide-react";
 import { usePermissions } from "@/hooks/ats/use-permissions";
 import { CvIntakeDialog, type CvIntakeSource } from "@/components/ats/CvIntakeDialog";
 import {
@@ -27,6 +27,7 @@ import {
   useDeleteVacancyFiles,
   useMoveVacancyFiles,
   useImportDriveFolder,
+  useCreateVacancyFolders,
   useVacancyFiles,
   type VacancyFile,
 } from "@/hooks/ats/use-vacancy-files";
@@ -42,8 +43,20 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
   const deleteFiles = useDeleteVacancyFiles();
   const moveFiles = useMoveVacancyFiles();
   const importFolder = useImportDriveFolder();
+  const createFolders = useCreateVacancyFolders();
   const { can } = usePermissions();
   const canEdit = can("files.manage");
+
+  const handleCreateFolders = () => {
+    createFolders.mutate(
+      { vacancy_id: vacancyId },
+      {
+        onSuccess: (res) => {
+          if (res.vacancy_folder_link) window.open(res.vacancy_folder_link, "_blank", "noopener");
+        },
+      },
+    );
+  };
 
   // Вибір файлів для масових операцій (видалення / переміщення).
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -203,6 +216,16 @@ export function FilesTab({ vacancyId }: FilesTabProps) {
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 mr-2" />
               Розпізнати CV
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCreateFolders}
+              disabled={createFolders.isPending}
+              title="Створити структуру папок вакансії в Google Drive"
+            >
+              <FolderPlus className="h-4 w-4 mr-2" />
+              {createFolders.isPending ? "Створення..." : "Створити папки в Drive"}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setFolderDialogOpen(true)}>
               <FolderInput className="h-4 w-4 mr-2" />
