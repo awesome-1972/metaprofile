@@ -113,7 +113,13 @@ async function fetchJobText(rawUrl: string): Promise<{ ok: true; text: string } 
     resp = await fetch(u.toString(), {
       redirect: "follow",
       signal: ctrl.signal,
-      headers: { "User-Agent": "MetaprofileATS/1.0 (+vacancy-import)", Accept: "text/html,text/plain" },
+      headers: {
+        // Браузерний UA — деякі сайти віддають 403 на не-браузерні агенти.
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8",
+        "Accept-Language": "uk,en;q=0.8",
+      },
     });
   } catch {
     clearTimeout(timer);

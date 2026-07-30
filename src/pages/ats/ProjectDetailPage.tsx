@@ -99,7 +99,7 @@ const ProjectDetailPage = () => {
   const setApproval = useSetProjectApproval();
   const { user, hasRole } = useAuthV2();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [importMode, setImportMode] = useState<"url" | "text">("url");
+  const [importMode, setImportMode] = useState<"url" | "text">("text");
   const [importValue, setImportValue] = useState("");
 
   const isWorkspaceAdmin = hasRole("owner") || hasRole("admin");

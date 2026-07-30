@@ -79,7 +79,7 @@ const VacanciesListPage = () => {
   const canCreate = can("vacancies.create");
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [importMode, setImportMode] = useState<"url" | "text">("url");
+  const [importMode, setImportMode] = useState<"url" | "text">("text");
   const [importValue, setImportValue] = useState("");
 
   const activeProjects = (projects ?? []).filter((p) => p.status !== "archived");

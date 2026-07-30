@@ -1397,6 +1397,57 @@ export type Database = {
           },
         ]
       }
+      vacancy_candidate_matches: {
+        Row: {
+          brief_fingerprint: string | null
+          breakdown: Json
+          candidate_id: string
+          computed_at: string
+          created_by: string | null
+          id: string
+          score: number
+          tenant_id: string | null
+          vacancy_id: string
+        }
+        Insert: {
+          brief_fingerprint?: string | null
+          breakdown?: Json
+          candidate_id: string
+          computed_at?: string
+          created_by?: string | null
+          id?: string
+          score?: number
+          tenant_id?: string | null
+          vacancy_id: string
+        }
+        Update: {
+          brief_fingerprint?: string | null
+          breakdown?: Json
+          candidate_id?: string
+          computed_at?: string
+          created_by?: string | null
+          id?: string
+          score?: number
+          tenant_id?: string | null
+          vacancy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vacancy_candidate_matches_vacancy_id_fkey"
+            columns: ["vacancy_id"]
+            isOneToOne: false
+            referencedRelation: "vacancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vacancy_candidate_matches_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "ats_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vacancy_files: {
         Row: {
           category: string

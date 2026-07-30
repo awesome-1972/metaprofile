@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.import-vacancy]
 verify_jwt = true
+
+[functions.recommend-candidates]
+verify_jwt = true
