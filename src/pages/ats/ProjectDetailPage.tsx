@@ -19,7 +19,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Briefcase, Building2, Calendar, Users, Plus } from "lucide-react";
+import { ArrowLeft, Briefcase, Building2, Calendar, Users, Plus, Sparkles } from "lucide-react";
+import { useImportVacancy } from "@/hooks/ats/use-vacancy-import";
+import { toast } from "sonner";
 import { useHiringProject, useSetProjectApproval } from "@/hooks/ats/use-hiring-projects";
 import { ProjectActions } from "@/components/ats/ProjectActions";
 import { useVacanciesByProject, useCreateVacancy } from "@/hooks/ats/use-vacancies";
@@ -93,9 +95,12 @@ const ProjectDetailPage = () => {
   const { data: project, isLoading, isError, error } = useHiringProject(id);
   const { data: vacancies, isLoading: vacanciesLoading } = useVacanciesByProject(id);
   const createVacancy = useCreateVacancy();
+  const importVacancy = useImportVacancy();
   const setApproval = useSetProjectApproval();
   const { user, hasRole } = useAuthV2();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"url" | "text">("url");
+  const [importValue, setImportValue] = useState("");
 
   const isWorkspaceAdmin = hasRole("owner") || hasRole("admin");
   const isInternal = isWorkspaceAdmin || hasRole("recruiter") || hasRole("assistant");
@@ -130,6 +135,30 @@ const ProjectDetailPage = () => {
         onSuccess: () => {
           setDialogOpen(false);
           form.reset();
+        },
+      },
+    );
+  };
+
+  // «Магічний імпорт»: URL/текст → AI → заповнення полів форми.
+  const handleMagicImport = () => {
+    if (!importValue.trim()) return;
+    importVacancy.mutate(
+      importMode === "url" ? { url: importValue.trim() } : { text: importValue.trim() },
+      {
+        onSuccess: ({ parsed }) => {
+          if (parsed.title) form.setValue("title", parsed.title);
+          if (parsed.employment_type) form.setValue("employment_type", parsed.employment_type);
+          if (parsed.location) form.setValue("location", parsed.location);
+          if (parsed.is_remote !== null) form.setValue("is_remote", parsed.is_remote);
+          // Опис: готовий description + короткий блок вимог/навичок, якщо є.
+          const extra: string[] = [];
+          if (parsed.requirements.length) extra.push("Вимоги:\n" + parsed.requirements.map((r) => `• ${r}`).join("\n"));
+          if (parsed.skills.length) extra.push("Навички: " + parsed.skills.join(", "));
+          const desc = [parsed.description, ...extra].filter(Boolean).join("\n\n");
+          if (desc) form.setValue("description", desc);
+          toast.success("Поля заповнено з оголошення — перевірте й створіть");
+          setImportValue("");
         },
       },
     );
@@ -289,6 +318,60 @@ const ProjectDetailPage = () => {
             <DialogTitle>Нова вакансія</DialogTitle>
             <DialogDescription>Для проекту: {project.name}</DialogDescription>
           </DialogHeader>
+
+          {/* Магічний імпорт: вставити посилання/текст оголошення → AI заповнить поля. */}
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Магічний імпорт</span>
+              <span className="text-xs text-muted-foreground">AI заповнить поля з оголошення</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={importMode === "url" ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setImportMode("url")}
+              >
+                Посилання
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={importMode === "text" ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setImportMode("text")}
+              >
+                Текст
+              </Button>
+            </div>
+            <div className="flex items-start gap-2">
+              {importMode === "url" ? (
+                <Input
+                  placeholder="https://... посилання на вакансію"
+                  value={importValue}
+                  onChange={(e) => setImportValue(e.target.value)}
+                />
+              ) : (
+                <Textarea
+                  rows={3}
+                  placeholder="Встав текст оголошення про вакансію"
+                  value={importValue}
+                  onChange={(e) => setImportValue(e.target.value)}
+                />
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleMagicImport}
+                disabled={!importValue.trim() || importVacancy.isPending}
+                className="whitespace-nowrap"
+              >
+                {importVacancy.isPending ? "Аналіз..." : "Заповнити"}
+              </Button>
+            </div>
+          </div>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">

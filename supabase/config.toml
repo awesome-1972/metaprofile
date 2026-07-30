@@ -59,3 +59,6 @@ verify_jwt = true
 
 [functions.create-vacancy-folders]
 verify_jwt = true
+
+[functions.import-vacancy]
+verify_jwt = true
