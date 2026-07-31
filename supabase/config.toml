@@ -65,3 +65,6 @@ verify_jwt = true
 
 [functions.recommend-candidates]
 verify_jwt = true
+
+[functions.public-brief]
+verify_jwt = false

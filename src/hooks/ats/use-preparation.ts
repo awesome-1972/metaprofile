@@ -158,6 +158,46 @@ export function usePublicBrief(vacancyId: string | undefined) {
   });
 }
 
+/**
+ * Увімкнути/вимкнути публічне посилання на бріф (/brief/:token). При вмиканні
+ * генерує token (якщо ще нема). Оновлює vacancy_public_briefs.
+ */
+export function useSetPublicBriefLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      vacancyId,
+      enabled,
+      currentToken,
+    }: {
+      vacancyId: string;
+      enabled: boolean;
+      currentToken: string | null;
+    }): Promise<{ public_token: string | null; is_link_enabled: boolean }> => {
+      const patch: Record<string, unknown> = { is_link_enabled: enabled };
+      if (enabled) {
+        patch.public_token = currentToken || crypto.randomUUID();
+        patch.published_at = new Date().toISOString();
+      }
+      const { data, error } = await supabase
+        .from("vacancy_public_briefs")
+        .update(patch as never)
+        .eq("vacancy_id", vacancyId)
+        .select("public_token, is_link_enabled")
+        .single();
+      if (error) throw error;
+      return data as { public_token: string | null; is_link_enabled: boolean };
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: publicBriefKey(variables.vacancyId) });
+      toast.success(variables.enabled ? "Публічне посилання увімкнено" : "Посилання вимкнено");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося змінити посилання");
+    },
+  });
+}
+
 export function useSavePublicBrief() {
   const qc = useQueryClient();
   return useMutation({

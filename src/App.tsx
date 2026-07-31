@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import PublicBriefPage from "./pages/PublicBriefPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -66,7 +67,9 @@ const DemoGate = ({ children }: { children: React.ReactNode }) => {
     !isRegistered &&
     location.pathname !== "/demo" &&
     !location.pathname.startsWith("/v2") &&
-    !location.pathname.startsWith("/ats")
+    !location.pathname.startsWith("/ats") &&
+    !location.pathname.startsWith("/brief") &&
+    !location.pathname.startsWith("/jobs")
   ) {
     return <Navigate to="/demo" replace />;
   }
@@ -81,6 +84,8 @@ const App = () => (
       <BrowserRouter>
         <DemoGate>
         <Routes>
+          {/* Публічний бріф кандидата за посиланням (без авторизації). */}
+          <Route path="/brief/:token" element={<PublicBriefPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />

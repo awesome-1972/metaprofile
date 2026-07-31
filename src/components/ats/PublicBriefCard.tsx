@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, Lock, Plus, Printer, Sparkles, Trash2, Unlock } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ChevronDown, ChevronUp, Copy, ExternalLink, Link2, Lock, Plus, Printer, Sparkles, Trash2, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import {
   usePublicBrief,
   useSavePublicBrief,
   useGeneratePublicBrief,
+  useSetPublicBriefLink,
   toBriefSections,
   type BriefSection,
 } from "@/hooks/ats/use-preparation";
@@ -36,6 +38,19 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidenti
   const { data: brief, isLoading } = usePublicBrief(vacancyId);
   const saveBrief = useSavePublicBrief();
   const generate = useGeneratePublicBrief();
+  const setLink = useSetPublicBriefLink();
+
+  const linkEnabled = !!(brief as unknown as { is_link_enabled?: boolean })?.is_link_enabled;
+  const publicToken = (brief as unknown as { public_token?: string | null })?.public_token ?? null;
+  const publicUrl = publicToken ? `${window.location.origin}/brief/${publicToken}` : "";
+
+  const handleCopyLink = () => {
+    if (!publicUrl) return;
+    navigator.clipboard
+      .writeText(publicUrl)
+      .then(() => toast.success("Посилання скопійовано"))
+      .catch(() => toast.error("Не вдалося скопіювати"));
+  };
 
   const [title, setTitle] = useState("");
   const [intro, setIntro] = useState("");
@@ -182,6 +197,46 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidenti
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             {generate.isPending ? "Генерація..." : "AI-чернетка з внутрішнього бріфу"}
           </Button>
+        </div>
+
+        {/* Публічне посилання на бріф (для відправки кандидату). */}
+        <div className="rounded-lg border p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="brief-public-link"
+              checked={linkEnabled}
+              disabled={!canEdit || !brief?.id || setLink.isPending}
+              onCheckedChange={(v) => setLink.mutate({ vacancyId, enabled: v, currentToken: publicToken })}
+            />
+            <Label htmlFor="brief-public-link" className="text-sm font-normal flex items-center gap-1.5 cursor-pointer">
+              <Link2 className="h-3.5 w-3.5" />
+              Публічне посилання на бріф
+            </Label>
+          </div>
+          {!brief?.id && (
+            <p className="text-xs text-muted-foreground pl-1">Спершу збережіть бріф, щоб увімкнути посилання.</p>
+          )}
+          {linkEnabled && publicUrl && (
+            <div className="flex items-center gap-2">
+              <Input readOnly value={publicUrl} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <Button size="icon" variant="outline" className="h-9 w-9 flex-shrink-0" onClick={handleCopyLink} title="Копіювати">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-9 w-9 flex-shrink-0"
+                onClick={() => window.open(publicUrl, "_blank", "noopener")}
+                title="Відкрити"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground pl-1">
+            Надішліть кандидату це посилання або PDF (кнопка «PDF» вгорі). Клієнт у бріфі не називається,
+            якщо пошук конфіденційний.
+          </p>
         </div>
 
         <div className="space-y-1.5">
