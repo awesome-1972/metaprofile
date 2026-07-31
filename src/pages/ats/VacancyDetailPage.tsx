@@ -652,7 +652,9 @@ const VacancyDetailPage = () => {
             vacancy.hiring_manager_id,
             vacancy.created_by,
           ].filter(Boolean) as string[];
-          const canApprove = isWorkspaceAdmin || (!!user && responsibleIds.includes(user.id));
+          // Рішення по requisition — лише owner/admin (Партнер). Сегрегація — на сервері.
+          const canApprove = isWorkspaceAdmin;
+          void responsibleIds;
           const projectApproved = vacancy.hiring_project?.approval_status === "approved";
           const gateHint =
             vacancy.approval_status === "approved" && !projectApproved

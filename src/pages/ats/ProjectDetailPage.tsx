@@ -97,7 +97,7 @@ const ProjectDetailPage = () => {
   const createVacancy = useCreateVacancy();
   const importVacancy = useImportVacancy();
   const setApproval = useSetProjectApproval();
-  const { user, hasRole } = useAuthV2();
+  const { hasRole } = useAuthV2();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importMode, setImportMode] = useState<"url" | "text">("text");
   const [importValue, setImportValue] = useState("");
@@ -226,7 +226,7 @@ const ProjectDetailPage = () => {
               approvalNote={project.approval_note}
               submittedAt={project.submitted_at}
               approvedAt={project.approved_at}
-              canApprove={isWorkspaceAdmin || (!!user && user.id === project.created_by)}
+              canApprove={isWorkspaceAdmin}
               canEdit={isInternal}
               isBusy={setApproval.isPending}
               onSubmit={() => id && setApproval.mutate({ id, approvalStatus: "pending_approval" })}

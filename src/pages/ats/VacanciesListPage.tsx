@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -81,8 +82,16 @@ const VacanciesListPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importMode, setImportMode] = useState<"url" | "text">("text");
   const [importValue, setImportValue] = useState("");
+  const [showClosed, setShowClosed] = useState(false);
 
   const activeProjects = (projects ?? []).filter((p) => p.status !== "archived");
+
+  // За замовчуванням ховаємо завершені вакансії (закрита наймом / закрита / скасована).
+  const ACTIVE_STATUSES: VacancyStatus[] = ["draft", "open", "on_hold"];
+  const visibleVacancies = (vacancies ?? []).filter(
+    (v) => showClosed || ACTIVE_STATUSES.includes(v.status),
+  );
+  const closedCount = (vacancies ?? []).length - (vacancies ?? []).filter((v) => ACTIVE_STATUSES.includes(v.status)).length;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -150,12 +159,20 @@ const VacanciesListPage = () => {
             <h1 className="text-2xl font-semibold text-foreground">Вакансії</h1>
             <p className="text-muted-foreground mt-1">Усі вакансії, доступні вам</p>
           </div>
-          {canCreate && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Нова вакансія
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            {closedCount > 0 && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox checked={showClosed} onCheckedChange={(v) => setShowClosed(v === true)} />
+                Показати закриті ({closedCount})
+              </label>
+            )}
+            {canCreate && (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Нова вакансія
+              </Button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -166,12 +183,16 @@ const VacanciesListPage = () => {
               {error instanceof Error ? error.message : "Не вдалося завантажити вакансії"}
             </CardContent>
           </Card>
-        ) : !vacancies || vacancies.length === 0 ? (
+        ) : visibleVacancies.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>Ще немає вакансій</p>
-              <p className="text-sm mt-1">Створіть вакансію кнопкою «Нова вакансія» або з картки проекту</p>
+              <p>{closedCount > 0 ? "Немає активних вакансій" : "Ще немає вакансій"}</p>
+              <p className="text-sm mt-1">
+                {closedCount > 0
+                  ? "Увімкніть «Показати закриті», щоб побачити завершені"
+                  : "Створіть вакансію кнопкою «Нова вакансія» або з картки проекту"}
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -187,7 +208,7 @@ const VacanciesListPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vacancies.map((vacancy) => (
+                {visibleVacancies.map((vacancy) => (
                   <TableRow
                     key={vacancy.id}
                     className="cursor-pointer"
