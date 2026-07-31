@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Circle, CalendarRange } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Check, Circle, CalendarRange, Lock } from "lucide-react";
+import { useUpdateVacancy } from "@/hooks/ats/use-vacancies";
 import { useVacancyBrief } from "@/hooks/ats/use-vacancy-brief";
 import { useVacancyCompetencies } from "@/hooks/ats/use-competencies";
 import { useSearchStrategy, usePublicBrief, toStringArray } from "@/hooks/ats/use-preparation";
@@ -23,6 +25,8 @@ interface PreparationPanelProps {
   phases: SearchPhase[];
   approvalStatus: RequisitionApprovalStatus;
   canEdit: boolean;
+  /** Конфіденційний пошук — не називати клієнта кандидатам. */
+  isConfidential: boolean;
   /** Перехід на відповідну вкладку вакансії (бріф/компетенції). */
   onOpenTab: (tab: string) => void;
 }
@@ -70,8 +74,10 @@ export function PreparationPanel({
   phases,
   approvalStatus,
   canEdit,
+  isConfidential,
   onOpenTab,
 }: PreparationPanelProps) {
+  const updateVacancy = useUpdateVacancy();
   const { data: brief } = useVacancyBrief(vacancyId);
   const { data: competencies } = useVacancyCompetencies(vacancyId);
   const { data: strategy } = useSearchStrategy(vacancyId);
@@ -114,6 +120,29 @@ export function PreparationPanel({
   };
 
   return (
+    <>
+      {/* Конфіденційність пошуку — ставиться на етапі Підготовки. */}
+      <div className="mb-3 flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 flex-wrap">
+        <Switch
+          id="confidential-search"
+          checked={isConfidential}
+          disabled={!canEdit || updateVacancy.isPending}
+          onCheckedChange={(v) =>
+            updateVacancy.mutate({
+              id: vacancyId,
+              patch: { is_confidential: v } as unknown as Parameters<typeof updateVacancy.mutate>[0]["patch"],
+            })
+          }
+        />
+        <Label htmlFor="confidential-search" className="text-sm cursor-pointer flex items-center gap-1.5">
+          <Lock className="h-3.5 w-3.5 text-amber-600" />
+          Конфіденційний пошук — не називати клієнта кандидатам
+        </Label>
+        <span className="text-xs text-muted-foreground basis-full">
+          Впливає на бріф для кандидатів, листи та публічне посилання/портал.
+        </span>
+      </div>
+
     <Tabs value={subTab} onValueChange={setSubTab}>
       <TabsList>
         <TabsTrigger value="checklist">
@@ -258,5 +287,6 @@ export function PreparationPanel({
         <StopListCard vacancyId={vacancyId} canEdit={canEdit} />
       </TabsContent>
     </Tabs>
+    </>
   );
 }

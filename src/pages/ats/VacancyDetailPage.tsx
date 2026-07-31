@@ -42,6 +42,7 @@ import {
   Copy,
   FileSpreadsheet,
   ListChecks,
+  Lock,
   MapPin,
   Plus,
   Send,
@@ -589,6 +590,12 @@ const VacancyDetailPage = () => {
             </div>
             <div className="flex items-center gap-2 mt-2">
               <Badge className={vacancyStatusColor[vacancy.status]}>{vacancyStatusLabel[vacancy.status]}</Badge>
+              {(vacancy as unknown as { is_confidential?: boolean }).is_confidential && (
+                <Badge className="bg-amber-100 text-amber-800 gap-1">
+                  <Lock className="h-3 w-3" />
+                  Конфіденційно
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">
                 {employmentTypeLabel[vacancy.employment_type]} · {vacancy.headcount} позиц.
               </span>
@@ -751,6 +758,7 @@ const VacancyDetailPage = () => {
                     phases={sortedPhases}
                     approvalStatus={vacancy.approval_status}
                     canEdit={isInternal}
+                    isConfidential={(vacancy as unknown as { is_confidential?: boolean }).is_confidential ?? false}
                     onOpenTab={setActiveTab}
                   />
                 ) : sortedStages.length === 0 ? (
@@ -1137,7 +1145,14 @@ const VacancyDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="brief" className="pt-4">
-            {id && <PublicBriefCard vacancyId={id} vacancyTitle={vacancy.title} canEdit={isInternal} />}
+            {id && (
+              <PublicBriefCard
+                vacancyId={id}
+                vacancyTitle={vacancy.title}
+                canEdit={isInternal}
+                isConfidential={(vacancy as unknown as { is_confidential?: boolean }).is_confidential ?? false}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="competencies" className="pt-4">

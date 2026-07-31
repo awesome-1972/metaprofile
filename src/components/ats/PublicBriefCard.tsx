@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, Plus, Printer, Sparkles, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Lock, Plus, Printer, Sparkles, Trash2, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import {
   usePublicBrief,
@@ -21,6 +20,8 @@ interface PublicBriefCardProps {
   vacancyId: string;
   vacancyTitle: string;
   canEdit: boolean;
+  /** Конфіденційний пошук (з етапу Підготовки) — керує розкриттям клієнта. */
+  isConfidential: boolean;
 }
 
 /**
@@ -31,7 +32,7 @@ interface PublicBriefCardProps {
  * Конфіденційність: за замовчуванням клієнт НЕ називається («Наш Клієнт — …»);
  * розкриття — свідомий чекбокс рекрутера.
  */
-export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit }: PublicBriefCardProps) {
+export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidential }: PublicBriefCardProps) {
   const { data: brief, isLoading } = usePublicBrief(vacancyId);
   const saveBrief = useSavePublicBrief();
   const generate = useGeneratePublicBrief();
@@ -39,7 +40,6 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit }: PublicBrie
   const [title, setTitle] = useState("");
   const [intro, setIntro] = useState("");
   const [sections, setSections] = useState<BriefSection[]>([]);
-  const [discloseClient, setDiscloseClient] = useState(false);
   const [extraNotes, setExtraNotes] = useState("");
   const [aiModel, setAiModel] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit }: PublicBrie
 
   const handleGenerate = () => {
     generate.mutate(
-      { vacancyId, discloseClient, extraNotes: extraNotes.trim() || undefined },
+      { vacancyId, discloseClient: !isConfidential, extraNotes: extraNotes.trim() || undefined },
       {
         onSuccess: (draft) => {
           setTitle(draft.title || vacancyTitle);
@@ -87,7 +87,7 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit }: PublicBrie
     }
     const opened = openPrintableDocument({
       title: title.trim() || vacancyTitle,
-      subtitle: "Конфіденційний бріф для кандидатів",
+      subtitle: isConfidential ? "Конфіденційний бріф для кандидатів" : "Бріф для кандидатів",
       intro: intro.trim() || undefined,
       sections: printable,
     });
@@ -150,16 +150,20 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit }: PublicBrie
       <CardContent className="space-y-4">
         {/* AI-генерація з внутрішнього брифу */}
         <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="disclose-client"
-              checked={discloseClient}
-              disabled={!canEdit}
-              onCheckedChange={(checked) => setDiscloseClient(checked === true)}
-            />
-            <Label htmlFor="disclose-client" className="text-sm font-normal">
-              Можна називати клієнта (за замовчуванням пошук конфіденційний)
-            </Label>
+          <div className="flex items-center gap-2 text-sm">
+            {isConfidential ? (
+              <>
+                <Lock className="h-3.5 w-3.5 text-amber-600" />
+                <span className="text-amber-800">
+                  Пошук конфіденційний — клієнт не називається. Змінити — перемикачем на етапі «Підготовка».
+                </span>
+              </>
+            ) : (
+              <>
+                <Unlock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Клієнта дозволено називати у бріфі.</span>
+              </>
+            )}
           </div>
           <Textarea
             value={extraNotes}

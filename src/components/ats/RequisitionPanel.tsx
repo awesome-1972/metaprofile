@@ -90,6 +90,7 @@ export function RequisitionPanel({
 }: RequisitionPanelProps) {
   const [decision, setDecision] = useState<DecisionStatus | null>(null);
   const [note, setNote] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   const levelWord = level === "vacancy" ? "вакансії" : "проекту";
   const openWord = level === "vacancy" ? "відкрити вакансію" : "активувати проект";
@@ -112,6 +113,21 @@ export function RequisitionPanel({
     rejected: "Відхилити requisition",
   };
 
+  // Після затвердження — компактний рядок (повна картка займає багато місця).
+  if (approvalStatus === "approved" && !expanded) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border bg-green-50/60 px-3 py-2 text-sm flex-wrap">
+        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+        <span className="font-medium text-green-800">Заявку на підбір затверджено</span>
+        <span className="text-muted-foreground">· {formatDate(approvedAt)}</span>
+        {gateHint && <span className="text-xs text-amber-700 basis-full sm:basis-auto">{gateHint}</span>}
+        <Button size="sm" variant="ghost" className="h-6 text-xs ml-auto" onClick={() => setExpanded(true)}>
+          Деталі
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -120,7 +136,14 @@ export function RequisitionPanel({
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
             Заявка на підбір (Requisition)
           </CardTitle>
-          <Badge className={statusColor[approvalStatus]}>{statusLabel[approvalStatus]}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={statusColor[approvalStatus]}>{statusLabel[approvalStatus]}</Badge>
+            {approvalStatus === "approved" && (
+              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setExpanded(false)}>
+                Згорнути
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
