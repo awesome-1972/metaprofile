@@ -89,7 +89,7 @@ const ClientDetailPage = () => {
       {
         client_id: id,
         name: values.name,
-        code: values.code || null,
+        code: null, // авто-код генерує тригер mp_hiring_project_code (per-client)
         status: values.status,
         description: values.description || null,
         start_date: values.start_date || null,
@@ -278,8 +278,10 @@ const ClientDetailPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="project-code">Код замовлення</Label>
-                <Input id="project-code" placeholder="HP-001" {...form.register("code")} />
+                <Label>Код замовлення</Label>
+                <div className="h-10 flex items-center rounded-md border border-dashed px-3 text-sm text-muted-foreground">
+                  Згенерується автоматично
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Статус</Label>

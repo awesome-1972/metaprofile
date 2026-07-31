@@ -94,7 +94,7 @@ const ProjectsListPage = () => {
       {
         client_id: values.client_id,
         name: values.name,
-        code: values.code || null,
+        code: null, // авто-код генерує тригер mp_hiring_project_code (per-client)
         status: values.status,
         start_date: values.start_date || null,
         target_date: values.target_date || null,
@@ -231,18 +231,13 @@ const ProjectsListPage = () => {
                 <p className="text-sm text-destructive">{form.formState.errors.client_id.message}</p>
               )}
             </div>
-            <div className="grid grid-cols-[1fr_auto] gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="pl-name">Назва *</Label>
-                <Input id="pl-name" {...form.register("name")} />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pl-code">Код</Label>
-                <Input id="pl-code" className="w-28" placeholder="HP-001" {...form.register("code")} />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pl-name">Назва *</Label>
+              <Input id="pl-name" {...form.register("name")} />
+              {form.formState.errors.name && (
+                <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground">Код замовлення згенерується автоматично.</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
