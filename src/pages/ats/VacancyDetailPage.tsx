@@ -85,7 +85,7 @@ import {
   useCancelBatchCommunication,
 } from "@/hooks/ats/use-communications";
 import { useScheduleInterview, useUpcomingInterviewsByApplications } from "@/hooks/ats/use-interviews";
-import { BriefTab } from "@/components/ats/BriefTab";
+import { PublicBriefCard } from "@/components/ats/PublicBriefCard";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
 import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
@@ -1137,7 +1137,7 @@ const VacancyDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="brief" className="pt-4">
-            {id && <BriefTab vacancyId={id} />}
+            {id && <PublicBriefCard vacancyId={id} vacancyTitle={vacancy.title} canEdit={isInternal} />}
           </TabsContent>
 
           <TabsContent value="competencies" className="pt-4">

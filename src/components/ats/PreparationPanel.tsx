@@ -11,7 +11,7 @@ import { useVacancyCompetencies } from "@/hooks/ats/use-competencies";
 import { useSearchStrategy, usePublicBrief, toStringArray } from "@/hooks/ats/use-preparation";
 import { useUpdatePhasePlan, type SearchPhase } from "@/hooks/ats/use-search-phases";
 import { SearchStrategyCard } from "@/components/ats/SearchStrategyCard";
-import { PublicBriefCard } from "@/components/ats/PublicBriefCard";
+import { BriefTab } from "@/components/ats/BriefTab";
 import { StopListCard } from "@/components/ats/StopListCard";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -78,6 +78,7 @@ export function PreparationPanel({
   const { data: publicBrief } = usePublicBrief(vacancyId);
   const updatePlan = useUpdatePhasePlan();
 
+  const [subTab, setSubTab] = useState("checklist");
   const [planDraft, setPlanDraft] = useState<Record<string, { start: string; end: string }>>({});
 
   const briefDone = brief?.status === "completed";
@@ -113,7 +114,7 @@ export function PreparationPanel({
   };
 
   return (
-    <Tabs defaultValue="checklist">
+    <Tabs value={subTab} onValueChange={setSubTab}>
       <TabsList>
         <TabsTrigger value="checklist">
           Чеклист
@@ -122,7 +123,7 @@ export function PreparationPanel({
           </Badge>
         </TabsTrigger>
         <TabsTrigger value="strategy">Стратегія пошуку</TabsTrigger>
-        <TabsTrigger value="public-brief">Бріф для кандидатів</TabsTrigger>
+        <TabsTrigger value="questionnaire">Бріф-опитувальник</TabsTrigger>
         <TabsTrigger value="stop-list">Стоп-лист</TabsTrigger>
       </TabsList>
 
@@ -141,9 +142,9 @@ export function PreparationPanel({
               <ChecklistRow
                 done={briefDone}
                 title="Бріф із замовником заповнено"
-                hint={brief ? "Бріф вакансії (68 питань)" : "Бріф ще не створено"}
+                hint={brief ? "Опитувальник замовника (формує бріф)" : "Опитувальник ще не заповнено"}
                 action={
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onOpenTab("brief")}>
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSubTab("questionnaire")}>
                     {briefDone ? "Переглянути" : "Заповнити"}
                   </Button>
                 }
@@ -181,6 +182,11 @@ export function PreparationPanel({
                     : publicBrief
                       ? "Чернетка — потребує затвердження"
                       : "Ще не створено"
+                }
+                action={
+                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onOpenTab("brief")}>
+                    {publicBriefDone ? "Переглянути" : "Створити"}
+                  </Button>
                 }
               />
             </CardContent>
@@ -240,8 +246,12 @@ export function PreparationPanel({
         <SearchStrategyCard vacancyId={vacancyId} vacancyTitle={vacancyTitle} canEdit={canEdit} />
       </TabsContent>
 
-      <TabsContent value="public-brief" className="pt-4">
-        <PublicBriefCard vacancyId={vacancyId} vacancyTitle={vacancyTitle} canEdit={canEdit} />
+      <TabsContent value="questionnaire" className="pt-4">
+        <div className="mb-3 text-sm text-muted-foreground">
+          Опитувальник замовника — інструмент підготовки. На його основі формується бріф для
+          кандидатів (таб «Бріф»). У роботі більше не потрібен.
+        </div>
+        <BriefTab vacancyId={vacancyId} />
       </TabsContent>
 
       <TabsContent value="stop-list" className="pt-4">
