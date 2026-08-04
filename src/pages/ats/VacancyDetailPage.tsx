@@ -589,8 +589,14 @@ const VacancyDetailPage = () => {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Badge className={vacancyStatusColor[vacancy.status]}>{vacancyStatusLabel[vacancy.status]}</Badge>
+              {(() => {
+                const p = (vacancy as unknown as { priority?: string }).priority;
+                if (p === "urgent") return <Badge className="bg-red-100 text-red-700">Терміново</Badge>;
+                if (p === "high") return <Badge className="bg-amber-100 text-amber-800">Високий пріоритет</Badge>;
+                return null;
+              })()}
               {(vacancy as unknown as { is_confidential?: boolean }).is_confidential && (
                 <Badge className="bg-amber-100 text-amber-800 gap-1">
                   <Lock className="h-3 w-3" />
@@ -599,6 +605,15 @@ const VacancyDetailPage = () => {
               )}
               <span className="text-xs text-muted-foreground">
                 {employmentTypeLabel[vacancy.employment_type]} · {vacancy.headcount} позиц.
+                {(() => {
+                  const v = vacancy as unknown as { work_style?: string; work_schedule?: string; candidates_geo?: string };
+                  const styleLabel: Record<string, string> = { remote: "віддалено", office: "в офісі", hybrid: "гібрид" };
+                  const parts: string[] = [];
+                  if (v.work_style && styleLabel[v.work_style]) parts.push(styleLabel[v.work_style]);
+                  if (v.work_schedule?.trim()) parts.push(v.work_schedule.trim());
+                  if (v.candidates_geo?.trim()) parts.push(`тільки з: ${v.candidates_geo.trim()}`);
+                  return parts.length ? ` · ${parts.join(" · ")}` : null;
+                })()}
               </span>
             </div>
             <div className="flex items-center gap-2 mt-3">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUpdateCandidate } from "@/hooks/ats/use-candidates";
 import { useMoveApplication, type ApplicationWithCandidate } from "@/hooks/ats/use-applications";
 import type { PipelineStage } from "@/hooks/ats/use-pipeline";
+import { useVacancyMatches, matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
 
 interface LongListTableProps {
   vacancyId: string;
@@ -32,6 +33,29 @@ export function LongListTable({ vacancyId, applications, stages, canEdit }: Long
   const updateCandidate = useUpdateCandidate();
   const moveApplication = useMoveApplication();
   const [drafts, setDrafts] = useState<Record<string, RowDraft>>({});
+  const [matchFilter, setMatchFilter] = useState<"all" | "green" | "yellow">("all");
+  const [sortByMatch, setSortByMatch] = useState(false);
+
+  const { data: matches } = useVacancyMatches(vacancyId);
+  const scoreByCandidate = useMemo(() => {
+    const map = new Map<string, number>();
+    (matches ?? []).forEach((m) => map.set(m.candidate_id, m.score));
+    return map;
+  }, [matches]);
+
+  const visibleApplications = useMemo(() => {
+    let rows = applications;
+    if (matchFilter !== "all") {
+      const threshold = matchFilter === "green" ? 75 : 50;
+      rows = rows.filter((a) => (scoreByCandidate.get(a.candidate_id) ?? -1) >= threshold);
+    }
+    if (sortByMatch) {
+      rows = [...rows].sort(
+        (a, b) => (scoreByCandidate.get(b.candidate_id) ?? -1) - (scoreByCandidate.get(a.candidate_id) ?? -1),
+      );
+    }
+    return rows;
+  }, [applications, matchFilter, sortByMatch, scoreByCandidate]);
 
   const getDraft = (application: ApplicationWithCandidate): RowDraft => {
     const candidate = application.candidate;
@@ -90,21 +114,56 @@ export function LongListTable({ vacancyId, applications, stages, canEdit }: Long
   }
 
   return (
-    <div className="rounded-lg border overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="bg-muted/50">
-            <tr className="text-left">
-              <th className="p-2 w-48">ПІБ</th>
-              <th className="p-2 w-44">Компанія</th>
-              <th className="p-2 w-44">Посада</th>
-              <th className="p-2 w-44">Стадія</th>
-              <th className="p-2">Коментар</th>
-              <th className="p-2 w-24"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {applications.map((application) => {
+    <div className="space-y-2">
+      {matches && matches.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Збіг з бріфом:</span>
+          <Select value={matchFilter} onValueChange={(v) => setMatchFilter(v as typeof matchFilter)}>
+            <SelectTrigger className="h-7 w-40 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">Усі кандидати</SelectItem>
+              <SelectItem value="green" className="text-xs">Високий (≥ 75%)</SelectItem>
+              <SelectItem value="yellow" className="text-xs">Середній+ (≥ 50%)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant={sortByMatch ? "default" : "outline"}
+            className="h-7 text-xs"
+            onClick={() => setSortByMatch((v) => !v)}
+          >
+            Сортувати за збігом
+          </Button>
+          <span className="text-muted-foreground">
+            Показано: {visibleApplications.length} із {applications.length}
+          </span>
+        </div>
+      )}
+      <div className="rounded-lg border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50">
+              <tr className="text-left">
+                <th className="p-2 w-48">ПІБ</th>
+                <th className="p-2 w-20">Збіг</th>
+                <th className="p-2 w-44">Компанія</th>
+                <th className="p-2 w-44">Посада</th>
+                <th className="p-2 w-44">Стадія</th>
+                <th className="p-2">Коментар</th>
+                <th className="p-2 w-24"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleApplications.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                    Немає кандидатів за обраним фільтром збігу
+                  </td>
+                </tr>
+              )}
+              {visibleApplications.map((application) => {
               const draft = getDraft(application);
               const dirty = isDirty(application);
               const rejected = application.status !== "active";
@@ -130,6 +189,18 @@ export function LongListTable({ vacancyId, applications, stages, canEdit }: Long
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="p-2 align-top">
+                    {(() => {
+                      const score = scoreByCandidate.get(application.candidate_id);
+                      if (score === undefined) return <span className="text-muted-foreground">—</span>;
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`h-2 w-2 rounded-full ${matchDotClass[matchFlag(score)]}`} />
+                          {score}%
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-2 align-top">
                     <Input
@@ -189,8 +260,9 @@ export function LongListTable({ vacancyId, applications, stages, canEdit }: Long
                 </tr>
               );
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

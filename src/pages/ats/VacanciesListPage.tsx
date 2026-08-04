@@ -66,6 +66,10 @@ const formSchema = z.object({
   headcount: z.coerce.number().int().min(1, "Мінімум 1"),
   location: z.string().optional(),
   is_remote: z.boolean(),
+  priority: z.enum(["normal", "high", "urgent"]),
+  work_style: z.string().optional(),
+  work_schedule: z.string().optional(),
+  candidates_geo: z.string().optional(),
   description: z.string().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
@@ -103,6 +107,10 @@ const VacanciesListPage = () => {
       headcount: 1,
       location: "",
       is_remote: false,
+      priority: "normal",
+      work_style: "",
+      work_schedule: "",
+      candidates_geo: "",
       description: "",
     },
   });
@@ -117,8 +125,12 @@ const VacanciesListPage = () => {
         headcount: values.headcount,
         location: values.location || null,
         is_remote: values.is_remote,
+        priority: values.priority,
+        work_style: values.work_style || null,
+        work_schedule: values.work_schedule || null,
+        candidates_geo: values.candidates_geo || null,
         description: values.description || null,
-      },
+      } as unknown as Parameters<typeof createVacancy.mutate>[0],
       {
         onSuccess: (data) => {
           setDialogOpen(false);
@@ -343,6 +355,46 @@ const VacanciesListPage = () => {
               <div className="space-y-1.5">
                 <Label htmlFor="v-location">Локація</Label>
                 <Input id="v-location" placeholder="Київ, Україна" {...form.register("location")} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Пріоритет</Label>
+                <Select value={form.watch("priority")} onValueChange={(v) => form.setValue("priority", v as FormValues["priority"])}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">Звичайний</SelectItem>
+                    <SelectItem value="high">Високий</SelectItem>
+                    <SelectItem value="urgent">Терміново</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Стиль роботи</Label>
+                <Select value={form.watch("work_style") || ""} onValueChange={(v) => form.setValue("work_style", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Не вказано" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="office">В офісі</SelectItem>
+                    <SelectItem value="remote">Віддалено</SelectItem>
+                    <SelectItem value="hybrid">Гібрид</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="v-schedule">Графік</Label>
+                <Input id="v-schedule" placeholder="напр. гнучкий старт 9–11" {...form.register("work_schedule")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="v-geo">Кандидати тільки з</Label>
+                <Input id="v-geo" placeholder="напр. Україна" {...form.register("candidates_geo")} />
               </div>
             </div>
 
