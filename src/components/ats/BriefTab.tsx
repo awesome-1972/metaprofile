@@ -15,7 +15,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Sparkles } from "lucide-react";
 import { BRIEF_SECTIONS, CONDITIONS_SECTION_KEY } from "@/lib/ats/brief-questions";
+import { useParseBrief, type BriefParseQuestion } from "@/hooks/ats/use-brief-parse";
 import type { Json } from "@/integrations/supabase/types";
 import {
   useVacancyBrief,
@@ -40,8 +43,52 @@ export function BriefTab({ vacancyId }: BriefTabProps) {
   const setStatus = useSetVacancyBriefStatus();
   const saveFinancials = useSaveVacancyBriefFinancials();
 
+  const parseBrief = useParseBrief();
+
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [financialAnswers, setFinancialAnswers] = useState<Record<string, string>>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [importCount, setImportCount] = useState<number | null>(null);
+
+  // Розбір транскрипту розмови у поля бріфу.
+  const handleParseTranscript = () => {
+    if (transcript.trim().length < 20) return;
+    const questions: BriefParseQuestion[] = BRIEF_SECTIONS.flatMap((section) =>
+      section.questions.map((q) => ({
+        id: `${section.sectionKey}.${q.key}`,
+        label: q.label,
+        type: q.type,
+        options: q.options,
+      })),
+    );
+    parseBrief.mutate(
+      { vacancyId, transcript: transcript.trim(), questions },
+      {
+        onSuccess: (extracted) => {
+          const financialKeys = new Set(
+            BRIEF_SECTIONS.flatMap((s) => s.questions.filter((q) => q.financial).map((q) => `${s.sectionKey}.${q.key}`)),
+          );
+          const nextAnswers: AnswersMap = { ...answers };
+          const nextFin: Record<string, string> = { ...financialAnswers };
+          let applied = 0;
+          for (const item of extracted) {
+            const [sectionKey, questionKey] = item.id.split(".");
+            if (!sectionKey || !questionKey) continue;
+            if (financialKeys.has(item.id)) {
+              if (canViewFinancials) { nextFin[questionKey] = item.value; applied++; }
+            } else {
+              nextAnswers[sectionKey] = { ...(nextAnswers[sectionKey] ?? {}), [questionKey]: item.value };
+              applied++;
+            }
+          }
+          setAnswers(nextAnswers);
+          setFinancialAnswers(nextFin);
+          setImportCount(applied);
+        },
+      },
+    );
+  };
 
   useEffect(() => {
     if (brief?.answers && typeof brief.answers === "object") {
@@ -109,10 +156,48 @@ export function BriefTab({ vacancyId }: BriefTabProps) {
             </Label>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saveBrief.isPending}>
-          {saveBrief.isPending ? "Збереження..." : "Зберегти"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => { setImportOpen(true); setImportCount(null); }}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Завантажити бріф із розмови
+          </Button>
+          <Button onClick={handleSave} disabled={saveBrief.isPending}>
+            {saveBrief.isPending ? "Збереження..." : "Зберегти"}
+          </Button>
+        </div>
       </div>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Завантажити бріф із розмови</DialogTitle>
+            <DialogDescription>
+              Вставте транскрибацію запису розмови з клієнтом — AI розкладе дані по полях опитувальника.
+              Після розпізнавання все можна перевірити й доправити вручну, а потім натиснути «Зберегти».
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder="Вставте сюди текст транскрипції розмови…"
+            className="min-h-[220px]"
+          />
+          {importCount !== null && (
+            <p className="text-sm text-muted-foreground">
+              {importCount > 0
+                ? `Розпізнано й заповнено полів: ${importCount}. Перевірте у формі нижче та збережіть.`
+                : "Не вдалося виділити відповіді з тексту. Спробуйте докладнішу транскрипцію."}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setImportOpen(false)}>Закрити</Button>
+            <Button onClick={handleParseTranscript} disabled={parseBrief.isPending || transcript.trim().length < 20}>
+              {parseBrief.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+              Розпізнати
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Accordion type="multiple" className="w-full">
         {BRIEF_SECTIONS.map((section) => (
