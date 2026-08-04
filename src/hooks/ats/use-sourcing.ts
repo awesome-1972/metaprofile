@@ -105,6 +105,23 @@ export function useRunSourcing() {
   });
 }
 
+// Назва джерела в довіднику candidate_sources під кожного провайдера
+// (див. міграцію 20260804120000_ats_sourcing_sources.sql).
+const PROVIDER_SOURCE_NAME: Record<SourcingProvider, string> = {
+  github: "GitHub",
+  pdl: "People Data Labs",
+  apollo: "Apollo",
+  proxycurl: "Proxycurl",
+};
+
+// Знайти source_id за назвою провайдера (best-effort; якщо немає — null).
+async function resolveSourceId(provider: SourcingProvider): Promise<string | null> {
+  const name = PROVIDER_SOURCE_NAME[provider];
+  if (!name) return null;
+  const { data } = await supabase.from("candidate_sources").select("id").eq("name", name).limit(1).maybeSingle();
+  return (data as { id: string } | null)?.id ?? null;
+}
+
 // Створити ats_candidate з профілю + злінкувати sourced_profile. Спільна логіка.
 async function createCandidateFromProfile(p: SourcedProfile): Promise<string> {
   const noteParts = [
@@ -112,6 +129,7 @@ async function createCandidateFromProfile(p: SourcedProfile): Promise<string> {
     p.profile_url ? `Профіль: ${p.profile_url}` : "",
     p.skills.length ? `Навички: ${p.skills.join(", ")}` : "",
   ].filter(Boolean);
+  const sourceId = await resolveSourceId(p.provider);
   const { data: created, error } = await supabase
     .from("ats_candidates")
     .insert({
@@ -121,6 +139,7 @@ async function createCandidateFromProfile(p: SourcedProfile): Promise<string> {
       location: p.location,
       linkedin_url: p.profile_url,
       notes: noteParts.join("\n"),
+      source_id: sourceId,
       resume_parsed: p.skills.length ? ({ skills: p.skills } as unknown as never) : null,
     })
     .select("id")
