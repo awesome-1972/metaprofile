@@ -102,6 +102,7 @@ import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
 import { ListsTab } from "@/components/ats/ListsTab";
 import { FilesTab } from "@/components/ats/FilesTab";
 import { RecommendedTab } from "@/components/ats/RecommendedTab";
+import { SourcingTab } from "@/components/ats/SourcingTab";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
 import { PhaseNav } from "@/components/ats/PhaseNav";
 import { PreparationPanel } from "@/components/ats/PreparationPanel";
@@ -735,6 +736,7 @@ const VacancyDetailPage = () => {
             <TabsTrigger value="comparison">Порівняння</TabsTrigger>
             <TabsTrigger value="reports">Звіти</TabsTrigger>
             <TabsTrigger value="recommended">Рекомендовані</TabsTrigger>
+            <TabsTrigger value="sourcing">Сорсинг</TabsTrigger>
             <TabsTrigger value="files">Файли</TabsTrigger>
           </TabsList>
 
@@ -1206,6 +1208,10 @@ const VacancyDetailPage = () => {
 
           <TabsContent value="recommended" className="pt-4">
             {id && <RecommendedTab vacancyId={id} existingCandidateIds={existingCandidateIds} />}
+          </TabsContent>
+
+          <TabsContent value="sourcing" className="pt-4">
+            {id && <SourcingTab vacancyId={id} canEdit={isInternal} />}
           </TabsContent>
 
           <TabsContent value="files" className="pt-4">
