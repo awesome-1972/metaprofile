@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { ChevronDown, ChevronUp, Copy, ExternalLink, Link2, Lock, Plus, Printer, Sparkles, Trash2, Unlock } from "lucide-react";
+import { ChevronDown, ChevronUp, Copy, ExternalLink, Globe, Link2, Lock, Plus, Printer, Sparkles, Trash2, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import {
   usePublicBrief,
   useSavePublicBrief,
   useGeneratePublicBrief,
   useSetPublicBriefLink,
+  useSetVacancyBoardPublished,
   toBriefSections,
   type BriefSection,
 } from "@/hooks/ats/use-preparation";
@@ -24,6 +25,8 @@ interface PublicBriefCardProps {
   canEdit: boolean;
   /** Конфіденційний пошук (з етапу Підготовки) — керує розкриттям клієнта. */
   isConfidential: boolean;
+  /** Чи опублікована вакансія на публічному порталі /jobs. */
+  isBoardPublished?: boolean;
 }
 
 /**
@@ -34,11 +37,12 @@ interface PublicBriefCardProps {
  * Конфіденційність: за замовчуванням клієнт НЕ називається («Наш Клієнт — …»);
  * розкриття — свідомий чекбокс рекрутера.
  */
-export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidential }: PublicBriefCardProps) {
+export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidential, isBoardPublished = false }: PublicBriefCardProps) {
   const { data: brief, isLoading } = usePublicBrief(vacancyId);
   const saveBrief = useSavePublicBrief();
   const generate = useGeneratePublicBrief();
   const setLink = useSetPublicBriefLink();
+  const setBoard = useSetVacancyBoardPublished();
 
   const linkEnabled = !!(brief as unknown as { is_link_enabled?: boolean })?.is_link_enabled;
   const publicToken = (brief as unknown as { public_token?: string | null })?.public_token ?? null;
@@ -237,6 +241,31 @@ export function PublicBriefCard({ vacancyId, vacancyTitle, canEdit, isConfidenti
             Надішліть кандидату це посилання або PDF (кнопка «PDF» вгорі). Клієнт у бріфі не називається,
             якщо пошук конфіденційний.
           </p>
+        </div>
+
+        {/* Публікація на публічному порталі /jobs (окремо від приватного лінка). */}
+        <div className="rounded-lg border p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="board-publish"
+              checked={isBoardPublished}
+              disabled={!canEdit || !brief?.id || setBoard.isPending}
+              onCheckedChange={(v) => setBoard.mutate({ vacancyId, published: v, currentToken: publicToken })}
+            />
+            <Label htmlFor="board-publish" className="text-sm font-normal flex items-center gap-1.5 cursor-pointer">
+              <Globe className="h-3.5 w-3.5" />
+              Опублікувати на порталі вакансій
+            </Label>
+            {isBoardPublished && <Badge className="bg-green-100 text-green-800 text-[10px]">На порталі</Badge>}
+          </div>
+          {!brief?.id ? (
+            <p className="text-xs text-muted-foreground pl-1">Спершу збережіть бріф, щоб опублікувати вакансію.</p>
+          ) : (
+            <p className="text-xs text-muted-foreground pl-1">
+              Вакансія з'явиться у відкритій вітрині <span className="font-mono">/jobs</span>. Вмикання приватного
+              посилання вище саме по собі вакансію на портал не виводить.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">

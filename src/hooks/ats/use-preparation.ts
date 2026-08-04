@@ -198,6 +198,53 @@ export function useSetPublicBriefLink() {
   });
 }
 
+/**
+ * Опублікувати/зняти вакансію з публічного порталу /jobs. Окремо від приватного
+ * лінка на бріф: при публікації також гарантує токен + увімкнений публічний бріф,
+ * щоб деталь /brief/:token відкривалася з вітрини.
+ */
+export function useSetVacancyBoardPublished() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      vacancyId,
+      published,
+      currentToken,
+    }: {
+      vacancyId: string;
+      published: boolean;
+      currentToken: string | null;
+    }): Promise<void> => {
+      const { error: vErr } = await supabase
+        .from("vacancies")
+        .update({ board_published_at: published ? new Date().toISOString() : null } as never)
+        .eq("id", vacancyId);
+      if (vErr) throw vErr;
+      if (published) {
+        // Деталь на порталі відкривається наявним публічним бріфом — вмикаємо його й токен.
+        const { error: bErr } = await supabase
+          .from("vacancy_public_briefs")
+          .update({
+            is_link_enabled: true,
+            public_token: currentToken || crypto.randomUUID(),
+            published_at: new Date().toISOString(),
+          } as never)
+          .eq("vacancy_id", vacancyId);
+        if (bErr) throw bErr;
+      }
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: publicBriefKey(variables.vacancyId) });
+      qc.invalidateQueries({ queryKey: ["ats", "vacancies"] });
+      qc.invalidateQueries({ queryKey: ["ats", "vacancies", variables.vacancyId] });
+      toast.success(variables.published ? "Вакансію опубліковано на порталі" : "Вакансію знято з порталу");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося змінити публікацію");
+    },
+  });
+}
+
 export function useSavePublicBrief() {
   const qc = useQueryClient();
   return useMutation({

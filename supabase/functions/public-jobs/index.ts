@@ -31,33 +31,40 @@ Deno.serve(async (req) => {
   try {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // База — вакансії, опубліковані на порталі (board_published_at). Приватний лінк на
+    // бріф сам по собі вакансію на портал НЕ виводить. Токен деталі беремо з публічного
+    // бріфу (публікація на порталі гарантує його увімкнення).
+    const CLOSED = new Set(["filled", "closed", "cancelled"]);
     const { data, error } = await admin
-      .from("vacancy_public_briefs")
-      .select("public_token, title, published_at, is_link_enabled, vacancy:vacancies(title, location, is_remote, work_style, status)")
-      .eq("is_link_enabled", true)
-      .order("published_at", { ascending: false });
+      .from("vacancies")
+      .select("id, title, location, is_remote, work_style, status, board_published_at, public_brief:vacancy_public_briefs(public_token, is_link_enabled)")
+      .not("board_published_at", "is", null)
+      .order("board_published_at", { ascending: false });
     if (error) { console.error("public-jobs lookup error:", error.message); return json({ error: "server_error" }, 500); }
 
-    const CLOSED = new Set(["filled", "closed", "cancelled"]);
     const jobs = (data ?? [])
-      .map((r) => {
-        const row = r as unknown as {
-          public_token: string | null;
-          title: string | null;
-          published_at: string | null;
-          vacancy: { title: string; location: string | null; is_remote: boolean; work_style: string | null; status: string } | null;
-        };
-        return row;
+      .map((r) => r as unknown as {
+        title: string;
+        location: string | null;
+        is_remote: boolean;
+        work_style: string | null;
+        status: string;
+        board_published_at: string | null;
+        public_brief: { public_token: string | null; is_link_enabled: boolean } | Array<{ public_token: string | null; is_link_enabled: boolean }> | null;
       })
-      // Закриті/скасовані вакансії не показуємо, навіть якщо посилання лишилось увімкненим.
-      .filter((row) => row.public_token && (!row.vacancy || !CLOSED.has(row.vacancy.status)))
-      .map((row) => ({
-        token: row.public_token,
-        title: row.vacancy?.title ?? row.title ?? "Вакансія",
-        location: row.vacancy?.location ?? null,
-        is_remote: row.vacancy?.is_remote ?? false,
-        work_style: row.vacancy?.work_style ?? null,
-        published_at: row.published_at,
+      .map((row) => {
+        const pb = Array.isArray(row.public_brief) ? row.public_brief[0] : row.public_brief;
+        return { row, token: pb?.public_token ?? null, enabled: pb?.is_link_enabled ?? false };
+      })
+      // Показуємо лише не-закриті вакансії з робочим публічним токеном.
+      .filter(({ row, token, enabled }) => token && enabled && !CLOSED.has(row.status))
+      .map(({ row, token }) => ({
+        token,
+        title: row.title,
+        location: row.location,
+        is_remote: row.is_remote,
+        work_style: row.work_style,
+        published_at: row.board_published_at,
       }));
 
     return json({ jobs });

@@ -1190,6 +1190,7 @@ const VacancyDetailPage = () => {
                 vacancyTitle={vacancy.title}
                 canEdit={isInternal}
                 isConfidential={(vacancy as unknown as { is_confidential?: boolean }).is_confidential ?? false}
+                isBoardPublished={!!(vacancy as unknown as { board_published_at?: string | null }).board_published_at}
               />
             )}
           </TabsContent>
