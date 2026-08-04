@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Ban, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Ban, FileText, Loader2, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import {
   useStopList,
   useAddStopListEntry,
   useRemoveStopListEntry,
   useParseStopList,
+  useStopListSource,
+  useSetStopListSource,
+  useSyncStopList,
   type ParsedStopEntry,
 } from "@/hooks/ats/use-stop-list";
 
@@ -28,9 +31,26 @@ interface StopListCardProps {
  */
 export function StopListCard({ vacancyId, canEdit }: StopListCardProps) {
   const { data: entries, isLoading } = useStopList(vacancyId);
+  const { data: source } = useStopListSource(vacancyId);
   const addEntry = useAddStopListEntry();
   const removeEntry = useRemoveStopListEntry();
   const parseStopList = useParseStopList();
+  const setSource = useSetStopListSource();
+  const syncStopList = useSyncStopList();
+
+  const [sourceUrl, setSourceUrl] = useState("");
+  useEffect(() => {
+    if (source?.url !== undefined && source?.url !== null) setSourceUrl(source.url);
+  }, [source?.url]);
+
+  // Автопідтягування при відкритті: якщо джерело задане — тихо синхронізуємо раз.
+  const autoSyncedRef = useRef(false);
+  useEffect(() => {
+    if (canEdit && source?.url && !autoSyncedRef.current && !syncStopList.isPending) {
+      autoSyncedRef.current = true;
+      syncStopList.mutate(vacancyId);
+    }
+  }, [canEdit, source?.url, vacancyId, syncStopList]);
 
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
@@ -110,6 +130,50 @@ export function StopListCard({ vacancyId, canEdit }: StopListCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {canEdit && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium">Стоп-лист із Google-документа</span>
+              {source?.syncedAt && (
+                <span className="text-xs text-muted-foreground">
+                  · синхронізовано {new Date(source.syncedAt).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                className="h-8 text-sm"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="Посилання на Google Doc або Sheet"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 shrink-0"
+                disabled={setSource.isPending || sourceUrl === (source?.url ?? "")}
+                onClick={() => setSource.mutate({ vacancyId, url: sourceUrl.trim() || null })}
+              >
+                Зберегти
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 shrink-0"
+                disabled={!source?.url || syncStopList.isPending}
+                onClick={() => syncStopList.mutate(vacancyId)}
+                title="Підтягнути зміни з документа"
+              >
+                {syncStopList.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Надайте сервісному акаунту доступ до документа. Зміни підтягуються автоматично при відкритті вакансії
+              й кнопкою оновлення. Формат рядка: ПІБ, компанія, причина (через кому/таб).
+            </p>
+          </div>
+        )}
+
+        {canEdit && (
           <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto] items-end">
             <div className="space-y-1">
               <Label className="text-xs">ПІБ *</Label>
@@ -162,6 +226,12 @@ export function StopListCard({ vacancyId, canEdit }: StopListCardProps) {
             {entries!.map((entry) => (
               <div key={entry.id} className="flex items-center gap-3 p-2.5 text-sm">
                 <span className="font-medium">{entry.full_name}</span>
+                {(entry as unknown as { source?: string }).source === "gdoc" && (
+                  <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                    <FileText className="h-2.5 w-2.5" />
+                    Google
+                  </Badge>
+                )}
                 {entry.company && (
                   <span className="text-xs text-muted-foreground">{entry.company}</span>
                 )}

@@ -121,6 +121,72 @@ export function useParseStopList() {
   });
 }
 
+const stopSourceKey = (vacancyId: string) => ["ats", "stop_list_source", vacancyId] as const;
+
+/** Посилання на Google-документ стоп-листа + час останньої синхронізації. */
+export function useStopListSource(vacancyId: string | undefined) {
+  return useQuery({
+    queryKey: vacancyId ? stopSourceKey(vacancyId) : ["ats", "stop_list_source", "none"],
+    queryFn: async (): Promise<{ url: string | null; syncedAt: string | null }> => {
+      if (!vacancyId) return { url: null, syncedAt: null };
+      const { data, error } = await supabase
+        .from("vacancies")
+        .select("stop_list_source_url, stop_list_synced_at")
+        .eq("id", vacancyId)
+        .maybeSingle();
+      if (error) throw error;
+      const row = data as unknown as { stop_list_source_url: string | null; stop_list_synced_at: string | null } | null;
+      return { url: row?.stop_list_source_url ?? null, syncedAt: row?.stop_list_synced_at ?? null };
+    },
+    enabled: !!vacancyId,
+    staleTime: 60_000,
+  });
+}
+
+/** Зберегти посилання на Google-документ стоп-листа. */
+export function useSetStopListSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ vacancyId, url }: { vacancyId: string; url: string | null }): Promise<void> => {
+      const { error } = await supabase
+        .from("vacancies")
+        .update({ stop_list_source_url: url } as never)
+        .eq("id", vacancyId);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: stopSourceKey(v.vacancyId) });
+      toast.success(v.url ? "Джерело стоп-листа збережено" : "Джерело прибрано");
+    },
+    onError: (error: { message?: string }) => toast.error(error?.message || "Не вдалося зберегти джерело"),
+  });
+}
+
+/** Синхронізувати стоп-лист із Google-документа (Edge sync-stoplist). */
+export function useSyncStopList() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vacancyId: string): Promise<{ count: number; synced_at: string }> => {
+      const { data, error } = await supabase.functions.invoke("sync-stoplist", { body: { vacancy_id: vacancyId } });
+      if (error) {
+        let detail = "";
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) { const p = await ctx.json(); detail = p.detail || p.error || ""; }
+        } catch { /* ignore */ }
+        throw new Error(detail || error.message || "Не вдалося синхронізувати");
+      }
+      return data as { count: number; synced_at: string };
+    },
+    onSuccess: (res, vacancyId) => {
+      qc.invalidateQueries({ queryKey: stopListKey(vacancyId) });
+      qc.invalidateQueries({ queryKey: stopSourceKey(vacancyId) });
+      toast.success(`Синхронізовано зі стоп-листа: ${res.count}`);
+    },
+    onError: (error: { message?: string }) => toast.error(error?.message || "Не вдалося синхронізувати"),
+  });
+}
+
 /** Прибрати запис зі стоп-листа. */
 export function useRemoveStopListEntry() {
   const qc = useQueryClient();
