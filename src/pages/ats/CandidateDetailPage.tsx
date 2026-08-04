@@ -54,6 +54,7 @@ import {
   useSendCommunicationNow,
   type CommStatus,
 } from "@/hooks/ats/use-communications";
+import { CandidateTagsEditor } from "@/components/ats/CandidateTagsEditor";
 import { extractTextFromFile, ResumeParseError } from "@/lib/resume-parse-client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -371,6 +372,10 @@ const CandidateDetailPage = () => {
                   <span className="text-muted-foreground">Джерело: </span>
                   {candidate.source?.name || "—"}
                 </div>
+                <CandidateTagsEditor
+                  candidateId={candidate.id}
+                  tags={(candidate as unknown as { tags?: string[] }).tags ?? []}
+                />
                 {candidate.notes && (
                   <div>
                     <span className="text-muted-foreground">Нотатки: </span>

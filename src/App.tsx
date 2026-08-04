@@ -47,6 +47,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
 
  // ATS imports
  import AtsDashboardPage from "./pages/ats/AtsDashboardPage";
+ import SettingsPage from "./pages/ats/SettingsPage";
  import ClientsListPage from "./pages/ats/ClientsListPage";
  import ClientDetailPage from "./pages/ats/ClientDetailPage";
  import ProjectsListPage from "./pages/ats/ProjectsListPage";
@@ -186,6 +187,14 @@ const App = () => (
            element={
              <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
                <AtsDashboardPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/settings"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <SettingsPage />
              </ProtectedRoute>
            }
          />
