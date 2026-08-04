@@ -44,6 +44,7 @@ import {
   ListChecks,
   Lock,
   MapPin,
+  MoreHorizontal,
   Plus,
   Send,
   Star,
@@ -51,6 +52,13 @@ import {
   Users,
   Video,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useVacancy, useSetVacancyApproval } from "@/hooks/ats/use-vacancies";
 import { usePipelineStages } from "@/hooks/ats/use-pipeline";
 import {
@@ -1047,45 +1055,43 @@ const VacancyDetailPage = () => {
                                       </button>
                                     )}
                                   </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="w-full h-7 text-xs"
-                                    onClick={() => setScoreDialogApplication(application)}
-                                  >
-                                    <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
-                                    Оцінка компетенцій
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="w-full h-7 text-xs"
-                                    onClick={() => openMeetingDialog(application)}
-                                  >
-                                    <Video className="h-3.5 w-3.5 mr-1.5" />
-                                    Зустріч
-                                  </Button>
-                                  {/* Дії етапу: лист-запрошення на наступний етап або
-                                      відмова за шаблоном (обидві — з AI-чернеткою). */}
-                                  <div className="grid grid-cols-2 gap-1.5">
+                                  {/* Основна дія стадії — «Далі» (запрошення). Решта дій
+                                      (оцінка, зустріч, відмова) — у меню «⋯», щоб картка
+                                      лишалась компактною. */}
+                                  <div className="flex items-center gap-1.5">
                                     <Button
                                       size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs"
+                                      className="flex-1 h-7 text-xs"
                                       onClick={() => setActionDialog({ application, kind: "invitation" })}
                                     >
                                       <Send className="h-3.5 w-3.5 mr-1" />
                                       Далі
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs text-destructive hover:text-destructive"
-                                      onClick={() => setActionDialog({ application, kind: "rejection" })}
-                                    >
-                                      <UserX className="h-3.5 w-3.5 mr-1" />
-                                      Відмова
-                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button size="icon" variant="outline" className="h-7 w-7 shrink-0">
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-48">
+                                        <DropdownMenuItem onClick={() => setScoreDialogApplication(application)}>
+                                          <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                                          Оцінка компетенцій
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => openMeetingDialog(application)}>
+                                          <Video className="h-3.5 w-3.5 mr-2" />
+                                          Зустріч
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() => setActionDialog({ application, kind: "rejection" })}
+                                        >
+                                          <UserX className="h-3.5 w-3.5 mr-2" />
+                                          Відмова
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
                                   <div className="flex items-center justify-between gap-1 pt-1">
                                     <Button
