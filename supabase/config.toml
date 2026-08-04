@@ -75,6 +75,9 @@ verify_jwt = true
 [functions.parse-brief]
 verify_jwt = true
 
+[functions.parse-stoplist]
+verify_jwt = true
+
 [functions.public-brief]
 verify_jwt = false
 

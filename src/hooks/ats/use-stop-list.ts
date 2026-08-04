@@ -92,6 +92,35 @@ export function useAddStopListEntry() {
   });
 }
 
+export interface ParsedStopEntry {
+  full_name: string;
+  company: string | null;
+  reason: string | null;
+}
+
+/** Розбір транскрипту розмови у записи стоп-листа (Edge parse-stoplist). */
+export function useParseStopList() {
+  return useMutation({
+    mutationFn: async (args: { vacancyId: string; transcript: string }): Promise<ParsedStopEntry[]> => {
+      const { data, error } = await supabase.functions.invoke("parse-stoplist", {
+        body: { vacancy_id: args.vacancyId, transcript: args.transcript },
+      });
+      if (error) {
+        let detail = "";
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) { const p = await ctx.json(); detail = p.detail || p.error || ""; }
+        } catch { /* ignore */ }
+        throw new Error(detail || error.message || "Не вдалося розпізнати стоп-лист");
+      }
+      return (data as { entries?: ParsedStopEntry[] })?.entries ?? [];
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося розпізнати стоп-лист");
+    },
+  });
+}
+
 /** Прибрати запис зі стоп-листа. */
 export function useRemoveStopListEntry() {
   const qc = useQueryClient();
