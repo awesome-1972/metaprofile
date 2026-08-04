@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import PublicBriefPage from "./pages/PublicBriefPage";
+import PublicJobsPage from "./pages/PublicJobsPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -87,6 +88,8 @@ const App = () => (
         <Routes>
           {/* Публічний бріф кандидата за посиланням (без авторизації). */}
           <Route path="/brief/:token" element={<PublicBriefPage />} />
+          {/* Публічний список відкритих вакансій. */}
+          <Route path="/jobs" element={<PublicJobsPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
