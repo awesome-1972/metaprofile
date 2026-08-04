@@ -224,11 +224,18 @@ export function useSetVacancyApproval() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: VACANCIES_KEY });
       qc.invalidateQueries({ queryKey: vacancyKey(data.id) });
       qc.invalidateQueries({ queryKey: vacanciesByProjectKey(data.hiring_project_id) });
       toast.success(approvalToast[data.approval_status]);
+      // Розсилка сповіщень (in-app + email) — best-effort, не блокує UI.
+      supabase.functions
+        .invoke("notify", {
+          body: { vacancy_id: data.id, status: data.approval_status, note: variables.note ?? null },
+        })
+        .then(() => qc.invalidateQueries({ queryKey: ["ats", "notifications"] }))
+        .catch(() => { /* сповіщення best-effort */ });
     },
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));

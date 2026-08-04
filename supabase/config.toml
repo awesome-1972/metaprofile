@@ -69,5 +69,8 @@ verify_jwt = true
 [functions.sourcing-search]
 verify_jwt = true
 
+[functions.notify]
+verify_jwt = true
+
 [functions.public-brief]
 verify_jwt = false

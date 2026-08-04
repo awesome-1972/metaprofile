@@ -4,6 +4,7 @@ import { Building2, Briefcase, LayoutDashboard, LogOut, User, Users, ShieldCheck
 import { cn } from "@/lib/utils";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotificationBell } from "@/components/ats/NotificationBell";
 
 interface AtsLayoutProps {
   children: ReactNode;
@@ -140,7 +141,12 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-12 shrink-0 border-b border-border bg-card/50 flex items-center justify-end px-4 gap-2">
+          <NotificationBell />
+        </header>
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   );
 };
