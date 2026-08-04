@@ -87,6 +87,7 @@ import {
 } from "@/hooks/ats/use-communications";
 import { useScheduleInterview, useUpcomingInterviewsByApplications } from "@/hooks/ats/use-interviews";
 import { PublicBriefCard } from "@/components/ats/PublicBriefCard";
+import { VacancyCompletenessBar } from "@/components/ats/VacancyCompletenessBar";
 import { CompetenciesTab } from "@/components/ats/CompetenciesTab";
 import { ReportsTab } from "@/components/ats/ReportsTab";
 import { ComparisonMatrixTab } from "@/components/ats/ComparisonMatrixTab";
@@ -686,6 +687,21 @@ const VacancyDetailPage = () => {
             </div>
           );
         })()}
+
+        {id && (
+          <div className="mb-6">
+            <VacancyCompletenessBar
+              vacancyId={id}
+              vacancy={{
+                title: vacancy.title,
+                description: vacancy.description,
+                location: vacancy.location,
+                headcount: vacancy.headcount,
+              }}
+              onOpenTab={setActiveTab}
+            />
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
