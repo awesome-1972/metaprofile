@@ -45,6 +45,7 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
 
  // ATS imports
+ import AtsDashboardPage from "./pages/ats/AtsDashboardPage";
  import ClientsListPage from "./pages/ats/ClientsListPage";
  import ClientDetailPage from "./pages/ats/ClientDetailPage";
  import ProjectsListPage from "./pages/ats/ProjectsListPage";
@@ -169,6 +170,22 @@ const App = () => (
          />
 
          {/* ATS Routes */}
+         <Route
+           path="/ats"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <AtsDashboardPage />
+             </ProtectedRoute>
+           }
+         />
+         <Route
+           path="/ats/dashboard"
+           element={
+             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+               <AtsDashboardPage />
+             </ProtectedRoute>
+           }
+         />
          <Route
            path="/ats/clients"
            element={

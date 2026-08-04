@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Building2, Briefcase, LogOut, User, Users, ShieldCheck, UserCog, KeyRound } from "lucide-react";
+import { Building2, Briefcase, LayoutDashboard, LogOut, User, Users, ShieldCheck, UserCog, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +10,7 @@ interface AtsLayoutProps {
 }
 
 const navItems = [
+  { path: "/ats/dashboard", label: "Дашборд", icon: LayoutDashboard },
   { path: "/ats/clients", label: "Клієнти", icon: Building2 },
   { path: "/ats/projects", label: "Проекти найму", icon: Briefcase },
   { path: "/ats/vacancies", label: "Вакансії", icon: Users },
