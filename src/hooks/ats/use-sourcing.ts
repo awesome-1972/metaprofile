@@ -44,6 +44,7 @@ export function useSourcedProfiles(vacancyId: string | undefined) {
         .from("sourced_profiles")
         .select("id, provider, external_id, full_name, title, company, location, skills, profile_url, match_score, breakdown, candidate_id")
         .eq("vacancy_id", vacancyId)
+        .is("dismissed_at", null)
         .order("match_score", { ascending: false });
       if (error) throw error;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,37 +105,38 @@ export function useRunSourcing() {
   });
 }
 
+// Створити ats_candidate з профілю + злінкувати sourced_profile. Спільна логіка.
+async function createCandidateFromProfile(p: SourcedProfile): Promise<string> {
+  const noteParts = [
+    `Джерело сорсингу: ${p.provider}`,
+    p.profile_url ? `Профіль: ${p.profile_url}` : "",
+    p.skills.length ? `Навички: ${p.skills.join(", ")}` : "",
+  ].filter(Boolean);
+  const { data: created, error } = await supabase
+    .from("ats_candidates")
+    .insert({
+      full_name: p.full_name || "Без імені",
+      headline: p.title,
+      current_company: p.company,
+      location: p.location,
+      linkedin_url: p.profile_url,
+      notes: noteParts.join("\n"),
+      resume_parsed: p.skills.length ? ({ skills: p.skills } as unknown as never) : null,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  const candidateId = (created as { id: string }).id;
+  if (p.id) await db.from("sourced_profiles").update({ candidate_id: candidateId }).eq("id", p.id);
+  return candidateId;
+}
+
 /** Імпортувати знайдений профіль у базу кандидатів (ats_candidates) + злінкувати. */
 export function useImportSourcedProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { vacancyId: string; profile: SourcedProfile }): Promise<string> => {
-      const p = args.profile;
-      const noteParts = [
-        `Джерело сорсингу: ${p.provider}`,
-        p.profile_url ? `Профіль: ${p.profile_url}` : "",
-        p.skills.length ? `Навички: ${p.skills.join(", ")}` : "",
-      ].filter(Boolean);
-      const { data: created, error } = await supabase
-        .from("ats_candidates")
-        .insert({
-          full_name: p.full_name || "Без імені",
-          headline: p.title,
-          current_company: p.company,
-          location: p.location,
-          linkedin_url: p.profile_url,
-          notes: noteParts.join("\n"),
-          resume_parsed: p.skills.length ? ({ skills: p.skills } as unknown as never) : null,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      const candidateId = (created as { id: string }).id;
-      if (p.id) {
-        await db.from("sourced_profiles").update({ candidate_id: candidateId }).eq("id", p.id);
-      }
-      return candidateId;
-    },
+    mutationFn: async (args: { vacancyId: string; profile: SourcedProfile }): Promise<string> =>
+      createCandidateFromProfile(args.profile),
     onSuccess: (_id, args) => {
       qc.invalidateQueries({ queryKey: sourcedKey(args.vacancyId) });
       qc.invalidateQueries({ queryKey: ["ats", "candidates"] });
@@ -143,5 +145,73 @@ export function useImportSourcedProfile() {
     onError: (error: { code?: string; message?: string }) => {
       toast.error(typeof error?.message === "string" ? error.message : "Не вдалося імпортувати профіль");
     },
+  });
+}
+
+/** Додати профіль одразу у вакансію: кандидат у базі + заявка на першу стадію воронки. */
+export function useAddSourcedToVacancy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { vacancyId: string; profile: SourcedProfile }): Promise<void> => {
+      const candidateId = await createCandidateFromProfile(args.profile);
+      // Перша стадія воронки вакансії.
+      const { data: firstStage } = await supabase
+        .from("pipeline_stages")
+        .select("id")
+        .eq("vacancy_id", args.vacancyId)
+        .order("position", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const { error } = await supabase.from("applications").insert({
+        vacancy_id: args.vacancyId,
+        candidate_id: candidateId,
+        list_state: "long_list",
+        ...(firstStage ? { current_stage_id: (firstStage as { id: string }).id } : {}),
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: (_v, args) => {
+      qc.invalidateQueries({ queryKey: sourcedKey(args.vacancyId) });
+      qc.invalidateQueries({ queryKey: ["ats", "candidates"] });
+      qc.invalidateQueries({ queryKey: ["ats", "applications", "vacancy", args.vacancyId] });
+      qc.invalidateQueries({ queryKey: ["ats", "vacancies"] });
+      toast.success("Профіль додано у вакансію (лонг-лист)");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(typeof error?.message === "string" ? error.message : "Не вдалося додати у вакансію");
+    },
+  });
+}
+
+/** Відхилити профіль (приховати зі списку сорсингу). */
+export function useDismissSourcedProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { vacancyId: string; profileId: string }): Promise<void> => {
+      const { error } = await db.from("sourced_profiles").update({ dismissed_at: new Date().toISOString() }).eq("id", args.profileId);
+      if (error) throw error;
+    },
+    onSuccess: (_v, args) => qc.invalidateQueries({ queryKey: sourcedKey(args.vacancyId) }),
+    onError: () => toast.error("Не вдалося відхилити профіль"),
+  });
+}
+
+/** Очистити пошук: приховати всі активні (невідхилені) профілі вакансії. */
+export function useClearSourcing() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vacancyId: string): Promise<void> => {
+      const { error } = await db
+        .from("sourced_profiles")
+        .update({ dismissed_at: new Date().toISOString() })
+        .eq("vacancy_id", vacancyId)
+        .is("dismissed_at", null);
+      if (error) throw error;
+    },
+    onSuccess: (_v, vacancyId) => {
+      qc.invalidateQueries({ queryKey: sourcedKey(vacancyId) });
+      toast.success("Список сорсингу очищено");
+    },
+    onError: () => toast.error("Не вдалося очистити список"),
   });
 }

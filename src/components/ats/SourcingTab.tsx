@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { ExternalLink, Loader2, Search, UserPlus } from "lucide-react";
+import { Ban, Database, ExternalLink, Loader2, MoreHorizontal, Search, Trash2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   useRunSourcing,
   useSourcedProfiles,
   useImportSourcedProfile,
+  useAddSourcedToVacancy,
+  useDismissSourcedProfile,
+  useClearSourcing,
   type SourcingProvider,
   type SourcedProfile,
 } from "@/hooks/ats/use-sourcing";
@@ -30,6 +40,9 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   const { data: saved, isLoading } = useSourcedProfiles(vacancyId);
   const runSourcing = useRunSourcing();
   const importProfile = useImportSourcedProfile();
+  const addToVacancy = useAddSourcedToVacancy();
+  const dismissProfile = useDismissSourcedProfile();
+  const clearSourcing = useClearSourcing();
 
   const [selected, setSelected] = useState<Set<SourcingProvider>>(new Set(["github"]));
   const [keywords, setKeywords] = useState("");
@@ -57,7 +70,9 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   };
 
   const result = runSourcing.data;
-  const profiles: SourcedProfile[] = result?.profiles ?? saved ?? [];
+  // Показуємо збережені профілі (мають id для дій «У вакансію»/«Відхилити»);
+  // свіжий пошук лише інвалідовує кеш, і список підтягується оновленим.
+  const profiles: SourcedProfile[] = saved ?? [];
 
   return (
     <div className="space-y-5">
@@ -99,10 +114,25 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" onClick={run} disabled={runSourcing.isPending || selected.size === 0}>
                 {runSourcing.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
                 Знайти кандидатів
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setKeywords(""); setSkills(""); setLocations(""); setSelected(new Set(["github"]));
+                  runSourcing.reset();
+                  if (profiles.length > 0 && window.confirm("Приховати всі знайдені профілі цієї вакансії?")) {
+                    clearSourcing.mutate(vacancyId);
+                  }
+                }}
+                disabled={clearSourcing.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-1.5" />
+                Очистити пошук
               </Button>
               <p className="text-xs text-muted-foreground">
                 Порожні поля беруться з бріфу вакансії (назва, компетенції, гео).
@@ -171,22 +201,46 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
                           </a>
                         </Button>
                       )}
-                      {canEdit && (
-                        p.candidate_id || p.already_in_base ? (
-                          <Badge className="text-[10px] bg-green-100 text-green-800">У базі</Badge>
-                        ) : (
+                      {canEdit && (p.candidate_id ? (
+                        <Badge className="text-[10px] bg-green-100 text-green-800">У базі</Badge>
+                      ) : (
+                        <>
                           <Button
                             size="sm"
-                            variant="outline"
                             className="h-7 text-xs"
-                            disabled={importProfile.isPending}
-                            onClick={() => importProfile.mutate({ vacancyId, profile: p })}
+                            disabled={addToVacancy.isPending}
+                            onClick={() => addToVacancy.mutate({ vacancyId, profile: p })}
                           >
                             <UserPlus className="h-3.5 w-3.5 mr-1" />
-                            У базу
+                            У вакансію
                           </Button>
-                        )
-                      )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem
+                                disabled={importProfile.isPending}
+                                onClick={() => importProfile.mutate({ vacancyId, profile: p })}
+                              >
+                                <Database className="h-3.5 w-3.5 mr-2" />
+                                Додати в базу
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                disabled={!p.id || dismissProfile.isPending}
+                                onClick={() => p.id && dismissProfile.mutate({ vacancyId, profileId: p.id })}
+                              >
+                                <Ban className="h-3.5 w-3.5 mr-2" />
+                                Відхилити
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </>
+                      ))}
                     </div>
                   </td>
                 </tr>
