@@ -188,9 +188,19 @@ async function getRobotaToken(): Promise<string | null> {
   return token;
 }
 
-async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
+// Заголовок авторизації robota.ua: пріоритет — статичний API-ключ (X-Api-Key),
+// бо інтерактивний /Login захищений Cloudflare managed-challenge і з сервера не
+// проходить. Логін лишаємо запасним (раптом дадуть доступ без челенджу).
+async function robotaAuthHeaders(): Promise<Record<string, string> | null> {
+  const apiKey = Deno.env.get("ROBOTAUA_API_KEY");
+  if (apiKey) return { "X-Api-Key": `ApiKey ${apiKey}` };
   const token = await getRobotaToken();
-  if (!token) return [];
+  return token ? { Authorization: `Bearer ${token}` } : null;
+}
+
+async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
+  const auth = await robotaAuthHeaders();
+  if (!auth) return [];
   const keyWords = [q.keywords, ...q.titles.slice(0, 1), ...q.skills.slice(0, 4)].filter(Boolean).join(" ").trim();
   const body = {
     page: 0,
@@ -202,7 +212,7 @@ async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
   };
   const res = await fetch("https://employer-api.robota.ua/cvdb/resumes", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/plain", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json", Accept: "text/plain", ...auth },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`robotaua ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
@@ -224,7 +234,7 @@ const PROVIDER_FN: Record<Provider, (q: RoleQuery) => Promise<NormProfile[]>> = 
   github: searchGitHub, pdl: searchPDL, apollo: searchApollo, proxycurl: searchProxycurl, robotaua: searchRobotaUa,
 };
 const PROVIDER_SECRET: Record<Provider, string> = {
-  github: "GITHUB_TOKEN", pdl: "PDL_API_KEY", apollo: "APOLLO_API_KEY", proxycurl: "PROXYCURL_API_KEY", robotaua: "ROBOTAUA_EMAIL",
+  github: "GITHUB_TOKEN", pdl: "PDL_API_KEY", apollo: "APOLLO_API_KEY", proxycurl: "PROXYCURL_API_KEY", robotaua: "ROBOTAUA_API_KEY",
 };
 
 Deno.serve(async (req) => {

@@ -23,6 +23,7 @@ import {
   type SourcedProfile,
 } from "@/hooks/ats/use-sourcing";
 import { matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
+import { WorkuaResponsesCard } from "@/components/ats/WorkuaResponsesCard";
 
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
   { id: "robotaua", label: "Robota.ua" },
@@ -77,6 +78,8 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
 
   return (
     <div className="space-y-5">
+      <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
+
       {canEdit && (
         <Card>
           <CardContent className="p-4 space-y-4">

@@ -84,6 +84,9 @@ verify_jwt = true
 [functions.merge-candidates]
 verify_jwt = true
 
+[functions.workua-connector]
+verify_jwt = true
+
 [functions.public-brief]
 verify_jwt = false
 
