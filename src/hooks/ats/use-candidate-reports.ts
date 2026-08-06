@@ -130,6 +130,24 @@ export function useGenerateCandidateReport() {
   });
 }
 
+/** Редагування тексту готового звіту перед відправкою клієнту — RLS: mp_can_edit_vacancy. */
+export function useUpdateCandidateReportContent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, contentMd }: { id: string; vacancyId: string; contentMd: string }): Promise<void> => {
+      const { error } = await supabase.from("candidate_reports").update({ content_md: contentMd } as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: reportsByVacancyKey(variables.vacancyId) });
+      toast.success("Зміни у звіті збережено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
 /** Видалення застарілого звіту — RLS: mp_can_edit_vacancy. */
 export function useDeleteCandidateReport() {
   const qc = useQueryClient();

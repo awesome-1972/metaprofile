@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import {
   useCandidateReports,
   useGenerateCandidateReport,
+  useUpdateCandidateReportContent,
   type CandidateReportKind,
 } from "@/hooks/ats/use-candidate-reports";
 import { useVacancyPrompts, useSaveVacancyPrompt } from "@/hooks/ats/use-vacancy-prompts";
@@ -214,6 +215,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const { data: reports, isLoading } = useCandidateReports(vacancyId);
   const { data: prompts } = useVacancyPrompts(vacancyId);
   const generateReport = useGenerateCandidateReport();
+  const updateReport = useUpdateCandidateReportContent();
   const savePrompt = useSaveVacancyPrompt();
 
   const [genDialogOpen, setGenDialogOpen] = useState(false);
@@ -233,7 +235,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const fetchTranscript = useFetchMeetTranscript();
 
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [viewContent, setViewContent] = useState<{ title: string; content: string } | null>(null);
+  const [viewContent, setViewContent] = useState<{ title: string; content: string; reportId?: string } | null>(null);
 
   const [promptKind, setPromptKind] = useState<CandidateReportKind>("candidate_report");
   const [promptDraft, setPromptDraft] = useState<Record<CandidateReportKind, string>>({
@@ -292,7 +294,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
       {
         onSuccess: (data) => {
           setGenDialogOpen(false);
-          setViewContent({ title: kindLabel[genKind], content: data.content_md });
+          setViewContent({ title: kindLabel[genKind], content: data.content_md, reportId: data.report_id });
           setViewDialogOpen(true);
         },
       },
@@ -310,6 +312,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
     setViewContent({
       title: `${kindLabel[report.kind]}${candidateName ? ` — ${candidateName}` : ""}`,
       content: report.content_md,
+      reportId: report.id,
     });
     setViewDialogOpen(true);
   };
@@ -504,11 +507,26 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewContent?.title}</DialogTitle>
+            <DialogDescription>Відредагуйте текст перед відправкою клієнту, потім збережіть і відкрийте версію для клієнта (PDF).</DialogDescription>
           </DialogHeader>
-          <pre className="whitespace-pre-wrap break-words text-sm font-sans bg-muted/30 rounded-md p-4">
-            {viewContent?.content}
-          </pre>
-          <DialogFooter>
+          <Textarea
+            value={viewContent?.content ?? ""}
+            onChange={(e) => setViewContent((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
+            className="min-h-[420px] text-sm font-mono"
+          />
+          <DialogFooter className="flex-wrap gap-2">
+            {viewContent?.reportId && (
+              <Button
+                type="button"
+                onClick={() =>
+                  viewContent?.reportId &&
+                  updateReport.mutate({ id: viewContent.reportId, vacancyId, contentMd: viewContent.content })
+                }
+                disabled={updateReport.isPending}
+              >
+                {updateReport.isPending ? "Збереження…" : "Зберегти зміни"}
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleCopy}>
               <Copy className="h-4 w-4 mr-2" />
               Копіювати
@@ -519,7 +537,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
             </Button>
             <Button type="button" variant="outline" onClick={handleOpenClientVersion}>
               <ExternalLink className="h-4 w-4 mr-2" />
-              Версія для клієнта
+              Версія для клієнта (PDF)
             </Button>
           </DialogFooter>
         </DialogContent>
