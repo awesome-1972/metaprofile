@@ -186,6 +186,14 @@ Deno.serve(async (req) => {
     }
     const callerTenantId = (callerProfile as { tenant_id: string | null } | null)?.tenant_id ?? null;
 
+    // Тенант-ізоляція: усі дії — лише над користувачами СВОГО тенанта.
+    const META = "11111111-1111-1111-1111-111111111111";
+    const effTenant = callerTenantId ?? META;
+    const sameTenant = async (uid: string): Promise<boolean> => {
+      const { data } = await supabase.from("profiles").select("tenant_id").eq("user_id", uid).maybeSingle();
+      return ((data as { tenant_id?: string | null } | null)?.tenant_id ?? META) === effTenant;
+    };
+
     // --- 3. Parse body ---------------------------------------------------
     let body: Record<string, unknown>;
     try {
@@ -359,8 +367,6 @@ Deno.serve(async (req) => {
       }
 
       // Тенант-ізоляція: показуємо лише користувачів СВОГО тенанта (за profiles.tenant_id).
-      const META = "11111111-1111-1111-1111-111111111111";
-      const effTenant = callerTenantId ?? META;
       const users = authUsers
         .filter((u) => {
           const p = profileByUser.get(u.id) as { tenant_id?: string | null } | undefined;
@@ -407,11 +413,12 @@ Deno.serve(async (req) => {
       if (getUserErr || !targetUser?.user) {
         return json({ error: "user_not_found" }, 404);
       }
+      if (!(await sameTenant(userId))) return json({ error: "forbidden" }, 403);
 
       if (enabled) {
         const { error: insertErr } = await supabase
           .from("user_roles")
-          .insert({ user_id: userId, role });
+          .insert({ user_id: userId, role, tenant_id: effTenant });
         if (insertErr && !/duplicate/i.test(insertErr.message)) {
           console.error("admin-invite-user set_role insert error:", insertErr.message);
           return json({ error: "server_error" }, 500);
@@ -444,6 +451,7 @@ Deno.serve(async (req) => {
 
       const { data: target, error: getErr } = await supabase.auth.admin.getUserById(targetId);
       if (getErr || !target?.user) return json({ error: "user_not_found" }, 404);
+      if (!(await sameTenant(targetId))) return json({ error: "forbidden" }, 403);
 
       const { error: delErr } = await supabase.auth.admin.deleteUser(targetId);
       if (delErr) {
@@ -468,6 +476,7 @@ Deno.serve(async (req) => {
       if (getUserErr || !targetUser?.user) {
         return json({ error: "user_not_found" }, 404);
       }
+      if (!(await sameTenant(userId))) return json({ error: "forbidden" }, 403);
 
       const banDuration = action === "deactivate" ? "876000h" : "none";
       const { error: updateErr } = await supabase.auth.admin.updateUserById(userId, {
@@ -497,6 +506,7 @@ Deno.serve(async (req) => {
       if (getUserErr || !targetUser?.user) {
         return json({ error: "user_not_found" }, 404);
       }
+      if (!(await sameTenant(userId))) return json({ error: "forbidden" }, 403);
 
       // profiles.email — NOT NULL, тому plain upsert без email ризикує впасти,
       // якщо рядок ще не існує (напр. користувач ще не логінився після
