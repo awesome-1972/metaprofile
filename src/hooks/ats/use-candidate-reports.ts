@@ -186,6 +186,33 @@ export function useSetReportShared() {
   });
 }
 
+/** Надіслати звіт клієнту на email (Edge send-report). */
+export function useSendReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { reportId: string; vacancyId: string; toEmail: string; message?: string }): Promise<{ link: string }> => {
+      const { data, error } = await supabase.functions.invoke("send-report", {
+        body: { report_id: args.reportId, to_email: args.toEmail, message: args.message },
+      });
+      if (error) {
+        const context = (error as { context?: { error?: string; detail?: string } })?.context;
+        if (context?.error) throw new Error(edgeErrorMessage(context.error, context.detail));
+        throw error;
+      }
+      const body = data as { error?: string; detail?: string; link?: string };
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+      return { link: body.link! };
+    },
+    onSuccess: (_d, args) => {
+      qc.invalidateQueries({ queryKey: reportsByVacancyKey(args.vacancyId) });
+      toast.success("Звіт надіслано клієнту");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося надіслати звіт");
+    },
+  });
+}
+
 /** Видалення застарілого звіту — RLS: mp_can_edit_vacancy. */
 export function useDeleteCandidateReport() {
   const qc = useQueryClient();

@@ -28,6 +28,7 @@ import {
   useGenerateCandidateReport,
   useUpdateCandidateReportContent,
   useSetReportShared,
+  useSendReport,
   type CandidateReportKind,
 } from "@/hooks/ats/use-candidate-reports";
 import { Switch } from "@/components/ui/switch";
@@ -221,7 +222,9 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const generateReport = useGenerateCandidateReport();
   const updateReport = useUpdateCandidateReportContent();
   const setShared = useSetReportShared();
+  const sendReport = useSendReport();
   const savePrompt = useSaveVacancyPrompt();
+  const [clientEmail, setClientEmail] = useState("");
 
   const [genDialogOpen, setGenDialogOpen] = useState(false);
   const [genKind, setGenKind] = useState<CandidateReportKind>("candidate_report");
@@ -564,6 +567,31 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
                 <p className="text-xs text-muted-foreground">
                   Клієнт відкриє звіт за посиланням без входу і зможе зберегти PDF. Спершу збережіть зміни у тексті.
                 </p>
+
+                <div className="flex items-center gap-2 pt-1 border-t">
+                  <Input
+                    type="email"
+                    placeholder="email клієнта"
+                    value={clientEmail}
+                    onChange={(e) => setClientEmail(e.target.value)}
+                    className="text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={!clientEmail.trim() || sendReport.isPending || !viewContent.reportId}
+                    onClick={() =>
+                      viewContent.reportId &&
+                      sendReport.mutate(
+                        { reportId: viewContent.reportId, vacancyId, toEmail: clientEmail.trim() },
+                        { onSuccess: () => setClientEmail("") },
+                      )
+                    }
+                  >
+                    {sendReport.isPending ? "Надсилання…" : "Надіслати клієнту"}
+                  </Button>
+                </div>
               </div>
             );
           })()}

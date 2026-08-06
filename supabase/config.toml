@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.public-report]
 verify_jwt = false
+
+[functions.send-report]
+verify_jwt = true
