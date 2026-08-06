@@ -556,6 +556,7 @@ const CandidateDetailPage = () => {
                                   <Badge className={applicationStatusColor[app.status]}>
                                     {applicationStatusLabel[app.status]}
                                   </Badge>
+                                  <OfferDialog applicationId={app.id} candidateName={candidate.full_name} />
                                   <Button
                                     size="sm"
                                     variant={noteApplicationId === app.id ? "default" : "outline"}
