@@ -338,7 +338,7 @@ Deno.serve(async (req) => {
       const userIds = authUsers.map((u) => u.id);
 
       const [{ data: profiles, error: profilesErr }, { data: roles, error: rolesErr }] = await Promise.all([
-        supabase.from("profiles").select("user_id, full_name, email").in("user_id", userIds),
+        supabase.from("profiles").select("user_id, full_name, email, tenant_id").in("user_id", userIds),
         supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
       ]);
       if (profilesErr) {
@@ -358,19 +358,27 @@ Deno.serve(async (req) => {
         rolesByUser.set(r.user_id, list);
       }
 
-      const users = authUsers.map((u) => {
-        const profile = profileByUser.get(u.id);
-        return {
-          id: u.id,
-          email: u.email ?? profile?.email ?? null,
-          full_name: profile?.full_name ?? null,
-          roles: rolesByUser.get(u.id) ?? [],
-          created_at: u.created_at,
-          last_sign_in_at: u.last_sign_in_at ?? null,
-          confirmed: Boolean(u.email_confirmed_at || u.confirmed_at),
-          banned: Boolean(u.banned_until && u.banned_until !== "none" && new Date(u.banned_until) > new Date()),
-        };
-      });
+      // Тенант-ізоляція: показуємо лише користувачів СВОГО тенанта (за profiles.tenant_id).
+      const META = "11111111-1111-1111-1111-111111111111";
+      const effTenant = callerTenantId ?? META;
+      const users = authUsers
+        .filter((u) => {
+          const p = profileByUser.get(u.id) as { tenant_id?: string | null } | undefined;
+          return (p?.tenant_id ?? META) === effTenant;
+        })
+        .map((u) => {
+          const profile = profileByUser.get(u.id);
+          return {
+            id: u.id,
+            email: u.email ?? profile?.email ?? null,
+            full_name: profile?.full_name ?? null,
+            roles: rolesByUser.get(u.id) ?? [],
+            created_at: u.created_at,
+            last_sign_in_at: u.last_sign_in_at ?? null,
+            confirmed: Boolean(u.email_confirmed_at || u.confirmed_at),
+            banned: Boolean(u.banned_until && u.banned_until !== "none" && new Date(u.banned_until) > new Date()),
+          };
+        });
 
       return json({ ok: true, users });
     }
