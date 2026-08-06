@@ -207,6 +207,34 @@ export function useCreateCandidate() {
   });
 }
 
+/** Злиття дубля кандидата у первинного (Edge merge-candidates). */
+export function useMergeCandidates() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { primaryId: string; duplicateId: string }): Promise<void> => {
+      const { data, error } = await supabase.functions.invoke("merge-candidates", {
+        body: { primary_id: args.primaryId, duplicate_id: args.duplicateId },
+      });
+      if (error) {
+        let detail = "";
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx) { const p = await ctx.json(); detail = p.detail || p.error || ""; }
+        } catch { /* ignore */ }
+        throw new Error(detail || error.message || "Не вдалося об'єднати");
+      }
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CANDIDATES_KEY });
+      toast.success("Кандидатів об'єднано");
+    },
+    onError: (error: { message?: string }) => {
+      toast.error(error?.message || "Не вдалося об'єднати кандидатів");
+    },
+  });
+}
+
 /** Оновлення картки кандидата — власник, автор або can_edit у scope (RLS: candidates_update). */
 export function useUpdateCandidate() {
   const qc = useQueryClient();

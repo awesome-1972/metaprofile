@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Users } from "lucide-react";
 import { useCandidates } from "@/hooks/ats/use-candidates";
+import { DuplicateCandidatesDialog } from "@/components/ats/DuplicateCandidatesDialog";
 
 // Дістати навички кандидата з resume_parsed (jsonb) або тегів.
 function candidateSkills(c: unknown): string[] {
@@ -111,6 +112,7 @@ const CandidatesListPage = () => {
           >
             Без вакансій
           </Button>
+          <DuplicateCandidatesDialog candidates={list} />
           <span className="text-sm text-muted-foreground ml-auto">Показано: {filtered.length} із {list.length}</span>
         </div>
 

@@ -81,6 +81,9 @@ verify_jwt = true
 [functions.sync-stoplist]
 verify_jwt = true
 
+[functions.merge-candidates]
+verify_jwt = true
+
 [functions.public-brief]
 verify_jwt = false
 
