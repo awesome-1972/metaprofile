@@ -55,6 +55,7 @@ import {
   type CommStatus,
 } from "@/hooks/ats/use-communications";
 import { CandidateTagsEditor } from "@/components/ats/CandidateTagsEditor";
+import { AddCandidateToVacancyDialog } from "@/components/ats/AddCandidateToVacancyDialog";
 import { extractTextFromFile, ResumeParseError } from "@/lib/resume-parse-client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -496,10 +497,18 @@ const CandidateDetailPage = () => {
 
               <TabsContent value="applications" className="pt-4 space-y-6">
                 <div>
-                  <h2 className="text-lg font-medium flex items-center gap-2 mb-4">
-                    <Briefcase className="h-4 w-4" />
-                    Заявки
-                  </h2>
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-medium flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Заявки
+                    </h2>
+                    <AddCandidateToVacancyDialog
+                      candidateId={candidate.id}
+                      existingVacancyIds={(applications ?? [])
+                        .map((a) => (a as unknown as { vacancy?: { id?: string } | null }).vacancy?.id)
+                        .filter((x): x is string => !!x)}
+                    />
+                  </div>
                   {applicationsLoading ? (
                     <div className="text-center py-8 text-muted-foreground">Завантаження...</div>
                   ) : !applications || applications.length === 0 ? (
