@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Building2, Briefcase, LayoutDashboard, LogOut, Settings, User, Users, ShieldCheck, UserCog, KeyRound } from "lucide-react";
+import { Building2, Briefcase, ChartColumn, LayoutDashboard, LogOut, Settings, User, Users, ShieldCheck, UserCog, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ const navItems = [
   { path: "/ats/projects", label: "Проекти найму", icon: Briefcase },
   { path: "/ats/vacancies", label: "Вакансії", icon: Users },
   { path: "/ats/candidates", label: "Кандидати", icon: User },
+  { path: "/ats/analytics", label: "Аналітика", icon: ChartColumn },
   { path: "/ats/settings", label: "Налаштування", icon: Settings },
 ];
 
