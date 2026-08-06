@@ -199,7 +199,7 @@ const App = () => (
          <Route
            path="/ats/settings"
            element={
-             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+             <ProtectedRoute allowedRoles={["admin", "owner"]}>
                <SettingsPage />
              </ProtectedRoute>
            }
@@ -207,7 +207,7 @@ const App = () => (
          <Route
            path="/ats/analytics"
            element={
-             <ProtectedRoute allowedRoles={["admin", "owner", "recruiter"]}>
+             <ProtectedRoute allowedRoles={["admin", "owner"]}>
                <AnalyticsPage />
              </ProtectedRoute>
            }

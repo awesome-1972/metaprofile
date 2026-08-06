@@ -27,6 +27,7 @@ import { WorkuaResponsesCard } from "@/components/ats/WorkuaResponsesCard";
 
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
   { id: "robotaua", label: "Robota.ua" },
+  { id: "workua", label: "Work.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },

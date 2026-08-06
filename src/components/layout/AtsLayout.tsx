@@ -10,19 +10,20 @@ interface AtsLayoutProps {
   children: ReactNode;
 }
 
+// Робочий простір — доступний усім внутрішнім ролям (owner/admin/recruiter/assistant).
 const navItems = [
   { path: "/ats/dashboard", label: "Дашборд", icon: LayoutDashboard },
   { path: "/ats/clients", label: "Клієнти", icon: Building2 },
   { path: "/ats/projects", label: "Проекти найму", icon: Briefcase },
   { path: "/ats/vacancies", label: "Вакансії", icon: Users },
   { path: "/ats/candidates", label: "Кандидати", icon: User },
-  { path: "/ats/analytics", label: "Аналітика", icon: ChartColumn },
-  { path: "/ats/settings", label: "Налаштування", icon: Settings },
 ];
 
-// "Доступи" і "Користувачі" — лише admin/owner (мірор allowedRoles на маршрутах
-// /ats/access і /ats/users у App.tsx).
+// Адміністрування — ЛИШЕ owner/admin (мірор allowedRoles на маршрутах у App.tsx).
+// Рекрутер/асистент цей розділ не бачать узагалі.
 const adminOnlyNavItems = [
+  { path: "/ats/analytics", label: "Аналітика", icon: ChartColumn },
+  { path: "/ats/settings", label: "Налаштування", icon: Settings },
   { path: "/ats/distribution", label: "Розподіл", icon: Building2 },
   { path: "/ats/access", label: "Доступи", icon: ShieldCheck },
   { path: "/ats/users", label: "Користувачі", icon: UserCog },
@@ -70,6 +71,9 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
         </div>
 
         <nav className="flex-1 p-4">
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Робота
+          </p>
           <ul className="space-y-1">
             {navItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
@@ -91,28 +95,37 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
                 </li>
               );
             })}
-            {isAdminLike &&
-              adminOnlyNavItems.map((item) => {
-                const isActive = location.pathname.startsWith(item.path);
-                const Icon = item.icon;
-                return (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                        isActive
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
           </ul>
+          {isAdminLike && (
+            <>
+              <div className="my-3 border-t border-border" />
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Адміністрування
+              </p>
+              <ul className="space-y-1">
+                {adminOnlyNavItems.map((item) => {
+                  const isActive = location.pathname.startsWith(item.path);
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </nav>
 
         <div className="p-4 border-t border-border space-y-3">
