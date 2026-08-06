@@ -30,6 +30,7 @@ import {
   type CandidateReportKind,
 } from "@/hooks/ats/use-candidate-reports";
 import { useVacancyPrompts, useSaveVacancyPrompt } from "@/hooks/ats/use-vacancy-prompts";
+import { DEFAULT_REPORT_PROMPTS } from "@/lib/ats/report-prompt-templates";
 import type { ApplicationWithCandidate } from "@/hooks/ats/use-applications";
 import { useInterviewsByApplication, useFetchMeetTranscript } from "@/hooks/ats/use-interviews";
 
@@ -414,9 +415,18 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
                 placeholder="Якщо залишити порожнім — використовується дефолтний промт агенції"
                 className="min-h-[160px] font-mono text-xs"
               />
-              <Button size="sm" onClick={handleSavePrompt} disabled={savePrompt.isPending}>
-                {savePrompt.isPending ? "Збереження..." : "Зберегти промт"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleSavePrompt} disabled={savePrompt.isPending}>
+                  {savePrompt.isPending ? "Збереження..." : "Зберегти промт"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPromptDraft((prev) => ({ ...prev, [promptKind]: DEFAULT_REPORT_PROMPTS[promptKind] }))}
+                >
+                  Підставити приклад
+                </Button>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
