@@ -25,6 +25,7 @@ import {
 import { matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
 
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
+  { id: "robotaua", label: "Robota.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },

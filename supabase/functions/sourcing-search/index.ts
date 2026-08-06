@@ -29,7 +29,7 @@ const corsHeaders = {
   "Vary": "Origin",
 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const KNOWN_PROVIDERS = ["github", "pdl", "apollo", "proxycurl"] as const;
+const KNOWN_PROVIDERS = ["github", "pdl", "apollo", "proxycurl", "robotaua"] as const;
 type Provider = (typeof KNOWN_PROVIDERS)[number];
 const PER_PROVIDER_LIMIT = 25;
 
@@ -164,11 +164,67 @@ async function searchProxycurl(q: RoleQuery): Promise<NormProfile[]> {
   }));
 }
 
+// robota.ua — employer-api CvDb (пошук по базі резюме, ~6.4M).
+// Auth: POST auth-api.robota.ua/Login {username,password} → JWT (text/plain).
+// Токен кешуємо в памʼяті isolate (за exp з payload, із запасом).
+let robotaTokenCache: { token: string; expMs: number } | null = null;
+async function getRobotaToken(): Promise<string | null> {
+  const email = Deno.env.get("ROBOTAUA_EMAIL");
+  const password = Deno.env.get("ROBOTAUA_PASSWORD");
+  if (!email || !password) return null;
+  const now = Date.now();
+  if (robotaTokenCache && robotaTokenCache.expMs - 60_000 > now) return robotaTokenCache.token;
+  const res = await fetch("https://auth-api.robota.ua/Login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/plain" },
+    body: JSON.stringify({ username: email, password }),
+  });
+  if (!res.ok) throw new Error(`robotaua login ${res.status}`);
+  const token = (await res.text()).trim().replace(/^"|"$/g, "");
+  if (!token) throw new Error("robotaua login: empty token");
+  let expMs = now + 45 * 60_000;
+  try { const p = JSON.parse(atob(token.split(".")[1])); if (p.exp) expMs = p.exp * 1000; } catch { /* keep default */ }
+  robotaTokenCache = { token, expMs };
+  return token;
+}
+
+async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
+  const token = await getRobotaToken();
+  if (!token) return [];
+  const keyWords = [q.keywords, ...q.titles.slice(0, 1), ...q.skills.slice(0, 4)].filter(Boolean).join(" ").trim();
+  const body = {
+    page: 0,
+    count: PER_PROVIDER_LIMIT,
+    ukrainian: true,
+    isSynonym: true,
+    sort: "Score",
+    keyWords: keyWords || undefined,
+  };
+  const res = await fetch("https://employer-api.robota.ua/cvdb/resumes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/plain", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`robotaua ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
+  const data = await res.json() as { documents?: Array<Record<string, unknown>> };
+  return (data.documents ?? []).map((d) => ({
+    provider: "robotaua" as const,
+    external_id: String(d.resumeId ?? crypto.randomUUID()),
+    full_name: (d.fullName as string) || (d.displayName as string) || null,
+    title: (d.speciality as string) ?? null,
+    company: null,
+    location: (d.cityName as string) ?? null,
+    skills: Array.isArray(d.keywords) ? (d.keywords as string[]).slice(0, 40) : [],
+    profile_url: (d.url as string) ?? (d.resumeId ? `https://robota.ua/ua/cv/${d.resumeId}` : null),
+    raw: d,
+  }));
+}
+
 const PROVIDER_FN: Record<Provider, (q: RoleQuery) => Promise<NormProfile[]>> = {
-  github: searchGitHub, pdl: searchPDL, apollo: searchApollo, proxycurl: searchProxycurl,
+  github: searchGitHub, pdl: searchPDL, apollo: searchApollo, proxycurl: searchProxycurl, robotaua: searchRobotaUa,
 };
 const PROVIDER_SECRET: Record<Provider, string> = {
-  github: "GITHUB_TOKEN", pdl: "PDL_API_KEY", apollo: "APOLLO_API_KEY", proxycurl: "PROXYCURL_API_KEY",
+  github: "GITHUB_TOKEN", pdl: "PDL_API_KEY", apollo: "APOLLO_API_KEY", proxycurl: "PROXYCURL_API_KEY", robotaua: "ROBOTAUA_EMAIL",
 };
 
 Deno.serve(async (req) => {

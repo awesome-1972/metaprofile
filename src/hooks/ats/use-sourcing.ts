@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as unknown as { from: (t: string) => any };
 
-export type SourcingProvider = "github" | "pdl" | "apollo" | "proxycurl";
+export type SourcingProvider = "github" | "pdl" | "apollo" | "proxycurl" | "robotaua";
 
 export interface SourcedProfile {
   id?: string;
