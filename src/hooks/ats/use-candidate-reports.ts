@@ -148,6 +148,44 @@ export function useUpdateCandidateReportContent() {
   });
 }
 
+/** Увімкнути/вимкнути захищене посилання на звіт для клієнта — RLS: mp_can_edit_vacancy. */
+export function useSetReportShared() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      shared,
+      currentToken,
+    }: {
+      id: string;
+      vacancyId: string;
+      shared: boolean;
+      currentToken: string | null;
+    }): Promise<{ token: string | null }> => {
+      const patch: Record<string, unknown> = { is_shared: shared };
+      if (shared) {
+        patch.public_token = currentToken || crypto.randomUUID();
+        patch.shared_at = new Date().toISOString();
+      }
+      const { data, error } = await supabase
+        .from("candidate_reports")
+        .update(patch as never)
+        .eq("id", id)
+        .select("public_token")
+        .single();
+      if (error) throw error;
+      return { token: (data as { public_token: string | null }).public_token };
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: reportsByVacancyKey(variables.vacancyId) });
+      toast.success(variables.shared ? "Посилання на звіт увімкнено" : "Доступ вимкнено");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
 /** Видалення застарілого звіту — RLS: mp_can_edit_vacancy. */
 export function useDeleteCandidateReport() {
   const qc = useQueryClient();

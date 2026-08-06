@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import PublicBriefPage from "./pages/PublicBriefPage";
 import PublicJobsPage from "./pages/PublicJobsPage";
+import PublicReportPage from "./pages/PublicReportPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -73,7 +74,8 @@ const DemoGate = ({ children }: { children: React.ReactNode }) => {
     !location.pathname.startsWith("/v2") &&
     !location.pathname.startsWith("/ats") &&
     !location.pathname.startsWith("/brief") &&
-    !location.pathname.startsWith("/jobs")
+    !location.pathname.startsWith("/jobs") &&
+    !location.pathname.startsWith("/report")
   ) {
     return <Navigate to="/demo" replace />;
   }
@@ -92,6 +94,8 @@ const App = () => (
           <Route path="/brief/:token" element={<PublicBriefPage />} />
           {/* Публічний список відкритих вакансій. */}
           <Route path="/jobs" element={<PublicJobsPage />} />
+          {/* Публічний звіт по кандидату за посиланням. */}
+          <Route path="/report/:token" element={<PublicReportPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />

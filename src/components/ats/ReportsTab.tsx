@@ -27,8 +27,11 @@ import {
   useCandidateReports,
   useGenerateCandidateReport,
   useUpdateCandidateReportContent,
+  useSetReportShared,
   type CandidateReportKind,
 } from "@/hooks/ats/use-candidate-reports";
+import { Switch } from "@/components/ui/switch";
+import { Copy as CopyIcon } from "lucide-react";
 import { useVacancyPrompts, useSaveVacancyPrompt } from "@/hooks/ats/use-vacancy-prompts";
 import { DEFAULT_REPORT_PROMPTS } from "@/lib/ats/report-prompt-templates";
 import type { ApplicationWithCandidate } from "@/hooks/ats/use-applications";
@@ -217,6 +220,7 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
   const { data: prompts } = useVacancyPrompts(vacancyId);
   const generateReport = useGenerateCandidateReport();
   const updateReport = useUpdateCandidateReportContent();
+  const setShared = useSetReportShared();
   const savePrompt = useSaveVacancyPrompt();
 
   const [genDialogOpen, setGenDialogOpen] = useState(false);
@@ -522,8 +526,48 @@ export function ReportsTab({ vacancyId, applications }: ReportsTabProps) {
           <Textarea
             value={viewContent?.content ?? ""}
             onChange={(e) => setViewContent((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
-            className="min-h-[420px] text-sm font-mono"
+            className="min-h-[380px] text-sm font-mono"
           />
+
+          {viewContent?.reportId && (() => {
+            const rep = (reports ?? []).find((r) => r.id === viewContent.reportId) as unknown as
+              { is_shared?: boolean; public_token?: string | null } | undefined;
+            const shared = !!rep?.is_shared;
+            const token = rep?.public_token ?? null;
+            const link = token ? `${window.location.origin}/report/${token}` : "";
+            return (
+              <div className="rounded-lg border p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={shared}
+                    disabled={setShared.isPending}
+                    onCheckedChange={(v) =>
+                      viewContent.reportId && setShared.mutate({ id: viewContent.reportId, vacancyId, shared: v, currentToken: token })
+                    }
+                  />
+                  <span className="text-sm font-normal">Поділитися з клієнтом за посиланням</span>
+                </div>
+                {shared && link && (
+                  <div className="flex items-center gap-2">
+                    <Input readOnly value={link} className="text-xs" onFocus={(e) => e.currentTarget.select()} />
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => navigator.clipboard.writeText(link).then(() => toast.success("Посилання скопійовано")).catch(() => toast.error("Не вдалося"))}
+                      title="Копіювати"
+                    >
+                      <CopyIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Клієнт відкриє звіт за посиланням без входу і зможе зберегти PDF. Спершу збережіть зміни у тексті.
+                </p>
+              </div>
+            );
+          })()}
+
           <DialogFooter className="flex-wrap gap-2">
             {viewContent?.reportId && (
               <Button
