@@ -19,21 +19,24 @@ export interface RecruitingAnalytics {
 
 const NO_SOURCE = "Без джерела";
 
-/** Агрегати рекрутменту по всіх доступних даних (RLS обмежує scope). */
-export function useRecruitingAnalytics() {
+/** Агрегати рекрутменту. Фільтр vacancyIds обмежує scope (компанія/проєкт/вакансія);
+ *  null/undefined — усі доступні (RLS усе одно обмежує). */
+export function useRecruitingAnalytics(vacancyIds?: string[] | null) {
+  const scope = vacancyIds && vacancyIds.length > 0 ? [...vacancyIds].sort() : null;
+  const scopeSet = scope ? new Set(scope) : null;
   return useQuery({
-    queryKey: ["ats", "analytics"],
+    queryKey: ["ats", "analytics", scope ? scope.join(",") : "all"],
     queryFn: async (): Promise<RecruitingAnalytics> => {
       const [appsRes, offersRes, rejRes, matchRes] = await Promise.all([
-        supabase.from("applications").select("id, status, list_state, candidate:ats_candidates(source:candidate_sources(name))").limit(10000),
-        supabase.from("offers").select("id, status, responded_at, application:applications(created_at)").limit(10000),
-        supabase.from("rejections").select("id, reason:rejection_reasons(label)").limit(10000),
-        supabase.from("vacancy_candidate_matches").select("score").limit(10000),
+        supabase.from("applications").select("id, status, list_state, vacancy_id, candidate:ats_candidates(source:candidate_sources(name))").limit(10000),
+        supabase.from("offers").select("id, status, responded_at, application:applications(created_at, vacancy_id)").limit(10000),
+        supabase.from("rejections").select("id, application:applications(vacancy_id), reason:rejection_reasons(label)").limit(10000),
+        supabase.from("vacancy_candidate_matches").select("score, vacancy_id").limit(10000),
       ]);
       if (appsRes.error) throw appsRes.error;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const apps = (appsRes.data ?? []) as any[];
+      const apps = ((appsRes.data ?? []) as any[]).filter((a) => !scopeSet || scopeSet.has(a.vacancy_id));
       const statusCounts: Record<string, number> = {};
       const byListState: Record<string, number> = {};
       const srcMap = new Map<string, { total: number; hired: number }>();
@@ -51,7 +54,7 @@ export function useRecruitingAnalytics() {
         .sort((a, b) => b.total - a.total);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const offers = (offersRes.data ?? []) as any[];
+      const offers = ((offersRes.data ?? []) as any[]).filter((o) => !scopeSet || scopeSet.has(o.application?.vacancy_id));
       let accepted = 0, declined = 0, sent = 0;
       const tthDays: number[] = [];
       for (const o of offers) {
@@ -68,7 +71,7 @@ export function useRecruitingAnalytics() {
       const avgTimeToHireDays = tthDays.length ? Math.round(tthDays.reduce((s, x) => s + x, 0) / tthDays.length) : null;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rejections = (rejRes.data ?? []) as any[];
+      const rejections = ((rejRes.data ?? []) as any[]).filter((r) => !scopeSet || scopeSet.has(r.application?.vacancy_id));
       const rejMap = new Map<string, number>();
       for (const r of rejections) {
         const label = r.reason?.label ?? "Інше";
@@ -79,7 +82,7 @@ export function useRecruitingAnalytics() {
         .sort((a, b) => b.count - a.count);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const matches = (matchRes.data ?? []) as any[];
+      const matches = ((matchRes.data ?? []) as any[]).filter((m) => !scopeSet || scopeSet.has(m.vacancy_id));
       const scores = matches.map((m) => m.score as number).filter((s) => typeof s === "number");
       const match = { avg: scores.length ? Math.round(scores.reduce((s, x) => s + x, 0) / scores.length) : null, count: scores.length };
 

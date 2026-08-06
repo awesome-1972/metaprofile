@@ -1,9 +1,12 @@
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CheckCircle2, Clock, Target, TrendingUp, Users } from "lucide-react";
 import { AtsLayout } from "@/components/layout/AtsLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRecruitingAnalytics } from "@/hooks/ats/use-analytics";
+import { useVacancies } from "@/hooks/ats/use-vacancies";
 
 const statusLabel: Record<string, string> = {
   active: "В роботі",
@@ -14,14 +17,70 @@ const statusLabel: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
-  const { data: a, isLoading } = useRecruitingAnalytics();
+  const { data: vacancies } = useVacancies();
+  const [companyId, setCompanyId] = useState("all");
+  const [projectId, setProjectId] = useState("all");
+  const [vacancyId, setVacancyId] = useState("all");
+
+  const list = vacancies ?? [];
+  const companies = useMemo(() => {
+    const m = new Map<string, string>();
+    list.forEach((v) => { const c = v.hiring_project?.client; if (c) m.set(c.id, c.name); });
+    return [...m.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [list]);
+  const projects = useMemo(() => {
+    const m = new Map<string, string>();
+    list.forEach((v) => {
+      const p = v.hiring_project;
+      if (p && (companyId === "all" || p.client_id === companyId)) m.set(p.id, p.name);
+    });
+    return [...m.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [list, companyId]);
+  const vacancyOptions = useMemo(
+    () => list.filter((v) => (companyId === "all" || v.hiring_project?.client_id === companyId) && (projectId === "all" || v.hiring_project?.id === projectId)),
+    [list, companyId, projectId],
+  );
+
+  // Набір vacancyIds за обраним scope; null = усі.
+  const scopeIds = useMemo(() => {
+    if (vacancyId !== "all") return [vacancyId];
+    const ids = vacancyOptions.map((v) => v.id);
+    const noFilter = companyId === "all" && projectId === "all";
+    return noFilter ? null : ids;
+  }, [vacancyId, vacancyOptions, companyId, projectId]);
+
+  const { data: a, isLoading } = useRecruitingAnalytics(scopeIds);
 
   return (
     <AtsLayout>
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Аналітика найму</h1>
-          <p className="text-sm text-muted-foreground">Воронка, джерела, офери, відмови та якість — по всіх доступних вакансіях</p>
+          <p className="text-sm text-muted-foreground">Воронка, джерела, офери, відмови та якість — з фільтром по компанії, проєкту та вакансії</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={companyId} onValueChange={(v) => { setCompanyId(v); setProjectId("all"); setVacancyId("all"); }}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Компанія" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Усі компанії</SelectItem>
+              {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={projectId} onValueChange={(v) => { setProjectId(v); setVacancyId("all"); }}>
+            <SelectTrigger className="w-56"><SelectValue placeholder="Проєкт" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Усі проєкти</SelectItem>
+              {projects.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={vacancyId} onValueChange={setVacancyId}>
+            <SelectTrigger className="w-64"><SelectValue placeholder="Вакансія" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Усі вакансії</SelectItem>
+              {vacancyOptions.map((v) => <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         {isLoading || !a ? (

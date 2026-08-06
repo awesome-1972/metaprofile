@@ -23,6 +23,7 @@ const navItems = [
 // "Доступи" і "Користувачі" — лише admin/owner (мірор allowedRoles на маршрутах
 // /ats/access і /ats/users у App.tsx).
 const adminOnlyNavItems = [
+  { path: "/ats/distribution", label: "Розподіл", icon: Building2 },
   { path: "/ats/access", label: "Доступи", icon: ShieldCheck },
   { path: "/ats/users", label: "Користувачі", icon: UserCog },
   { path: "/ats/roles", label: "Ролі та права", icon: KeyRound },
