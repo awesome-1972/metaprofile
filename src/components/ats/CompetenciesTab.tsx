@@ -20,18 +20,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Sparkles, ShieldAlert } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, Trash2, Sparkles, ShieldAlert, FileStack } from "lucide-react";
 import {
   useVacancyCompetencies,
   groupCompetencies,
   useCreateCompetency,
   useUpdateCompetency,
   useDeleteCompetency,
+  useSeedCompetencyTemplate,
   toStringList,
   toRubric,
   STANDARD_COMPETENCY_GROUPS,
   type VacancyCompetency,
 } from "@/hooks/ats/use-competencies";
+import { COMPETENCY_TEMPLATES } from "@/lib/ats/competency-templates";
+import { useVacancy, useUpdateVacancy } from "@/hooks/ats/use-vacancies";
+import { toCompetencyScale } from "@/lib/ats/competency-scale";
 
 interface CompetenciesTabProps {
   vacancyId: string;
@@ -76,6 +81,19 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   const createCompetency = useCreateCompetency();
   const updateCompetency = useUpdateCompetency();
   const deleteCompetency = useDeleteCompetency();
+  const seedTemplate = useSeedCompetencyTemplate();
+  const { data: vacancy } = useVacancy(vacancyId);
+  const updateVacancy = useUpdateVacancy();
+  const savedScale = toCompetencyScale((vacancy as unknown as { competency_scale?: unknown })?.competency_scale);
+  const [scaleHigh, setScaleHigh] = useState<string>("");
+  const [scaleMedium, setScaleMedium] = useState<string>("");
+  const scaleHighVal = scaleHigh === "" ? savedScale.high : Number(scaleHigh);
+  const scaleMediumVal = scaleMedium === "" ? savedScale.medium : Number(scaleMedium);
+  const handleSaveScale = () => {
+    const high = Number.isFinite(scaleHighVal) ? scaleHighVal : savedScale.high;
+    const medium = Number.isFinite(scaleMediumVal) ? Math.min(scaleMediumVal, high) : savedScale.medium;
+    updateVacancy.mutate({ id: vacancyId, patch: { competency_scale: { high, medium } } as never });
+  };
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<CompetencyFormState>(emptyForm());
@@ -207,10 +225,27 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
         </h3>
         <div className="flex gap-2">
           {(competencies ?? []).length === 0 && displayGroups.length === 0 && (
-            <Button variant="outline" size="sm" onClick={handleSeedStandard}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Створити стандартну структуру
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={handleSeedStandard}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Створити стандартну структуру
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={seedTemplate.isPending}>
+                    <FileStack className="h-4 w-4 mr-2" />
+                    Засіяти шаблон
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72">
+                  {COMPETENCY_TEMPLATES.map((t) => (
+                    <DropdownMenuItem key={t.key} onClick={() => seedTemplate.mutate({ vacancyId, template: t })}>
+                      {t.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           )}
           <Button size="sm" onClick={() => openCreateDialog()}>
             <Plus className="h-4 w-4 mr-2" />
@@ -218,6 +253,36 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="py-3 flex flex-wrap items-end gap-3">
+          <div className="text-sm font-medium text-muted-foreground w-full sm:w-auto sm:mr-2">
+            Шкала рівнів відповідності (1–3):
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Висока ≥</Label>
+            <Input
+              type="number" step="0.01" min={1} max={3}
+              className="h-8 w-24 text-sm"
+              value={scaleHigh === "" ? String(savedScale.high) : scaleHigh}
+              onChange={(e) => setScaleHigh(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Середня ≥</Label>
+            <Input
+              type="number" step="0.01" min={1} max={3}
+              className="h-8 w-24 text-sm"
+              value={scaleMedium === "" ? String(savedScale.medium) : scaleMedium}
+              onChange={(e) => setScaleMedium(e.target.value)}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">нижче — низька</span>
+          <Button size="sm" variant="outline" className="h-8" onClick={handleSaveScale} disabled={updateVacancy.isPending}>
+            Зберегти шкалу
+          </Button>
+        </CardContent>
+      </Card>
 
       {displayGroups.length === 0 ? (
         <Card>

@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { CompetencyTemplate } from "@/lib/ats/competency-templates";
 
 export type VacancyCompetency = Database["public"]["Tables"]["vacancy_competencies"]["Row"];
 export type VacancyCompetencyInsert = Database["public"]["Tables"]["vacancy_competencies"]["Insert"];
@@ -110,6 +111,39 @@ export function useCreateCompetency() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: competenciesByVacancyKey(data.vacancy_id) });
       toast.success("Компетенцію додано");
+    },
+    onError: (error: { code?: string; message?: string }) => {
+      toast.error(toFriendlyMessage(error));
+    },
+  });
+}
+
+/** Засіяти матрицю з готового шаблону (4 групи × компетенції з питаннями). */
+export function useSeedCompetencyTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ vacancyId, template }: { vacancyId: string; template: CompetencyTemplate }): Promise<number> => {
+      let position = 0;
+      const rows = template.groups.flatMap((g) =>
+        g.competencies.map((c) => ({
+          vacancy_id: vacancyId,
+          group_name: g.group_name,
+          group_weight: g.group_weight,
+          name: c.name,
+          name_en: c.name_en || null,
+          weight: c.weight,
+          questions: c.questions as unknown as VacancyCompetencyInsert["questions"],
+          is_must_have: false,
+          position: position++,
+        })),
+      );
+      const { error } = await supabase.from("vacancy_competencies").insert(rows as VacancyCompetencyInsert[]);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: (count, variables) => {
+      qc.invalidateQueries({ queryKey: competenciesByVacancyKey(variables.vacancyId) });
+      toast.success(`Матрицю засіяно: ${count} компетенцій`);
     },
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));

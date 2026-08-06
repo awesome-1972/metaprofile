@@ -137,6 +137,7 @@ interface ScoreRow {
 function computeWeightedScore(
   competencies: CompetencyRow[],
   scores: ScoreRow[],
+  scale: { high: number; medium: number } = { high: THRESHOLD_HIGH, medium: THRESHOLD_MEDIUM },
 ): { weightedScore: number | null; totalWeightScored: number; totalWeight: number; verdict: string | null } {
   const scoreByCompetency = new Map(scores.map((s) => [s.competency_id, s.score]));
   let weightedSum = 0;
@@ -157,8 +158,8 @@ function computeWeightedScore(
 
   const weightedScore = weightedSum / totalWeightScored;
   let verdict: string;
-  if (weightedScore >= THRESHOLD_HIGH) verdict = "висока відповідність";
-  else if (weightedScore >= THRESHOLD_MEDIUM) verdict = "середня відповідність";
+  if (weightedScore >= scale.high) verdict = "висока відповідність";
+  else if (weightedScore >= scale.medium) verdict = "середня відповідність";
   else verdict = "низька відповідність";
 
   return { weightedScore, totalWeightScored, totalWeight, verdict };
@@ -402,7 +403,7 @@ Deno.serve(async (req) => {
     // --- 5. Завантажити вакансію (title/description) під service_role ----
     const { data: vacancy, error: vacancyErr } = await admin
       .from("vacancies")
-      .select("id, title, description, location, employment_type")
+      .select("id, title, description, location, employment_type, competency_scale")
       .eq("id", vacancyId)
       .maybeSingle();
     if (vacancyErr) {
@@ -410,6 +411,14 @@ Deno.serve(async (req) => {
       return json({ error: "server_error" }, 500);
     }
     if (!vacancy) return json({ error: "vacancy_not_found" }, 404);
+
+    // Редагована шкала рівнів (vacancies.competency_scale) з фолбеком на дефолт.
+    const rawScale = (vacancy as { competency_scale?: { high?: number; medium?: number } | null }).competency_scale;
+    const scale = {
+      high: typeof rawScale?.high === "number" && rawScale.high > 0 ? rawScale.high : THRESHOLD_HIGH,
+      medium: typeof rawScale?.medium === "number" && rawScale.medium > 0 ? rawScale.medium : THRESHOLD_MEDIUM,
+    };
+    const scaleNote = `(пороги: ≥${scale.high.toFixed(2)} висока / ≥${scale.medium.toFixed(2)} середня / нижче — низька відповідність)`;
 
     // --- 5a. Якщо candidate_report — перевірити заявку належить вакансії --
     let candidate: { id: string; full_name: string; email: string | null; headline: string | null; location: string | null } | null = null;
@@ -593,12 +602,13 @@ Deno.serve(async (req) => {
       const { weightedScore, verdict } = computeWeightedScore(
         competencies as CompetencyRow[],
         scores.filter((s) => s.application_id === applicationId) as ScoreRow[],
+        scale,
       );
       if (weightedScore !== null) {
         userParts.push(
           "",
           `### Розрахована загальна оцінка: ${weightedScore.toFixed(2)} / 3.00 — ${verdict}`,
-          "(пороги: 2.34–3.00 висока / 1.67–2.33 середня / 1.00–1.66 низька відповідність)",
+          scaleNote,
         );
       }
       if (transcript) {
@@ -613,7 +623,7 @@ Deno.serve(async (req) => {
         const appScores = scores.filter((s) => s.application_id === app.id) as ScoreRow[];
         if (appScores.length === 0) continue; // без оцінок — не включаємо в порівняння
         userParts.push("", formatCompetencyMatrix(competencies as CompetencyRow[], appScores, app.candidate_name));
-        const { weightedScore, verdict } = computeWeightedScore(competencies as CompetencyRow[], appScores);
+        const { weightedScore, verdict } = computeWeightedScore(competencies as CompetencyRow[], appScores, scale);
         if (weightedScore !== null) {
           userParts.push(`Загальна оцінка ${app.candidate_name}: ${weightedScore.toFixed(2)} / 3.00 — ${verdict}`);
         }
