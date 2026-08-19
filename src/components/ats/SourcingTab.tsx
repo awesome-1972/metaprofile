@@ -26,9 +26,10 @@ import { matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
 import { WorkuaResponsesCard } from "@/components/ats/WorkuaResponsesCard";
 import { RobotaResponsesCard } from "@/components/ats/RobotaResponsesCard";
 
+// Work.ua свідомо НЕ в списку живого пошуку: його база резюме відкриває контакти
+// й списує квоту. Резюме з work.ua збираємо через відгуки (картка Work.ua вище).
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
   { id: "robotaua", label: "Robota.ua" },
-  { id: "workua", label: "Work.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },
@@ -48,10 +49,11 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   const dismissProfile = useDismissSourcedProfile();
   const clearSourcing = useClearSourcing();
 
-  const [selected, setSelected] = useState<Set<SourcingProvider>>(new Set(["github"]));
+  const [selected, setSelected] = useState<Set<SourcingProvider>>(new Set(["robotaua"]));
   const [keywords, setKeywords] = useState("");
   const [locations, setLocations] = useState("");
   const [skills, setSkills] = useState("");
+  const [showCriteria, setShowCriteria] = useState(false);
 
   const toggle = (p: SourcingProvider) =>
     setSelected((prev) => {
@@ -106,31 +108,36 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="src-keywords" className="text-xs">Ключові слова</Label>
-                <Input id="src-keywords" className="h-8 text-sm" placeholder="напр. React senior" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+            {showCriteria && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="src-keywords" className="text-xs">Ключові слова</Label>
+                  <Input id="src-keywords" className="h-8 text-sm" placeholder="напр. керівник продажів" value={keywords} onChange={(e) => setKeywords(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="src-skills" className="text-xs">Навички (через кому)</Label>
+                  <Input id="src-skills" className="h-8 text-sm" placeholder="переговори, B2B" value={skills} onChange={(e) => setSkills(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="src-loc" className="text-xs">Локації (через кому)</Label>
+                  <Input id="src-loc" className="h-8 text-sm" placeholder="Kyiv, Ukraine" value={locations} onChange={(e) => setLocations(e.target.value)} />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="src-skills" className="text-xs">Навички (через кому)</Label>
-                <Input id="src-skills" className="h-8 text-sm" placeholder="React, TypeScript" value={skills} onChange={(e) => setSkills(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="src-loc" className="text-xs">Локації (через кому)</Label>
-                <Input id="src-loc" className="h-8 text-sm" placeholder="Kyiv, Ukraine" value={locations} onChange={(e) => setLocations(e.target.value)} />
-              </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" onClick={run} disabled={runSourcing.isPending || selected.size === 0}>
                 {runSourcing.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Search className="h-4 w-4 mr-1.5" />}
-                Знайти кандидатів
+                Знайти за цією вакансією
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowCriteria((v) => !v)}>
+                {showCriteria ? "Сховати критерії" : "Уточнити критерії"}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  setKeywords(""); setSkills(""); setLocations(""); setSelected(new Set(["github"]));
+                  setKeywords(""); setSkills(""); setLocations(""); setSelected(new Set(["robotaua"])); setShowCriteria(false);
                   runSourcing.reset();
                   if (profiles.length > 0 && window.confirm("Приховати всі знайдені профілі цієї вакансії?")) {
                     clearSourcing.mutate(vacancyId);
@@ -142,7 +149,7 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
                 Очистити пошук
               </Button>
               <p className="text-xs text-muted-foreground">
-                Порожні поля беруться з бріфу вакансії (назва, компетенції, гео).
+                За замовчуванням шукаємо за бріфом цієї вакансії (назва, компетенції, гео). Критерії — лише щоб звузити.
               </p>
             </div>
 

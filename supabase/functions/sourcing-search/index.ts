@@ -191,11 +191,20 @@ async function getRobotaToken(): Promise<string | null> {
 // Заголовок авторизації robota.ua: пріоритет — статичний API-ключ (X-Api-Key),
 // бо інтерактивний /Login захищений Cloudflare managed-challenge і з сервера не
 // проходить. Логін лишаємо запасним (раптом дадуть доступ без челенджу).
+// Заголовки — валідний ByteString (0x00–0xFF). Чистимо ключ від незламних
+// пробілів / zero-width символів, які трапляються при копіюванні з кабінету.
+function asciiHeader(v: string): string {
+  // eslint-disable-next-line no-control-regex
+  return v.replace(/[^\x20-\x7E]/g, "").trim();
+}
 async function robotaAuthHeaders(): Promise<Record<string, string> | null> {
   const apiKey = Deno.env.get("ROBOTAUA_API_KEY");
-  if (apiKey) return { "X-Api-Key": `ApiKey ${apiKey}` };
+  if (apiKey) {
+    const clean = asciiHeader(apiKey);
+    if (clean) return { "X-Api-Key": `ApiKey ${clean}` };
+  }
   const token = await getRobotaToken();
-  return token ? { Authorization: `Bearer ${token}` } : null;
+  return token ? { Authorization: `Bearer ${asciiHeader(token)}` } : null;
 }
 
 async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
@@ -230,41 +239,12 @@ async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
   }));
 }
 
-// work.ua — пошук по базі резюме (Basic Auth). Мапимо ЛИШЕ не-контактні поля
-// (ПІБ, посада, місто, лінк) — контакти рекрутер відкриває вже на work.ua.
-async function searchWorkUa(q: RoleQuery): Promise<NormProfile[]> {
-  const email = Deno.env.get("WORKUA_EMAIL");
-  const password = Deno.env.get("WORKUA_PASSWORD");
-  if (!email || !password) return [];
-  const search = [q.keywords, ...q.titles.slice(0, 1), ...q.skills.slice(0, 4)].filter(Boolean).join(" ").trim();
-  const params = new URLSearchParams();
-  if (search) params.set("search", search);
-  params.set("limit", String(Math.max(10, PER_PROVIDER_LIMIT)));
-  params.set("page", "0");
-  const res = await fetch(`https://api.work.ua/resumes?${params}`, {
-    headers: {
-      Authorization: `Basic ${btoa(`${email}:${password}`)}`,
-      "User-Agent": `Metaprofile ATS (${email})`,
-      "X-Locale": "uk_UA",
-      Accept: "application/json",
-    },
-  });
-  if (!res.ok) throw new Error(`workua ${res.status}: ${(await res.text().catch(() => "")).slice(0, 150)}`);
-  const data = await res.json() as { result?: Array<Record<string, unknown>> };
-  return (data.result ?? []).map((r) => {
-    const fn = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
-    return {
-      provider: "workua" as const,
-      external_id: String(r.resume_id ?? r.id ?? crypto.randomUUID()),
-      full_name: fn || (r.name as string) || null,
-      title: (r.name as string) ?? null,           // бажана посада
-      company: null,
-      location: (r.region as string) ?? null,
-      skills: [],
-      profile_url: r.resume_id ? `https://www.work.ua/resumes/${r.resume_id}/` : null,
-      raw: { ...r, contacts: undefined },            // контакти не зберігаємо
-    };
-  });
+// work.ua — ВИМКНЕНО у живому пошуку по базі резюме: ендпоінт /resumes фактично
+// ВІДКРИВАЄ контакти й списує квоту (за докою work.ua), а форма фільтра часто
+// 400-ить. Резюме з work.ua збираємо без відкриття контактів через відгуки на
+// опубліковану вакансію (WorkuaResponsesCard → import_responses). Тут — no-op.
+async function searchWorkUa(_q: RoleQuery): Promise<NormProfile[]> {
+  return [];
 }
 
 const PROVIDER_FN: Record<Provider, (q: RoleQuery) => Promise<NormProfile[]>> = {

@@ -71,11 +71,20 @@ async function getRobotaToken(): Promise<string | null> {
   robotaTokenCache = { token, expMs };
   return token;
 }
+// Заголовки мають бути валідним ByteString (лише 0x00–0xFF). Ключі, скопійовані
+// з кабінету, часом містять незламні пробіли / zero-width символи — чистимо.
+function asciiHeader(v: string): string {
+  // eslint-disable-next-line no-control-regex
+  return v.replace(/[^\x20-\x7E]/g, "").trim();
+}
 async function robotaAuthHeaders(): Promise<Record<string, string> | null> {
   const apiKey = Deno.env.get("ROBOTAUA_API_KEY");
-  if (apiKey) return { "X-Api-Key": `ApiKey ${apiKey}`, Accept: "application/json" };
+  if (apiKey) {
+    const clean = asciiHeader(apiKey);
+    if (clean) return { "X-Api-Key": `ApiKey ${clean}`, Accept: "application/json" };
+  }
   const token = await getRobotaToken().catch(() => null);
-  return token ? { Authorization: `Bearer ${token}`, Accept: "application/json" } : null;
+  return token ? { Authorization: `Bearer ${asciiHeader(token)}`, Accept: "application/json" } : null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
