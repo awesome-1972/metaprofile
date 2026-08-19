@@ -26,6 +26,7 @@ import { useHiringProject, useSetProjectApproval } from "@/hooks/ats/use-hiring-
 import { ProjectActions } from "@/components/ats/ProjectActions";
 import { useVacanciesByProject, useCreateVacancy } from "@/hooks/ats/use-vacancies";
 import { RequisitionPanel } from "@/components/ats/RequisitionPanel";
+import { useAssignProjectRecruiter, useProfilesList } from "@/hooks/ats/use-grants";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -101,6 +102,8 @@ const ProjectDetailPage = () => {
   const createVacancy = useCreateVacancy();
   const importVacancy = useImportVacancy();
   const setApproval = useSetProjectApproval();
+  const assignProjectRecruiter = useAssignProjectRecruiter();
+  const { data: profiles } = useProfilesList();
   const { hasRole } = useAuthV2();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importMode, setImportMode] = useState<"url" | "text">("text");
@@ -245,6 +248,52 @@ const ProjectDetailPage = () => {
               onDecide={(status, note) => id && setApproval.mutate({ id, approvalStatus: status, note })}
               onReturnToDraft={() => id && setApproval.mutate({ id, approvalStatus: "draft", note: null })}
             />
+
+            {isWorkspaceAdmin && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="h-4 w-4" />
+                    Відповідальний рекрутер
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Select
+                    // TODO: типи після gen types — hiring_projects.assigned_recruiter_id
+                    // додано міграцією 20260819130000, ще не в types.ts.
+                    value={(project as unknown as { assigned_recruiter_id: string | null }).assigned_recruiter_id ?? ""}
+                    onValueChange={(recruiterId) => {
+                      if (!id) return;
+                      assignProjectRecruiter.mutate({ project_id: id, recruiter_id: recruiterId || null });
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Не призначено" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(profiles ?? []).map((p) => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          {p.full_name || p.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Рекрутер отримає доступ до проекту та його вакансій. Зняти — оберіть «Не призначено».
+                  </p>
+                  {(project as unknown as { assigned_recruiter_id: string | null }).assigned_recruiter_id && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={() => id && assignProjectRecruiter.mutate({ project_id: id, recruiter_id: null })}
+                    >
+                      Зняти призначення
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader>

@@ -452,6 +452,81 @@ Deno.serve(async (req) => {
       return json({ ok: true, vacancy_id: vacancyId, assigned_recruiter_id: userId, grant_id: grantId });
     }
 
+    if (action === "assign_project_recruiter") {
+      const projectId = body.project_id;
+      if (!isUuid(projectId)) return json({ error: "invalid_body", detail: "project_id" }, 422);
+
+      let userId: string | null;
+      if (body.user_id === null) userId = null;
+      else if (isUuid(body.user_id)) userId = body.user_id;
+      else return json({ error: "invalid_user_id" }, 422);
+
+      const { data: project, error: projErr } = await supabase
+        .from("hiring_projects")
+        .select("id, assigned_recruiter_id")
+        .eq("id", projectId)
+        .eq("tenant_id", callerTenantId)
+        .maybeSingle();
+      if (projErr) {
+        console.error("grant-management assign_project_recruiter lookup error:", projErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+      if (!project) return json({ error: "scope_not_found" }, 404);
+
+      const { error: assignErr } = await supabase
+        .from("hiring_projects")
+        .update({ assigned_recruiter_id: userId })
+        .eq("id", projectId);
+      if (assignErr) {
+        console.error("grant-management assign_project_recruiter update error:", assignErr.message);
+        return json({ error: "server_error" }, 500);
+      }
+
+      // Гарантуємо реальний доступ рекрутера до проекту (грант hiring_project).
+      let grantId: string | null = null;
+      if (userId) {
+        const { data: existingGrant, error: existErr } = await supabase
+          .from("access_grants")
+          .select("id, is_active")
+          .eq("user_id", userId)
+          .eq("scope_type", "hiring_project")
+          .eq("scope_id", projectId)
+          .maybeSingle();
+        if (existErr) {
+          console.error("grant-management assign_project_recruiter grant lookup error:", existErr.message);
+          return json({ error: "server_error" }, 500);
+        }
+        if (!existingGrant || !existingGrant.is_active) {
+          const { data: upserted, error: upsertErr } = await supabase
+            .from("access_grants")
+            .upsert(
+              {
+                user_id: userId,
+                scope_type: "hiring_project",
+                scope_id: projectId,
+                can_edit: true,
+                can_view_financials: false,
+                permissions: {},
+                is_active: true,
+                granted_by: caller.id,
+              },
+              { onConflict: "user_id,scope_type,scope_id" },
+            )
+            .select("id")
+            .single();
+          if (upsertErr || !upserted) {
+            console.error("grant-management assign_project_recruiter grant upsert error:", upsertErr?.message);
+            return json({ error: "server_error" }, 500);
+          }
+          grantId = upserted.id;
+        } else {
+          grantId = existingGrant.id;
+        }
+      }
+
+      return json({ ok: true, project_id: projectId, assigned_recruiter_id: userId, grant_id: grantId });
+    }
+
     return json({ error: "invalid_action" }, 422);
   } catch (error) {
     console.error("grant-management unhandled error:", (error as Error).message);

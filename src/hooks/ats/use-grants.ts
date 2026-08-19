@@ -218,6 +218,34 @@ export function useAssignRecruiter() {
   });
 }
 
+/** Призначення відповідального рекрутера на проект найму — `grant-management` action: 'assign_project_recruiter'. */
+export function useAssignProjectRecruiter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { project_id: string; recruiter_id: string | null }): Promise<void> => {
+      const { data, error } = await supabase.functions.invoke("grant-management", {
+        body: { action: "assign_project_recruiter", project_id: payload.project_id, user_id: payload.recruiter_id },
+      });
+      if (error) throw error;
+      const body = data as GrantManagementMutationResponse;
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: GRANTS_KEY });
+      qc.invalidateQueries({ queryKey: ["ats", "hiring_projects"] });
+      qc.invalidateQueries({ queryKey: ["ats", "hiring_project", variables.project_id] });
+      toast.success("Відповідального рекрутера призначено");
+    },
+    onError: (error: { message?: string }) => {
+      if (isEdgeNotDeployedError(error)) {
+        toast.error("Функція ще не задеплоєна");
+        return;
+      }
+      toast.error(error?.message || "Не вдалося призначити рекрутера");
+    },
+  });
+}
+
 /** Довідник профілів (для вибору користувача у діалозі видачі доступу). */
 export function useProfilesList() {
   return useQuery({
