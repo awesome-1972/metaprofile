@@ -33,6 +33,25 @@ const WORKUA_EMAIL = Deno.env.get("WORKUA_EMAIL") ?? "";
 const WORKUA_PASSWORD = Deno.env.get("WORKUA_PASSWORD") ?? "";
 const WORKUA_BASE = "https://api.work.ua";
 
+// Нормалізація назв міст work.ua (легасі-російська) → українська. Основні міста;
+// решта лишаються як віддав API.
+const RU_UA_CITY: Record<string, string> = {
+  "Киев": "Київ", "Львов": "Львів", "Днепр": "Дніпро", "Харьков": "Харків", "Одесса": "Одеса",
+  "Запорожье": "Запоріжжя", "Винница": "Вінниця", "Николаев": "Миколаїв", "Ровно": "Рівне",
+  "Луцк": "Луцьк", "Донецк": "Донецьк", "Луганск": "Луганськ", "Черкассы": "Черкаси",
+  "Чернигов": "Чернігів", "Черновцы": "Чернівці", "Хмельницкий": "Хмельницький",
+  "Ивано-Франковск": "Івано-Франківськ", "Кропивницкий": "Кропивницький", "Тернополь": "Тернопіль",
+  "Сумы": "Суми", "Полтава": "Полтава", "Херсон": "Херсон", "Ужгород": "Ужгород",
+  "Симферополь": "Сімферополь", "Севастополь": "Севастополь", "Мариуполь": "Маріуполь",
+  "Кривой Рог": "Кривий Ріг", "Кременчуг": "Кременчук", "Белая Церковь": "Біла Церква",
+  "Мелитополь": "Мелітополь", "Никополь": "Нікополь", "Бердянск": "Бердянськ",
+  "Славянск": "Слов'янськ", "Краматорск": "Краматорськ", "Каменское": "Кам'янське",
+  "Александрия": "Олександрія", "Умань": "Умань", "Бровары": "Бровари", "Борисполь": "Бориспіль",
+  "Ирпень": "Ірпінь", "Павлоград": "Павлоград", "Каменец-Подольский": "Кам'янець-Подільський",
+  "Житомир": "Житомир", "Бердичев": "Бердичів", "Изюм": "Ізюм", "Лисичанск": "Лисичанськ",
+  "Северодонецк": "Сєвєродонецьк", "Ковель": "Ковель", "Нежин": "Ніжин", "Кам'янець-Подільський": "Кам'янець-Подільський",
+};
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -90,9 +109,11 @@ Deno.serve(async (req) => {
       if (!res.ok) return json({ error: "workua_error", detail: `dictionaries ${res.status}` }, 502);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = await res.json().catch(() => ({})) as Record<string, any>;
-      const pick = (k: string) => (Array.isArray(data[k]) ? data[k].map((o: Record<string, unknown>) => ({ id: String(o.id), name: o.name })) : []);
+      const pick = (k: string) => (Array.isArray(data[k]) ? data[k].map((o: Record<string, unknown>) => ({ id: String(o.id), name: String(o.name ?? "") })) : []);
+      // work.ua віддає назви міст російською (легасі) — нормалізуємо основні на укр.
+      const town = pick("town").map((t: { id: string; name: string }) => ({ id: t.id, name: RU_UA_CITY[t.name] ?? t.name }));
       return json({
-        town: pick("town"),
+        town,
         category: pick("category"),
         jobtype: pick("jobtype"),
         experience: pick("experience"),
