@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, Sparkles, ShieldAlert, FileStack } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, Trash2, Sparkles, ShieldAlert, FileStack, Wand2, Save, Loader2 } from "lucide-react";
 import {
   useVacancyCompetencies,
   groupCompetencies,
@@ -34,6 +34,14 @@ import {
   STANDARD_COMPETENCY_GROUPS,
   type VacancyCompetency,
 } from "@/hooks/ats/use-competencies";
+import {
+  useCustomCompetencyTemplates,
+  useSaveCompetencyTemplate,
+  useDeleteCompetencyTemplate,
+  useSeedCompetencyGroups,
+  useGenerateCompetencies,
+  type TemplateGroup,
+} from "@/hooks/ats/use-competency-templates";
 import { COMPETENCY_TEMPLATES } from "@/lib/ats/competency-templates";
 import { useVacancy, useUpdateVacancy } from "@/hooks/ats/use-vacancies";
 import { toCompetencyScale } from "@/lib/ats/competency-scale";
@@ -82,6 +90,11 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   const updateCompetency = useUpdateCompetency();
   const deleteCompetency = useDeleteCompetency();
   const seedTemplate = useSeedCompetencyTemplate();
+  const seedGroups = useSeedCompetencyGroups();
+  const { data: customTemplates } = useCustomCompetencyTemplates();
+  const saveTemplate = useSaveCompetencyTemplate();
+  const deleteTemplate = useDeleteCompetencyTemplate();
+  const generate = useGenerateCompetencies();
   const { data: vacancy } = useVacancy(vacancyId);
   const updateVacancy = useUpdateVacancy();
   const savedScale = toCompetencyScale((vacancy as unknown as { competency_scale?: unknown })?.competency_scale);
@@ -98,6 +111,30 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<CompetencyFormState>(emptyForm());
   const [localExtraGroups, setLocalExtraGroups] = useState<{ groupName: string; groupWeight: number }[]>([]);
+
+  // Зберегти як шаблон
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [tplName, setTplName] = useState("");
+  const [tplDesc, setTplDesc] = useState("");
+  // AI-прев'ю згенерованої матриці
+  const [aiGroups, setAiGroups] = useState<TemplateGroup[] | null>(null);
+
+  const handleGenerate = () => {
+    generate.mutate(vacancyId, { onSuccess: (groups) => setAiGroups(groups) });
+  };
+  const applyAiGroups = () => {
+    if (!aiGroups) return;
+    seedGroups.mutate({ vacancyId, groups: aiGroups }, { onSuccess: () => setAiGroups(null) });
+  };
+  const handleSaveTemplate = () => {
+    if (!tplName.trim()) return;
+    saveTemplate.mutate(
+      { vacancyId, name: tplName.trim(), description: tplDesc.trim() || undefined },
+      { onSuccess: () => { setSaveOpen(false); setTplName(""); setTplDesc(""); } },
+    );
+  };
+  const aiCount = aiGroups?.reduce((s, g) => s + g.competencies.length, 0) ?? 0;
+  const hasMatrix = (competencies ?? []).length > 0;
 
   const groups = useMemo(() => groupCompetencies(competencies ?? []), [competencies]);
 
@@ -223,29 +260,65 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
         <h3 className="text-sm font-medium text-muted-foreground">
           Матриця компетенцій вакансії (групи з вагами, компетенції з питаннями для інтерв'ю)
         </h3>
-        <div className="flex gap-2">
-          {(competencies ?? []).length === 0 && displayGroups.length === 0 && (
-            <>
-              <Button variant="outline" size="sm" onClick={handleSeedStandard}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Створити стандартну структуру
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generate.isPending}>
+            {generate.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+            Згенерувати з AI
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={seedTemplate.isPending || seedGroups.isPending}>
+                <FileStack className="h-4 w-4 mr-2" />
+                Засіяти шаблон
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={seedTemplate.isPending}>
-                    <FileStack className="h-4 w-4 mr-2" />
-                    Засіяти шаблон
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  {COMPETENCY_TEMPLATES.map((t) => (
-                    <DropdownMenuItem key={t.key} onClick={() => seedTemplate.mutate({ vacancyId, template: t })}>
-                      {t.label}
-                    </DropdownMenuItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              {(customTemplates ?? []).length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Мої шаблони</div>
+                  {(customTemplates ?? []).map((t) => (
+                    <div key={t.id} className="flex items-center">
+                      <DropdownMenuItem
+                        className="flex-1"
+                        onClick={() => seedGroups.mutate({ vacancyId, groups: t.groups })}
+                      >
+                        {t.name}
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {t.groups.reduce((s, g) => s + g.competencies.length, 0)}
+                        </span>
+                      </DropdownMenuItem>
+                      <button
+                        type="button"
+                        className="px-2 text-muted-foreground hover:text-destructive"
+                        title="Видалити шаблон"
+                        onClick={(e) => { e.stopPropagation(); deleteTemplate.mutate(t.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Вбудовані</div>
+              {COMPETENCY_TEMPLATES.map((t) => (
+                <DropdownMenuItem key={t.key} onClick={() => seedTemplate.mutate({ vacancyId, template: t })}>
+                  {t.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {(competencies ?? []).length === 0 && displayGroups.length === 0 && (
+            <Button variant="outline" size="sm" onClick={handleSeedStandard}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Стандартна структура
+            </Button>
+          )}
+          {hasMatrix && (
+            <Button variant="outline" size="sm" onClick={() => setSaveOpen(true)}>
+              <Save className="h-4 w-4 mr-2" />
+              Зберегти як шаблон
+            </Button>
           )}
           <Button size="sm" onClick={() => openCreateDialog()}>
             <Plus className="h-4 w-4 mr-2" />
@@ -370,6 +443,74 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
           ))}
         </div>
       )}
+
+      {/* Зберегти поточну матрицю як шаблон */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Зберегти матрицю як шаблон</DialogTitle>
+            <DialogDescription>Застосовуватимете цю матрицю до інших вакансій одним кліком.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Назва шаблону *</Label>
+              <Input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="напр. Регіональний директор" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Опис (необовʼязково)</Label>
+              <Input value={tplDesc} onChange={(e) => setTplDesc(e.target.value)} placeholder="коротко про роль" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)}>Скасувати</Button>
+            <Button onClick={handleSaveTemplate} disabled={!tplName.trim() || saveTemplate.isPending}>
+              {saveTemplate.isPending ? "Збереження…" : "Зберегти шаблон"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI-прев'ю згенерованої матриці */}
+      <Dialog open={!!aiGroups} onOpenChange={(o) => !o && setAiGroups(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Згенерована матриця (прев'ю)</DialogTitle>
+            <DialogDescription>
+              AI склав {aiGroups?.length ?? 0} груп · {aiCount} компетенцій із бріфу вакансії. Застосуйте — і за потреби відредагуйте кожну картку.
+              {hasMatrix && " Увага: у вакансії вже є компетенції — застосування додасть нові до наявних."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(aiGroups ?? []).map((g, gi) => (
+              <div key={gi} className="border rounded-md p-3">
+                <div className="text-sm font-medium mb-1.5">
+                  {g.group_name} <Badge variant="outline">{Math.round(g.group_weight * 100)}%</Badge>
+                </div>
+                <ul className="space-y-1.5">
+                  {g.competencies.map((c, ci) => (
+                    <li key={ci} className="text-sm">
+                      <span className="font-medium">{c.name}</span>
+                      {c.name_en ? <span className="text-muted-foreground"> / {c.name_en}</span> : ""}
+                      <span className="text-xs text-muted-foreground"> · вага {c.weight}</span>
+                      {c.is_must_have && <Badge variant="destructive" className="text-[10px] ml-1.5">must-have</Badge>}
+                      <span className="text-xs text-muted-foreground"> · {c.questions.length} питань</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiGroups(null)}>Скасувати</Button>
+            <Button variant="ghost" onClick={handleGenerate} disabled={generate.isPending}>
+              {generate.isPending ? "Генерація…" : "Перегенерувати"}
+            </Button>
+            <Button onClick={applyAiGroups} disabled={seedGroups.isPending}>
+              {seedGroups.isPending ? "Застосування…" : "Застосувати матрицю"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

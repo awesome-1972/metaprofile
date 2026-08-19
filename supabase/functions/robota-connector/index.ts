@@ -77,14 +77,44 @@ function asciiHeader(v: string): string {
   // eslint-disable-next-line no-control-regex
   return v.replace(/[^\x20-\x7E]/g, "").trim();
 }
-async function robotaAuthHeaders(): Promise<Record<string, string> | null> {
+// Схема авторизації employer-api невідома напевно (swagger за Cloudflare):
+// у доці згадано лише Bearer, але видано «API-ключ». Тому пробуємо кілька
+// варіантів і кешуємо той, що не дав 401/403.
+function robotaAuthVariants(): Record<string, string>[] {
   const apiKey = Deno.env.get("ROBOTAUA_API_KEY");
+  const out: Record<string, string>[] = [];
   if (apiKey) {
-    const clean = asciiHeader(apiKey);
-    if (clean) return { "X-Api-Key": `ApiKey ${clean}`, Accept: "application/json" };
+    const k = asciiHeader(apiKey);
+    if (k) {
+      out.push({ Authorization: `Bearer ${k}` });
+      out.push({ "X-Api-Key": `ApiKey ${k}` });
+      out.push({ "X-Api-Key": k });
+    }
   }
-  const token = await getRobotaToken().catch(() => null);
-  return token ? { Authorization: `Bearer ${asciiHeader(token)}`, Accept: "application/json" } : null;
+  return out;
+}
+function robotaConfigured(): boolean {
+  return robotaAuthVariants().length > 0 || (!!Deno.env.get("ROBOTAUA_EMAIL") && !!Deno.env.get("ROBOTAUA_PASSWORD"));
+}
+let robotaWorkingAuth = 0;
+async function robotaFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  let variants = robotaAuthVariants();
+  if (variants.length === 0) {
+    const token = await getRobotaToken().catch(() => null);
+    if (token) variants = [{ Authorization: `Bearer ${asciiHeader(token)}` }];
+  }
+  if (variants.length === 0) throw new Error("robotaua_not_configured");
+  const baseHeaders = { Accept: "application/json", ...(init.headers as Record<string, string> | undefined) };
+  const order = [robotaWorkingAuth, ...variants.map((_, i) => i).filter((i) => i !== robotaWorkingAuth)];
+  let last: Response | null = null;
+  for (const i of order) {
+    const v = variants[i];
+    if (!v) continue;
+    const res = await fetch(url, { ...init, headers: { ...baseHeaders, ...v } });
+    if (res.status !== 401 && res.status !== 403) { robotaWorkingAuth = i; return res; }
+    last = res;
+  }
+  return last as Response;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,8 +140,7 @@ Deno.serve(async (req) => {
     if (authError || !caller) return json({ error: "unauthorized" }, 401);
     const asCaller = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jwt}` } } });
 
-    const auth = await robotaAuthHeaders();
-    if (!auth) return json({ error: "robotaua_not_configured" }, 503);
+    if (!robotaConfigured()) return json({ error: "robotaua_not_configured" }, 503);
 
     let body: Record<string, unknown>;
     try { body = await req.json(); } catch { return json({ error: "invalid_body" }, 400); }
@@ -121,8 +150,8 @@ Deno.serve(async (req) => {
     if (action === "list_jobs") {
       const { data: isAdmin } = await asCaller.rpc("mp_is_workspace_admin");
       if (!isAdmin) return json({ error: "forbidden" }, 403);
-      const res = await fetch(`${ROBOTA_BASE}/vacancy/list`, {
-        method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+      const res = await robotaFetch(`${ROBOTA_BASE}/vacancy/list`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ page: 0 }),
       });
       if (!res.ok) return json({ error: "robotaua_error", detail: `vacancy/list ${res.status}` }, 502);
@@ -138,8 +167,8 @@ Deno.serve(async (req) => {
     // ── dictionaries ──────────────────────────────────────────────────────
     if (action === "dictionaries") {
       const [cityRes, pubRes] = await Promise.all([
-        fetch(`${ROBOTA_BASE}/values/citylist`, { headers: auth }),
-        fetch(`${ROBOTA_BASE}/values/vacancy/publicationtype`, { headers: auth }),
+        robotaFetch(`${ROBOTA_BASE}/values/citylist`),
+        robotaFetch(`${ROBOTA_BASE}/values/vacancy/publicationtype`),
       ]);
       if (!cityRes.ok) return json({ error: "robotaua_error", detail: `citylist ${cityRes.status}` }, 502);
       const cityData = await cityRes.json().catch(() => ([]));
@@ -203,8 +232,8 @@ Deno.serve(async (req) => {
       if (workTypes.length) payload.workTypes = workTypes;
       if (body.is_for_student === true) payload.isForStudent = true;
 
-      const addRes = await fetch(`${ROBOTA_BASE}/vacancy/add`, {
-        method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+      const addRes = await robotaFetch(`${ROBOTA_BASE}/vacancy/add`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const addText = await addRes.text().catch(() => "");
@@ -224,7 +253,7 @@ Deno.serve(async (req) => {
       // Публікація статусу.
       let published = false;
       if (doPublish && vacId) {
-        const stRes = await fetch(`${ROBOTA_BASE}/vacancy/state/${vacId}?state=Publicated`, { method: "POST", headers: auth });
+        const stRes = await robotaFetch(`${ROBOTA_BASE}/vacancy/state/${vacId}?state=Publicated`, { method: "POST" });
         if (!stRes.ok) {
           const st = await stRes.text().catch(() => "");
           let detail = st.slice(0, 300);
@@ -234,7 +263,7 @@ Deno.serve(async (req) => {
       }
       // Перечитуємо реальний стан.
       if (vacId) {
-        const getRes = await fetch(`${ROBOTA_BASE}/vacancy/get/${vacId}`, { headers: auth });
+        const getRes = await robotaFetch(`${ROBOTA_BASE}/vacancy/get/${vacId}`);
         if (getRes.ok) {
           const jd = await getRes.json().catch(() => ({})) as Record<string, unknown>;
           const state = String(jd.state ?? jd.stateName ?? jd.vacancyState ?? "").toLowerCase();
@@ -262,8 +291,8 @@ Deno.serve(async (req) => {
       if (!vac) return json({ error: "vacancy_not_found" }, 404);
       if (!vac.robotaua_vacancy_id) return json({ error: "no_robotaua_job", detail: "Спершу опублікуйте/прив'яжіть вакансію robota.ua" }, 422);
 
-      const res = await fetch(`${ROBOTA_BASE}/apply/list`, {
-        method: "POST", headers: { ...auth, "Content-Type": "application/json" },
+      const res = await robotaFetch(`${ROBOTA_BASE}/apply/list`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vacancyId: Number(vac.robotaua_vacancy_id), folderId: 0, page: 0, filter: "" }),
       });
       if (!res.ok) return json({ error: "robotaua_error", detail: `apply/list ${res.status}: ${(await res.text().catch(() => "")).slice(0, 150)}` }, 502);

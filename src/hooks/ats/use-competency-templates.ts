@@ -122,6 +122,28 @@ export function useDeleteCompetencyTemplate() {
   });
 }
 
+/** AI-генерація матриці з бріфу вакансії (preview — не пише в БД). */
+export function useGenerateCompetencies() {
+  return useMutation({
+    mutationFn: async (vacancyId: string): Promise<TemplateGroup[]> => {
+      const { data, error } = await supabase.functions.invoke("generate-vacancy-competencies", {
+        body: { vacancy_id: vacancyId },
+      });
+      if (error) {
+        const ctx = (error as { context?: Response })?.context;
+        if (ctx && typeof ctx.json === "function") {
+          try { const b = await ctx.json(); if (b?.error) throw new Error(b.detail ? `${b.error}: ${b.detail}` : b.error); } catch (e) { if (e instanceof Error && e.message) throw e; }
+        }
+        throw new Error((error as { message?: string })?.message || "Не вдалося згенерувати");
+      }
+      const b = data as { error?: string; detail?: string; groups?: TemplateGroup[] };
+      if (b?.error) throw new Error(b.detail || b.error);
+      return b.groups ?? [];
+    },
+    onError: (error: { message?: string }) => toast.error(error?.message || "Помилка генерації"),
+  });
+}
+
 /** Засіяти вакансію повними рядками з набору груп (свій шаблон або AI-генерація). */
 export function useSeedCompetencyGroups() {
   const qc = useQueryClient();
