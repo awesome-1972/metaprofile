@@ -11,6 +11,7 @@ import {
   useWorkuaJobs,
   useImportWorkuaResponses,
 } from "@/hooks/ats/use-workua";
+import { WorkuaPublishDialog } from "@/components/ats/WorkuaPublishDialog";
 
 interface WorkuaResponsesCardProps {
   vacancyId: string;
@@ -33,11 +34,14 @@ export function WorkuaResponsesCard({ vacancyId, canEdit }: WorkuaResponsesCardP
     <Card>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-sm font-medium">Інтеграція Work.ua — відгуки</span>
-          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => listJobs.mutate()} disabled={listJobs.isPending}>
-            {listJobs.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
-            Мої вакансії work.ua
-          </Button>
+          <span className="text-sm font-medium">Інтеграція Work.ua</span>
+          <div className="flex items-center gap-2">
+            <WorkuaPublishDialog vacancyId={vacancyId} isEdit={!!savedJobId} />
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => listJobs.mutate()} disabled={listJobs.isPending}>
+              {listJobs.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              Мої вакансії
+            </Button>
+          </div>
         </div>
 
         {listJobs.data && listJobs.data.length > 0 && (

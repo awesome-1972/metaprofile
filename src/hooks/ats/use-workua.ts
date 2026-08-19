@@ -53,6 +53,74 @@ export function useWorkuaJobs() {
   });
 }
 
+export interface WorkuaDictItem { id: string; name: string }
+export interface WorkuaDictionaries {
+  town: WorkuaDictItem[];
+  category: WorkuaDictItem[];
+  jobtype: WorkuaDictItem[];
+  experience: WorkuaDictItem[];
+  education: WorkuaDictItem[];
+  publication_type: WorkuaDictItem[];
+}
+
+/** Довідники work.ua для форми публікації. */
+export function useWorkuaDictionaries() {
+  return useMutation({
+    mutationFn: async (): Promise<WorkuaDictionaries> => {
+      const { data, error } = await supabase.functions.invoke("workua-connector", { body: { action: "dictionaries" } });
+      if (error) throw new Error(edgeError(error, "Не вдалося отримати довідники work.ua"));
+      return data as WorkuaDictionaries;
+    },
+    onError: (e: { message?: string }) => toast.error(e?.message || "Помилка work.ua"),
+  });
+}
+
+export interface PublishWorkuaArgs {
+  vacancyId: string;
+  region_id: string;
+  category_ids: string[];
+  jobtype_ids: string[];
+  experience_id: string;
+  education_id?: string;
+  publication?: string;
+  salary_value?: number;
+  salary_value_max?: number;
+  salary_comment?: string;
+}
+
+/** Опублікувати/оновити вакансію на work.ua. */
+export function usePublishToWorkua() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: PublishWorkuaArgs): Promise<{ job_id: string | null; published: boolean }> => {
+      const { data, error } = await supabase.functions.invoke("workua-connector", {
+        body: {
+          action: "publish_job",
+          vacancy_id: args.vacancyId,
+          region_id: args.region_id,
+          category_ids: args.category_ids,
+          jobtype_ids: args.jobtype_ids,
+          experience_id: args.experience_id,
+          education_id: args.education_id,
+          publication: args.publication,
+          salary_value: args.salary_value,
+          salary_value_max: args.salary_value_max,
+          salary_comment: args.salary_comment,
+        },
+      });
+      if (error) throw new Error(edgeError(error, "Не вдалося опублікувати"));
+      const body = data as { error?: string; detail?: string; job_id?: string; published?: boolean };
+      if (body?.error) throw new Error(body.detail || body.error);
+      return { job_id: body.job_id ?? null, published: !!body.published };
+    },
+    onSuccess: (res, args) => {
+      qc.invalidateQueries({ queryKey: ["ats", "workua_job", args.vacancyId] });
+      toast.success(res.published ? "Вакансію опубліковано на work.ua" : "Вакансію збережено на work.ua (чернетка)");
+    },
+    onError: (e: { message?: string }) => toast.error(e?.message || "Помилка публікації"),
+  });
+}
+
 /** Підтягнути відгуки work.ua у воронку вакансії. */
 export function useImportWorkuaResponses() {
   const qc = useQueryClient();

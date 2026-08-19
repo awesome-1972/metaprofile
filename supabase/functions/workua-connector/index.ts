@@ -84,6 +84,81 @@ Deno.serve(async (req) => {
       return json({ jobs });
     }
 
+    // ── dictionaries (для форми публікації) ───────────────────────────────
+    if (action === "dictionaries") {
+      const res = await fetch(`${WORKUA_BASE}/dictionaries`, { headers: workuaHeaders() });
+      if (!res.ok) return json({ error: "workua_error", detail: `dictionaries ${res.status}` }, 502);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await res.json().catch(() => ({})) as Record<string, any>;
+      const pick = (k: string) => (Array.isArray(data[k]) ? data[k].map((o: Record<string, unknown>) => ({ id: String(o.id), name: o.name })) : []);
+      return json({
+        town: pick("town"),
+        category: pick("category"),
+        jobtype: pick("jobtype"),
+        experience: pick("experience"),
+        education: pick("education"),
+        publication_type: pick("publication_type"),
+      });
+    }
+
+    // ── publish_job (створення/редагування вакансії на work.ua) ────────────
+    if (action === "publish_job") {
+      const vacancyId = body.vacancy_id;
+      if (!isUuid(vacancyId)) return json({ error: "invalid_body", detail: "vacancy_id" }, 422);
+      const { data: canEdit } = await asCaller.rpc("mp_can_edit_vacancy", { p_vacancy_id: vacancyId });
+      if (!canEdit) return json({ error: "forbidden" }, 403);
+      const { data: vacancy } = await admin.from("vacancies").select("title, description, workua_job_id").eq("id", vacancyId).maybeSingle();
+      const vac = vacancy as unknown as { title: string; description: string | null; workua_job_id: string | null } | null;
+      if (!vac) return json({ error: "vacancy_not_found" }, 404);
+
+      const regionId = String(body.region_id ?? "");
+      const categoryIds = Array.isArray(body.category_ids) ? (body.category_ids as unknown[]).map(String).slice(0, 3) : [];
+      const jobtypeIds = Array.isArray(body.jobtype_ids) ? (body.jobtype_ids as unknown[]).map(String).slice(0, 3) : [];
+      const experienceId = String(body.experience_id ?? "");
+      const publication = typeof body.publication === "string" ? body.publication : "";
+      if (!regionId || categoryIds.length === 0 || jobtypeIds.length === 0 || !experienceId) {
+        return json({ error: "invalid_body", detail: "Обов'язкові: регіон, категорія, зайнятість, досвід" }, 422);
+      }
+
+      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const rawDesc = (vac.description ?? vac.title ?? "").toString();
+      const htmlDesc = rawDesc.split(/\n{2,}/).map((p) => `<p>${esc(p.replace(/\n/g, " "))}</p>`).join("") || `<p>${esc(vac.title ?? "")}</p>`;
+
+      const params = new URLSearchParams();
+      params.set("name", vac.title ?? "Вакансія");
+      params.set("description", htmlDesc);
+      params.set("region[id]", regionId);
+      categoryIds.forEach((id) => params.append("category[][id]", id));
+      jobtypeIds.forEach((id) => params.append("jobtype[][id]", id));
+      params.set("experience[id]", experienceId);
+      if (typeof body.education_id === "string" && body.education_id) params.set("education[id]", body.education_id);
+      if (body.salary_value) params.set("salary[value]", String(body.salary_value));
+      if (body.salary_value_max) params.set("salary[value_max]", String(body.salary_value_max));
+      if (typeof body.salary_comment === "string" && body.salary_comment) params.set("salary[comment]", body.salary_comment);
+      if (publication) params.set("publication", publication);
+
+      const isEdit = !!vac.workua_job_id;
+      const res = await fetch(`${WORKUA_BASE}/jobs${isEdit ? `/${vac.workua_job_id}` : ""}`, {
+        method: isEdit ? "PUT" : "POST",
+        headers: { ...workuaHeaders(), "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+      if (res.status === 201 || res.status === 204) {
+        let jobId = vac.workua_job_id;
+        const loc = res.headers.get("Location");
+        if (loc) { const m = loc.match(/(\d+)/); if (m) jobId = m[1]; }
+        if (jobId && jobId !== vac.workua_job_id) await admin.from("vacancies").update({ workua_job_id: jobId } as never).eq("id", vacancyId);
+        return json({ ok: true, job_id: jobId, published: !!publication });
+      }
+      const errText = await res.text().catch(() => "");
+      let detail = errText.slice(0, 300);
+      try {
+        const p = JSON.parse(errText) as { errors?: Array<{ message?: string }> };
+        if (Array.isArray(p.errors)) detail = p.errors.map((e) => e.message).filter(Boolean).join("; ");
+      } catch { /* keep */ }
+      return json({ error: "workua_publish_error", detail: detail || `HTTP ${res.status}` }, 400);
+    }
+
     // ── import_responses ──────────────────────────────────────────────────
     if (action === "import_responses") {
       const vacancyId = body.vacancy_id;
