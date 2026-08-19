@@ -82,6 +82,20 @@ export function useWorkuaDictionaries() {
   });
 }
 
+export interface WorkuaPublicationBalance { id: string; total: number }
+
+/** Скільки публікацій кожного типу куплено в акаунті work.ua. */
+export function useWorkuaAvailablePublications() {
+  return useMutation({
+    mutationFn: async (): Promise<WorkuaPublicationBalance[]> => {
+      const { data, error } = await supabase.functions.invoke("workua-connector", { body: { action: "available_publications" } });
+      if (error) throw new Error(await edgeError(error, "Не вдалося отримати доступні публікації"));
+      return (data as { publications?: WorkuaPublicationBalance[] })?.publications ?? [];
+    },
+    onError: (e: { message?: string }) => toast.error(e?.message || "Помилка work.ua"),
+  });
+}
+
 export interface PublishWorkuaArgs {
   vacancyId: string;
   region_id: string;
@@ -99,7 +113,7 @@ export interface PublishWorkuaArgs {
 export function usePublishToWorkua() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: PublishWorkuaArgs): Promise<{ job_id: string | null; published: boolean }> => {
+    mutationFn: async (args: PublishWorkuaArgs): Promise<{ job_id: string | null; published: boolean; requested: boolean; note?: string }> => {
       const { data, error } = await supabase.functions.invoke("workua-connector", {
         body: {
           action: "publish_job",
@@ -116,13 +130,15 @@ export function usePublishToWorkua() {
         },
       });
       if (error) throw new Error(await edgeError(error, "Не вдалося опублікувати"));
-      const body = data as { error?: string; detail?: string; job_id?: string; published?: boolean };
+      const body = data as { error?: string; detail?: string; job_id?: string; published?: boolean; requested?: boolean; note?: string };
       if (body?.error) throw new Error(body.detail || body.error);
-      return { job_id: body.job_id ?? null, published: !!body.published };
+      return { job_id: body.job_id ?? null, published: !!body.published, requested: !!body.requested, note: body.note };
     },
     onSuccess: (res, args) => {
       qc.invalidateQueries({ queryKey: ["ats", "workua_job", args.vacancyId] });
-      toast.success(res.published ? "Вакансію опубліковано на work.ua" : "Вакансію збережено на work.ua (чернетка)");
+      if (res.published) toast.success("Вакансію опубліковано на work.ua (активна)");
+      else if (res.note) toast.warning(res.note);
+      else toast.success("Вакансію збережено на work.ua (чернетка)");
     },
     onError: (e: { message?: string }) => toast.error(e?.message || "Помилка публікації"),
   });

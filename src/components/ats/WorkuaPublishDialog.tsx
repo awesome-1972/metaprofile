@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useWorkuaDictionaries, usePublishToWorkua, type WorkuaDictItem } from "@/hooks/ats/use-workua";
+import { useWorkuaDictionaries, usePublishToWorkua, useWorkuaAvailablePublications, type WorkuaDictItem } from "@/hooks/ats/use-workua";
 
 interface WorkuaPublishDialogProps {
   vacancyId: string;
@@ -40,6 +40,7 @@ function Chips({ items, selected, onToggle, max }: { items: WorkuaDictItem[]; se
 export function WorkuaPublishDialog({ vacancyId, isEdit }: WorkuaPublishDialogProps) {
   const dicts = useWorkuaDictionaries();
   const publish = usePublishToWorkua();
+  const balances = useWorkuaAvailablePublications();
   const [open, setOpen] = useState(false);
 
   const [regionId, setRegionId] = useState("");
@@ -62,7 +63,11 @@ export function WorkuaPublishDialog({ vacancyId, isEdit }: WorkuaPublishDialogPr
   const openDialog = () => {
     setOpen(true);
     if (!dicts.data) dicts.mutate();
+    if (!balances.data) balances.mutate();
   };
+
+  const totalPublications = (balances.data ?? []).reduce((s, b) => s + b.total, 0);
+  const balanceFor = (id: string) => balances.data?.find((b) => b.id === id)?.total ?? 0;
 
   const toggle = (arr: string[], set: (v: string[]) => void, id: string, max: number) => {
     if (arr.includes(id)) set(arr.filter((x) => x !== id));
@@ -154,12 +159,18 @@ export function WorkuaPublishDialog({ vacancyId, isEdit }: WorkuaPublishDialogPr
                   <Label className="text-xs">Тип публікації</Label>
                   <Select value={publication} onValueChange={setPublication}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Чернетка (не публікувати)" /></SelectTrigger>
-                    <SelectContent>{d.publication_type.map((p) => <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{d.publication_type.map((p) => <SelectItem key={p.id} value={p.id} className="text-xs">{p.name} · доступно: {balanceFor(p.id)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
+              {publication && balanceFor(publication) === 0 && (
+                <p className="text-xs text-destructive">
+                  На акаунті немає куплених публікацій цього типу — вакансія створиться, але лишиться неактивною. Придбайте публікації на work.ua або оберіть інший тип.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Без типу публікації вакансія створюється як чернетка. З типом — активується й списується публікація відповідного пакета.
+                {balances.data && ` Усього доступно публікацій: ${totalPublications}.`}
               </p>
             </div>
           )}

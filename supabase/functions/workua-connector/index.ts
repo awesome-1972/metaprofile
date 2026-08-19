@@ -186,6 +186,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── available_publications (скільки публікацій куплено) ───────────────
+    if (action === "available_publications") {
+      const res = await fetch(`${WORKUA_BASE}/available-publications`, { headers: workuaHeaders() });
+      if (!res.ok) return json({ error: "workua_error", detail: `available-publications ${res.status}` }, 502);
+      const data = await res.json().catch(() => []);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items: any[] = Array.isArray(data) ? data : [];
+      return json({ publications: items.map((p) => ({ id: String(p.id), total: Number(p.total ?? 0) })) });
+    }
+
     // ── publish_job (створення/редагування вакансії на work.ua) ────────────
     if (action === "publish_job") {
       const vacancyId = body.vacancy_id;
@@ -233,7 +243,22 @@ Deno.serve(async (req) => {
         const loc = res.headers.get("Location");
         if (loc) { const m = loc.match(/(\d+)/); if (m) jobId = m[1]; }
         if (jobId && jobId !== vac.workua_job_id) await admin.from("vacancies").update({ workua_job_id: jobId } as never).eq("id", vacancyId);
-        return json({ ok: true, job_id: jobId, published: !!publication });
+
+        // Перечитуємо вакансію на work.ua, щоб повідомити РЕАЛЬНИЙ стан
+        // (work.ua може прийняти запит, але лишити вакансію неактивною —
+        //  напр. коли не встановлено publication або бракує куплених публікацій).
+        let active = false;
+        if (jobId) {
+          const chk = await fetch(`${WORKUA_BASE}/jobs/${jobId}?full=1`, { headers: workuaHeaders() });
+          if (chk.ok) {
+            const jd = await chk.json().catch(() => ({})) as Record<string, unknown>;
+            active = jd.active === 1 || jd.active === true || (typeof jd.publication === "string" && jd.publication.length > 0);
+          }
+        }
+        const note = publication && !active
+          ? "work.ua створив вакансію, але вона неактивна. Найімовірніше, бракує куплених публікацій цього типу — перевірте доступні публікації."
+          : undefined;
+        return json({ ok: true, job_id: jobId, published: active, requested: !!publication, note });
       }
       const errText = await res.text().catch(() => "");
       let detail = errText.slice(0, 300);
