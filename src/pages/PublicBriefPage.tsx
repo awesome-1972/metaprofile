@@ -14,7 +14,25 @@ interface PublicBriefData {
   position: { title: string; location: string | null; is_remote: boolean };
 }
 
-/** Простий рендер тексту секції: рядки з «- » / «• » → список, решта — абзаци. */
+/** Інлайн-markdown: **жирний** і *курсив* → React-вузли (решта — текст). */
+function renderInline(text: string): (string | JSX.Element)[] {
+  const nodes: (string | JSX.Element)[] = [];
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*|__(.+?)__/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    if (m[1] !== undefined) nodes.push(<strong key={key++}>{m[1]}</strong>);
+    else if (m[2] !== undefined) nodes.push(<em key={key++}>{m[2]}</em>);
+    else if (m[3] !== undefined) nodes.push(<strong key={key++}>{m[3]}</strong>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes.length ? nodes : [text];
+}
+
+/** Простий рендер тексту секції: рядки з «- » / «• » / «* » → список, решта — абзаци. */
 function renderBody(body: string) {
   const lines = body.split(/\n/).map((l) => l.trim()).filter(Boolean);
   const blocks: JSX.Element[] = [];
@@ -24,7 +42,7 @@ function renderBody(body: string) {
       blocks.push(
         <ul key={`u${key}`} className="list-disc pl-5 space-y-1 my-2">
           {bullets.map((b, i) => (
-            <li key={i}>{b}</li>
+            <li key={i}>{renderInline(b)}</li>
           ))}
         </ul>,
       );
@@ -32,13 +50,14 @@ function renderBody(body: string) {
     }
   };
   lines.forEach((line, i) => {
-    if (/^[-•]\s+/.test(line)) {
-      bullets.push(line.replace(/^[-•]\s+/, ""));
+    // Буліт: «- », «• » або «* » (зірка з пробілом), але НЕ «**жирний**».
+    if (/^[-•]\s+/.test(line) || /^\*\s+/.test(line)) {
+      bullets.push(line.replace(/^[-•*]\s+/, ""));
     } else {
       flush(i);
       blocks.push(
         <p key={`p${i}`} className="my-2 leading-relaxed">
-          {line}
+          {renderInline(line)}
         </p>,
       );
     }
