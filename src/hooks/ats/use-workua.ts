@@ -4,9 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface WorkuaJob { id: string; name: string; active: boolean }
 
-function edgeError(error: unknown, fallback: string): string {
-  const ctx = (error as { context?: { error?: string; detail?: string } })?.context;
-  if (ctx?.error) return ctx.detail ? `${ctx.error}: ${ctx.detail}` : ctx.error;
+async function edgeError(error: unknown, fallback: string): Promise<string> {
+  // supabase-js FunctionsHttpError: error.context — це Response із тілом {error, detail}.
+  const ctx = (error as { context?: Response })?.context;
+  if (ctx && typeof (ctx as Response).json === "function") {
+    try {
+      const b = await (ctx as Response).json();
+      if (b?.error) return b.detail ? `${b.error}: ${b.detail}` : b.error;
+      if (b?.detail) return b.detail;
+    } catch { /* ignore */ }
+  }
   return (error as { message?: string })?.message || fallback;
 }
 
@@ -46,7 +53,7 @@ export function useWorkuaJobs() {
   return useMutation({
     mutationFn: async (): Promise<WorkuaJob[]> => {
       const { data, error } = await supabase.functions.invoke("workua-connector", { body: { action: "list_jobs" } });
-      if (error) throw new Error(edgeError(error, "Не вдалося отримати вакансії work.ua"));
+      if (error) throw new Error(await edgeError(error, "Не вдалося отримати вакансії work.ua"));
       return (data as { jobs?: WorkuaJob[] })?.jobs ?? [];
     },
     onError: (e: { message?: string }) => toast.error(e?.message || "Помилка work.ua"),
@@ -68,7 +75,7 @@ export function useWorkuaDictionaries() {
   return useMutation({
     mutationFn: async (): Promise<WorkuaDictionaries> => {
       const { data, error } = await supabase.functions.invoke("workua-connector", { body: { action: "dictionaries" } });
-      if (error) throw new Error(edgeError(error, "Не вдалося отримати довідники work.ua"));
+      if (error) throw new Error(await edgeError(error, "Не вдалося отримати довідники work.ua"));
       return data as WorkuaDictionaries;
     },
     onError: (e: { message?: string }) => toast.error(e?.message || "Помилка work.ua"),
@@ -108,7 +115,7 @@ export function usePublishToWorkua() {
           salary_comment: args.salary_comment,
         },
       });
-      if (error) throw new Error(edgeError(error, "Не вдалося опублікувати"));
+      if (error) throw new Error(await edgeError(error, "Не вдалося опублікувати"));
       const body = data as { error?: string; detail?: string; job_id?: string; published?: boolean };
       if (body?.error) throw new Error(body.detail || body.error);
       return { job_id: body.job_id ?? null, published: !!body.published };
@@ -129,7 +136,7 @@ export function useImportWorkuaResponses() {
       const { data, error } = await supabase.functions.invoke("workua-connector", {
         body: { action: "import_responses", vacancy_id: vacancyId },
       });
-      if (error) throw new Error(edgeError(error, "Не вдалося підтягнути відгуки"));
+      if (error) throw new Error(await edgeError(error, "Не вдалося підтягнути відгуки"));
       return data as { imported: number; skipped: number; total: number };
     },
     onSuccess: (res, vacancyId) => {
