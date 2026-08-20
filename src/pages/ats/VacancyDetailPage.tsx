@@ -940,7 +940,7 @@ const VacancyDetailPage = () => {
                           </div>
                         </div>
                         <div
-                          className={`space-y-2 min-h-[120px] rounded-lg p-2 transition-colors ${
+                          className={`space-y-2 min-h-[120px] max-h-[62vh] overflow-y-auto rounded-lg p-2 transition-colors ${
                             dragOverStageId === stage.id ? "bg-accent ring-2 ring-primary" : "bg-muted/30"
                           }`}
                           onDragOver={(e) => handleColumnDragOver(e, stage.id)}
