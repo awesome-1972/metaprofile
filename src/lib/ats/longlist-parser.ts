@@ -95,22 +95,15 @@ export interface ParseResult {
   sheetName: string;
 }
 
-/** Читає перший аркуш книги і повертає рядки лонг-листа. */
-export function parseLongListWorkbook(data: ArrayBuffer): ParseResult {
-  const workbook = XLSX.read(data, { type: "array" });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false });
+/** Парсить один аркуш; null, якщо в ньому не впізнано колонку ПІБ. */
+function parseSheet(matrix: unknown[][], sheetName: string): ParseResult | null {
+  if (matrix.length === 0) return null;
 
-  if (matrix.length === 0) {
-    return { rows: [], recognized: [], skipped: 0, sheetName: sheetName ?? "" };
-  }
-
-  // Шапка — перший рядок, у якому впізнано хоча б ПІБ (у файлах буває
-  // порожній/титульний рядок згори).
-  let headerIndex = 0;
+  // Шапка — перший рядок, у якому впізнано хоча б ПІБ (згори бувають
+  // титульні/порожні рядки — скануємо глибше).
+  let headerIndex = -1;
   let mapping: Record<number, keyof Omit<LongListRow, "rowNumber">> = {};
-  for (let i = 0; i < Math.min(matrix.length, 10); i += 1) {
+  for (let i = 0; i < Math.min(matrix.length, 25); i += 1) {
     const candidate = mapHeaders(matrix[i] ?? []);
     if (Object.values(candidate).includes("fullName")) {
       headerIndex = i;
@@ -118,9 +111,7 @@ export function parseLongListWorkbook(data: ArrayBuffer): ParseResult {
       break;
     }
   }
-  if (Object.keys(mapping).length === 0) {
-    return { rows: [], recognized: [], skipped: 0, sheetName: sheetName ?? "" };
-  }
+  if (headerIndex < 0 || Object.keys(mapping).length === 0) return null;
 
   const rows: LongListRow[] = [];
   let skipped = 0;
@@ -158,5 +149,27 @@ export function parseLongListWorkbook(data: ArrayBuffer): ParseResult {
   }
 
   const recognized = Array.from(new Set(Object.values(mapping)));
-  return { rows, recognized, skipped, sheetName: sheetName ?? "" };
+  return { rows, recognized, skipped, sheetName };
+}
+
+/**
+ * Читає книгу і повертає рядки лонг-листа. Перебирає ВСІ аркуші (дані часто на
+ * другому аркуші «Для Клієнта», а перший — «Дашборд»), бере той, де впізнано
+ * колонку ПІБ і найбільше валідних рядків.
+ */
+export function parseLongListWorkbook(data: ArrayBuffer): ParseResult {
+  const workbook = XLSX.read(data, { type: "array" });
+  if (workbook.SheetNames.length === 0) {
+    return { rows: [], recognized: [], skipped: 0, sheetName: "" };
+  }
+
+  let best: ParseResult | null = null;
+  for (const name of workbook.SheetNames) {
+    const sheet = workbook.Sheets[name];
+    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, blankrows: false });
+    const parsed = parseSheet(matrix, name);
+    if (parsed && (!best || parsed.rows.length > best.rows.length)) best = parsed;
+  }
+
+  return best ?? { rows: [], recognized: [], skipped: 0, sheetName: workbook.SheetNames[0] };
 }
