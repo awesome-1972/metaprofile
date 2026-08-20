@@ -24,16 +24,19 @@ import {
 } from "@/hooks/ats/use-sourcing";
 import { matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
 import { WorkuaResponsesCard } from "@/components/ats/WorkuaResponsesCard";
-import { RobotaResponsesCard } from "@/components/ats/RobotaResponsesCard";
+import { JoobleMarketCard } from "@/components/ats/JoobleMarketCard";
+// Robota.ua тимчасово вимкнено: employer-api за Cloudflare-челенджем ріже
+// серверний IP (потрібен whitelist/серверний доступ від robota). Код збережено.
+// import { RobotaResponsesCard } from "@/components/ats/RobotaResponsesCard";
 
-// Work.ua свідомо НЕ в списку живого пошуку: його база резюме відкриває контакти
-// й списує квоту. Резюме з work.ua збираємо через відгуки (картка Work.ua вище).
+// Work.ua/Robota.ua свідомо НЕ в списку живого пошуку: work.ua база резюме
+// відкриває контакти й списує квоту; robota.ua employer-api за Cloudflare-блоком.
+// Резюме з них збираємо через відгуки на опубліковану вакансію (картки вище).
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
-  { id: "robotaua", label: "Robota.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },
-  { id: "proxycurl", label: "Proxycurl" },
+  { id: "proxycurl", label: "Proxycurl (LinkedIn)" },
 ];
 
 interface SourcingTabProps {
@@ -49,7 +52,7 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   const dismissProfile = useDismissSourcedProfile();
   const clearSourcing = useClearSourcing();
 
-  const [selected, setSelected] = useState<Set<SourcingProvider>>(new Set(["robotaua"]));
+  const [selected, setSelected] = useState<Set<SourcingProvider>>(new Set(["github"]));
   const [keywords, setKeywords] = useState("");
   const [locations, setLocations] = useState("");
   const [skills, setSkills] = useState("");
@@ -83,7 +86,8 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   return (
     <div className="space-y-5">
       <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
-      <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
+      <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} />
+      {/* <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} /> — тимчасово вимкнено (Cloudflare) */}
 
       {canEdit && (
         <Card>
@@ -137,7 +141,7 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  setKeywords(""); setSkills(""); setLocations(""); setSelected(new Set(["robotaua"])); setShowCriteria(false);
+                  setKeywords(""); setSkills(""); setLocations(""); setSelected(new Set(["github"])); setShowCriteria(false);
                   runSourcing.reset();
                   if (profiles.length > 0 && window.confirm("Приховати всі знайдені профілі цієї вакансії?")) {
                     clearSourcing.mutate(vacancyId);

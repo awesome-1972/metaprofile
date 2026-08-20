@@ -154,7 +154,15 @@ Deno.serve(async (req) => {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ page: 0 }),
       });
-      if (!res.ok) return json({ error: "robotaua_error", detail: `vacancy/list ${res.status}` }, 502);
+      if (!res.ok) {
+        const bodyText = (await res.text().catch(() => "")).slice(0, 400);
+        const cf = res.headers.get("cf-ray") || /cloudflare|Attention Required|Just a moment|<!DOCTYPE html/i.test(bodyText);
+        return json({
+          error: "robotaua_error",
+          detail: `vacancy/list ${res.status}${cf ? " · схоже на Cloudflare-блок серверного IP" : ""}: ${bodyText || "(порожнє тіло)"}`,
+          cloudflare: !!cf,
+        }, 502);
+      }
       const data = await res.json().catch(() => ({}));
       const items = pickList(data, ["documents", "items", "vacancies", "result"]);
       const jobs = items.map((v) => {
@@ -170,7 +178,15 @@ Deno.serve(async (req) => {
         robotaFetch(`${ROBOTA_BASE}/values/citylist`),
         robotaFetch(`${ROBOTA_BASE}/values/vacancy/publicationtype`),
       ]);
-      if (!cityRes.ok) return json({ error: "robotaua_error", detail: `citylist ${cityRes.status}` }, 502);
+      if (!cityRes.ok) {
+        const bodyText = (await cityRes.text().catch(() => "")).slice(0, 400);
+        const cf = cityRes.headers.get("cf-ray") || /cloudflare|Attention Required|Just a moment|<!DOCTYPE html/i.test(bodyText);
+        return json({
+          error: "robotaua_error",
+          detail: `citylist ${cityRes.status}${cf ? " · схоже на Cloudflare-блок серверного IP" : ""}: ${bodyText || "(порожнє тіло)"}`,
+          cloudflare: !!cf,
+        }, 502);
+      }
       const cityData = await cityRes.json().catch(() => ([]));
       const city = pickList(cityData, ["documents", "items", "cities", "result"])
         .map((c) => ({ id: String(c.id ?? c.cityId ?? ""), name: String(c.name ?? c.title ?? "") }))
