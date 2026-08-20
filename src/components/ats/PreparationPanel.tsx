@@ -13,6 +13,7 @@ import { useVacancyCompetencies } from "@/hooks/ats/use-competencies";
 import { useSearchStrategy, usePublicBrief, toStringArray } from "@/hooks/ats/use-preparation";
 import { useUpdatePhasePlan, type SearchPhase } from "@/hooks/ats/use-search-phases";
 import { SearchStrategyCard } from "@/components/ats/SearchStrategyCard";
+import { ClientPortalCard } from "@/components/ats/ClientPortalCard";
 import { BriefTab } from "@/components/ats/BriefTab";
 import { StopListCard } from "@/components/ats/StopListCard";
 import type { Database } from "@/integrations/supabase/types";
@@ -271,8 +272,9 @@ export function PreparationPanel({
         </div>
       </TabsContent>
 
-      <TabsContent value="strategy" className="pt-4">
+      <TabsContent value="strategy" className="pt-4 space-y-4">
         <SearchStrategyCard vacancyId={vacancyId} vacancyTitle={vacancyTitle} canEdit={canEdit} />
+        <ClientPortalCard vacancyId={vacancyId} canEdit={canEdit} />
       </TabsContent>
 
       <TabsContent value="questionnaire" className="pt-4">

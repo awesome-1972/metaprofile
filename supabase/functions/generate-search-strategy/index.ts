@@ -35,12 +35,36 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 function isUuid(v: unknown): v is string { return typeof v === "string" && UUID_RE.test(v); }
-function asStr(v: unknown, max = 2000): string { return typeof v === "string" ? v.trim().slice(0, max) : ""; }
+// Прибираємо markdown-розмітку — поля стратегії це ПЛОСКІ textarea, не markdown.
+function stripMd(s: string): string {
+  return s
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    .replace(/`/g, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "• ")
+    .trim();
+}
+function asStr(v: unknown, max = 2000): string { return typeof v === "string" ? stripMd(v.trim()).slice(0, max) : ""; }
 function asArr(v: unknown, maxItems = 25, maxLen = 200): string[] {
   if (!Array.isArray(v)) return [];
   const out: string[] = [];
   for (const x of v) { const s = asStr(x, maxLen); if (s) out.push(s); if (out.length >= maxItems) break; }
   return out;
+}
+// Текстове поле, яке модель інколи віддає масивом або JSON-рядком «[...]» —
+// приводимо до звичайного тексту (переліки — рядками з •), без markdown.
+function cleanText(v: unknown, max = 1500): string {
+  if (Array.isArray(v)) return v.map((x) => `• ${stripMd(String(x))}`).join("\n").slice(0, max);
+  if (typeof v !== "string") return "";
+  const t = v.trim();
+  if (t.startsWith("[") && t.endsWith("]")) {
+    try {
+      const arr = JSON.parse(t);
+      if (Array.isArray(arr)) return arr.map((x) => `• ${stripMd(String(x))}`).join("\n").slice(0, max);
+    } catch { /* not JSON — fall through */ }
+  }
+  return stripMd(t).slice(0, max);
 }
 
 const rateBuckets = new Map<string, { count: number; windowStart: number }>();
@@ -64,6 +88,7 @@ function buildSystem(): string {
     "out_of_scope — кого НЕ беремо / хибні збіги (1–3 речення або перелік).",
     "notes — логіка воронки: з чого починати, куди спускатися за низької конверсії.",
     "Будь конкретним під роль і галузь. Не вигадуй компанії, яких не існує.",
+    "ВАЖЛИВО: пиши ПЛОСКИМ текстом без markdown — жодних **, __, #, зірочок, квадратних дужок чи JSON. out_of_scope і notes — звичайні речення; переліки в них — новими рядками, кожен з тире.",
   ].join(" ");
 }
 
@@ -186,13 +211,13 @@ Deno.serve(async (req) => {
         }).filter((i) => i.name)
       : [];
     const strategy = {
-      focus: asStr(p.focus, 1000),
+      focus: cleanText(p.focus, 1000),
       industries,
       target_companies: asArr(p.target_companies, 25, 160),
       target_titles: asArr(p.target_titles, 20, 160),
       profile_musts: asArr(p.profile_musts, 15, 300),
-      out_of_scope: asStr(p.out_of_scope, 1500),
-      notes: asStr(p.notes, 1500),
+      out_of_scope: cleanText(p.out_of_scope, 1500),
+      notes: cleanText(p.notes, 1500),
     };
     return json({ strategy });
   } catch (error) {

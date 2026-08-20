@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import PublicBriefPage from "./pages/PublicBriefPage";
 import PublicJobsPage from "./pages/PublicJobsPage";
 import PublicReportPage from "./pages/PublicReportPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -97,6 +98,7 @@ const App = () => (
           <Route path="/jobs" element={<PublicJobsPage />} />
           {/* Публічний звіт по кандидату за посиланням. */}
           <Route path="/report/:token" element={<PublicReportPage />} />
+          <Route path="/client/:token" element={<ClientPortalPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
