@@ -102,6 +102,10 @@ export function LongListImportDialog({
       prev ? prev.map((item, i) => (i === index ? { ...item, selected: !item.selected } : item)) : prev,
     );
 
+  const allSelected = !!plan && plan.length > 0 && plan.every((p) => p.selected);
+  const toggleAll = (value: boolean) =>
+    setPlan((prev) => (prev ? prev.map((item) => ({ ...item, selected: value })) : prev));
+
   const selectedCount = plan?.filter((p) => p.selected).length ?? 0;
   const newCount = plan?.filter((p) => p.selected && !p.existingCandidateId).length ?? 0;
   const dupCount = plan?.filter((p) => p.selected && p.existingCandidateId).length ?? 0;
@@ -224,7 +228,13 @@ export function LongListImportDialog({
                 <table className="w-full text-xs">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr className="text-left">
-                      <th className="p-2 w-8"></th>
+                      <th className="p-2 w-8">
+                        <Checkbox
+                          checked={allSelected}
+                          onCheckedChange={(v) => toggleAll(v === true)}
+                          aria-label="Обрати всіх"
+                        />
+                      </th>
                       <th className="p-2">ПІБ</th>
                       <th className="p-2">Компанія</th>
                       <th className="p-2">Посада</th>
@@ -277,10 +287,18 @@ export function LongListImportDialog({
               </div>
             </div>
 
-            <div className="text-xs text-muted-foreground">
-              Обрано {selectedCount}: створити {newCount}, оновити {dupCount}, одразу відмовлених{" "}
-              {rejectedCount}.
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-xs text-muted-foreground">
+                Обрано {selectedCount} із {plan.length}: створити {newCount}, оновити {dupCount}, одразу відмовлених{" "}
+                {rejectedCount}.
+              </div>
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => toggleAll(!allSelected)}>
+                {allSelected ? "Зняти всіх" : "Обрати всіх"}
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Оберіть стадію вище й натисніть <b>«Імпортувати {selectedCount}»</b> внизу праворуч.
+            </p>
           </div>
         )}
 
