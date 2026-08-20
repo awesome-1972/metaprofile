@@ -145,23 +145,11 @@ async function searchApollo(q: RoleQuery): Promise<NormProfile[]> {
 }
 
 // Proxycurl — LinkedIn-type person search.
-async function searchProxycurl(q: RoleQuery): Promise<NormProfile[]> {
-  const key = Deno.env.get("PROXYCURL_API_KEY");
-  if (!key) return [];
-  const params = new URLSearchParams();
-  if (q.titles[0]) params.set("current_role_title", q.titles[0]);
-  if (q.locations[0]) params.set("country", q.locations[0]);
-  if (q.skills[0]) params.set("skills", q.skills.slice(0, 3).join(" "));
-  params.set("page_size", String(PER_PROVIDER_LIMIT));
-  const res = await fetch(`https://nubela.co/proxycurl/api/v2/search/person?${params}`, { headers: { Authorization: `Bearer ${key}` } });
-  if (!res.ok) throw new Error(`proxycurl ${res.status}`);
-  const data = await res.json() as { results?: Array<Record<string, unknown>> };
-  return (data.results ?? []).map((r) => ({
-    provider: "proxycurl" as const, external_id: String(r.linkedin_profile_url ?? crypto.randomUUID()),
-    full_name: (r.full_name as string) ?? null, title: (r.occupation as string) ?? null,
-    company: null, location: null, skills: [],
-    profile_url: (r.linkedin_profile_url as string) ?? null, raw: r,
-  }));
+// Proxycurl ВИМКНЕНО: сервіс закрито 04.07.2025 після позову LinkedIn.
+// LinkedIn-дані тепер — через PDL/Apollo (агреговані бази). Заглушка лишена,
+// щоб не ламати тип провайдера й старі збережені запити.
+async function searchProxycurl(_q: RoleQuery): Promise<NormProfile[]> {
+  return [];
 }
 
 // robota.ua — employer-api CvDb (пошук по базі резюме, ~6.4M).

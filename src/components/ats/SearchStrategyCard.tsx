@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Printer, Trash2 } from "lucide-react";
+import { Plus, Printer, Trash2, Wand2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSearchStrategy,
   useSaveSearchStrategy,
+  useGenerateSearchStrategy,
   toIndustryShares,
   toStringArray,
   type IndustryShare,
@@ -37,6 +38,7 @@ const linesToArray = (text: string) =>
 export function SearchStrategyCard({ vacancyId, vacancyTitle, canEdit }: SearchStrategyCardProps) {
   const { data: strategy, isLoading } = useSearchStrategy(vacancyId);
   const saveStrategy = useSaveSearchStrategy();
+  const generate = useGenerateSearchStrategy();
 
   const [focus, setFocus] = useState("");
   const [industries, setIndustries] = useState<IndustryShare[]>([]);
@@ -58,6 +60,21 @@ export function SearchStrategyCard({ vacancyId, vacancyTitle, canEdit }: SearchS
   }, [strategy]);
 
   const sharesTotal = industries.reduce((sum, item) => sum + (Number(item.share) || 0), 0);
+
+  const handleGenerate = () => {
+    generate.mutate(vacancyId, {
+      onSuccess: (g) => {
+        setFocus(g.focus ?? "");
+        setIndustries((g.industries ?? []).filter((i) => i.name?.trim()));
+        setCompanies((g.target_companies ?? []).join("\n"));
+        setTitles((g.target_titles ?? []).join("\n"));
+        setMusts((g.profile_musts ?? []).join("\n"));
+        setOutOfScope(g.out_of_scope ?? "");
+        setNotes(g.notes ?? "");
+        toast.success("Стратегію згенеровано — перевірте й натисніть «Зберегти»");
+      },
+    });
+  };
 
   const handleSave = () => {
     saveStrategy.mutate({
@@ -117,6 +134,16 @@ export function SearchStrategyCard({ vacancyId, vacancyTitle, canEdit }: SearchS
         <CardTitle className="text-base flex items-center justify-between">
           Стратегія пошуку
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              disabled={!canEdit || generate.isPending}
+              onClick={handleGenerate}
+            >
+              {generate.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1.5" />}
+              Згенерувати з AI
+            </Button>
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5 mr-1.5" />
               PDF

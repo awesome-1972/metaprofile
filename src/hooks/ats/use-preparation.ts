@@ -133,6 +133,38 @@ export function useSaveSearchStrategy() {
   });
 }
 
+export interface GeneratedStrategy {
+  focus: string;
+  industries: IndustryShare[];
+  target_companies: string[];
+  target_titles: string[];
+  profile_musts: string[];
+  out_of_scope: string;
+  notes: string;
+}
+
+/** AI-генерація стратегії пошуку з бріфу вакансії (preview — не пише в БД). */
+export function useGenerateSearchStrategy() {
+  return useMutation({
+    mutationFn: async (vacancyId: string): Promise<GeneratedStrategy> => {
+      const { data, error } = await supabase.functions.invoke("generate-search-strategy", {
+        body: { vacancy_id: vacancyId },
+      });
+      if (error) {
+        const ctx = (error as { context?: Response })?.context;
+        if (ctx && typeof ctx.json === "function") {
+          try { const b = await ctx.json(); if (b?.error) throw new Error(b.detail ? `${b.error}: ${b.detail}` : b.error); } catch (e) { if (e instanceof Error && e.message) throw e; }
+        }
+        throw new Error((error as { message?: string })?.message || "Не вдалося згенерувати");
+      }
+      const b = data as { error?: string; detail?: string; strategy?: GeneratedStrategy };
+      if (b?.error) throw new Error(b.detail || b.error);
+      return b.strategy as GeneratedStrategy;
+    },
+    onError: (error: { message?: string }) => toast.error(error?.message || "Помилка генерації стратегії"),
+  });
+}
+
 // ------------------------------------------------------------
 // Публічний бріф для кандидатів
 // ------------------------------------------------------------

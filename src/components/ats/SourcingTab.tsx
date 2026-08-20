@@ -25,6 +25,8 @@ import {
 import { matchFlag, matchDotClass } from "@/hooks/ats/use-candidate-matches";
 import { WorkuaResponsesCard } from "@/components/ats/WorkuaResponsesCard";
 import { JoobleMarketCard } from "@/components/ats/JoobleMarketCard";
+import { DouMarketCard } from "@/components/ats/DouMarketCard";
+import { DjinniResponsesCard } from "@/components/ats/DjinniResponsesCard";
 // Robota.ua тимчасово вимкнено: employer-api за Cloudflare-челенджем ріже
 // серверний IP (потрібен whitelist/серверний доступ від robota). Код збережено.
 // import { RobotaResponsesCard } from "@/components/ats/RobotaResponsesCard";
@@ -32,11 +34,12 @@ import { JoobleMarketCard } from "@/components/ats/JoobleMarketCard";
 // Work.ua/Robota.ua свідомо НЕ в списку живого пошуку: work.ua база резюме
 // відкриває контакти й списує квоту; robota.ua employer-api за Cloudflare-блоком.
 // Резюме з них збираємо через відгуки на опубліковану вакансію (картки вище).
+// Proxycurl вилучено: сервіс закрито (2025, позов LinkedIn). LinkedIn-дані —
+// через PDL/Apollo (агреговані бази), прямого LinkedIn-парсингу нема.
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },
-  { id: "proxycurl", label: "Proxycurl (LinkedIn)" },
 ];
 
 interface SourcingTabProps {
@@ -86,7 +89,9 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
   return (
     <div className="space-y-5">
       <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
+      <DjinniResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
       <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} />
+      <DouMarketCard vacancyId={vacancyId} canEdit={canEdit} />
       {/* <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} /> — тимчасово вимкнено (Cloudflare) */}
 
       {canEdit && (
