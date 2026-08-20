@@ -3,6 +3,9 @@ project_id = "qzmjeftxpaseobkexekg"
 [api]
 enabled = true
 
+[functions.djinni-webhook]
+verify_jwt = false
+
 [functions.recommend-courses]
 verify_jwt = false
 
