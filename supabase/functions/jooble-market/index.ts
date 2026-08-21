@@ -84,7 +84,11 @@ Deno.serve(async (req) => {
     }
     if (!res.ok) {
       const t = (await res.text().catch(() => "")).slice(0, 200);
-      return json({ error: "jooble_error", detail: `HTTP ${res.status}: ${t}` }, 502);
+      const cf = res.headers.get("cf-ray") || /cloudflare|Just a moment|Attention Required|<!DOCTYPE html/i.test(t);
+      const detail = cf
+        ? `Cloudflare заблокував серверний IP (${res.status}). Jooble API недосяжний із нашого бекенду.`
+        : `HTTP ${res.status}: ${t}`;
+      return json({ error: "jooble_error", detail, cloudflare: !!cf }, 502);
     }
     const data = await res.json().catch(() => ({})) as { totalCount?: number; jobs?: Array<Record<string, unknown>> };
     const jobs = (Array.isArray(data.jobs) ? data.jobs : []).slice(0, 40).map((j) => ({

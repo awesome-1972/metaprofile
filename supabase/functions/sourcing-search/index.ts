@@ -227,12 +227,43 @@ async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
   }));
 }
 
-// work.ua — ВИМКНЕНО у живому пошуку по базі резюме: ендпоінт /resumes фактично
-// ВІДКРИВАЄ контакти й списує квоту (за докою work.ua), а форма фільтра часто
-// 400-ить. Резюме з work.ua збираємо без відкриття контактів через відгуки на
-// опубліковану вакансію (WorkuaResponsesCard → import_responses). Тут — no-op.
-async function searchWorkUa(_q: RoleQuery): Promise<NormProfile[]> {
-  return [];
+// work.ua — пошук по базі резюме (Basic Auth). Мапимо ЛИШЕ не-контактні поля
+// (ПІБ, посада, місто, лінк). Увага: /resumes може списувати квоту контактів —
+// вмикайте свідомо. Без відкриття контактів надійніший шлях — відгуки на
+// опубліковану вакансію (WorkuaResponsesCard → import_responses).
+async function searchWorkUa(q: RoleQuery): Promise<NormProfile[]> {
+  const email = Deno.env.get("WORKUA_EMAIL");
+  const password = Deno.env.get("WORKUA_PASSWORD");
+  if (!email || !password) return [];
+  const search = [q.keywords, ...q.titles.slice(0, 1), ...q.skills.slice(0, 4)].filter(Boolean).join(" ").trim();
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  params.set("limit", String(Math.max(10, PER_PROVIDER_LIMIT)));
+  params.set("page", "0");
+  const res = await fetch(`https://api.work.ua/resumes?${params}`, {
+    headers: {
+      Authorization: `Basic ${btoa(`${email}:${password}`)}`,
+      "User-Agent": `Metaprofile ATS (${email})`,
+      "X-Locale": "uk_UA",
+      Accept: "application/json",
+    },
+  });
+  if (!res.ok) throw new Error(`workua ${res.status}: ${(await res.text().catch(() => "")).slice(0, 150)}`);
+  const data = await res.json() as { result?: Array<Record<string, unknown>> };
+  return (data.result ?? []).map((r) => {
+    const fn = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
+    return {
+      provider: "workua" as const,
+      external_id: String(r.resume_id ?? r.id ?? crypto.randomUUID()),
+      full_name: fn || (r.name as string) || null,
+      title: (r.name as string) ?? null,
+      company: null,
+      location: (r.region as string) ?? null,
+      skills: [],
+      profile_url: r.resume_id ? `https://www.work.ua/resumes/${r.resume_id}/` : null,
+      raw: { ...r, contacts: undefined },
+    };
+  });
 }
 
 const PROVIDER_FN: Record<Provider, (q: RoleQuery) => Promise<NormProfile[]>> = {

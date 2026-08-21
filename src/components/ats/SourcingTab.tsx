@@ -31,12 +31,12 @@ import { DjinniResponsesCard } from "@/components/ats/DjinniResponsesCard";
 // серверний IP (потрібен whitelist/серверний доступ від robota). Код збережено.
 // import { RobotaResponsesCard } from "@/components/ats/RobotaResponsesCard";
 
-// Work.ua/Robota.ua свідомо НЕ в списку живого пошуку: work.ua база резюме
-// відкриває контакти й списує квоту; robota.ua employer-api за Cloudflare-блоком.
-// Резюме з них збираємо через відгуки на опубліковану вакансію (картки вище).
 // Proxycurl вилучено: сервіс закрито (2025, позов LinkedIn). LinkedIn-дані —
-// через PDL/Apollo (агреговані бази), прямого LinkedIn-парсингу нема.
+// через PDL/Apollo. Robota.ua employer-api за Cloudflare-блоком (може віддати
+// помилку), Work.ua /resumes може списувати квоту контактів — вмикайте свідомо.
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
+  { id: "robotaua", label: "Robota.ua" },
+  { id: "workua", label: "Work.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
   { id: "apollo", label: "Apollo" },
@@ -90,7 +90,8 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
     <div className="space-y-5">
       <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
       <DjinniResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
-      <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} />
+      {/* Jooble тимчасово прихований: jooble.org/api за Cloudflare-блоком серверного IP. */}
+      {/* <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} /> */}
       <DouMarketCard vacancyId={vacancyId} canEdit={canEdit} />
       {/* <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} /> — тимчасово вимкнено (Cloudflare) */}
 
