@@ -57,6 +57,7 @@ export function ComparisonMatrixTab({ vacancyId }: ComparisonMatrixTabProps) {
 
   const [overrideTarget, setOverrideTarget] = useState<CandidateComparisonColumn | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
+  const [showUnscored, setShowUnscored] = useState(false);
 
   const openOverrideDialog = (column: CandidateComparisonColumn) => {
     setOverrideTarget(column);
@@ -262,14 +263,22 @@ export function ComparisonMatrixTab({ vacancyId }: ComparisonMatrixTabProps) {
 
       {unscoredColumns.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Не оцінені</h4>
-          <div className="flex flex-wrap gap-2">
-            {unscoredColumns.map((col) => (
-              <Badge key={col.applicationId} variant="outline" className="text-xs">
-                {col.candidateName}
-              </Badge>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowUnscored((v) => !v)}
+            className="text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground"
+          >
+            Не оцінені: {unscoredColumns.length} · {showUnscored ? "сховати" : "показати"}
+          </button>
+          {showUnscored && (
+            <div className="flex flex-wrap gap-2">
+              {unscoredColumns.map((col) => (
+                <Badge key={col.applicationId} variant="outline" className="text-xs">
+                  {col.candidateName}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
