@@ -96,6 +96,25 @@ function robotaAuthVariants(): Record<string, string>[] {
 function robotaConfigured(): boolean {
   return robotaAuthVariants().length > 0 || (!!Deno.env.get("ROBOTAUA_EMAIL") && !!Deno.env.get("ROBOTAUA_PASSWORD"));
 }
+// Опційний релей для обходу Cloudflare-блоку серверного IP (relay/server.mjs).
+const RELAY_URL = (Deno.env.get("RELAY_URL") ?? "").replace(/\/+$/, "");
+const RELAY_SECRET = Deno.env.get("RELAY_SECRET") ?? "";
+async function edgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (!RELAY_URL || !RELAY_SECRET) return fetch(url, init);
+  const r = await fetch(`${RELAY_URL}/fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-relay-secret": RELAY_SECRET },
+    body: JSON.stringify({
+      url,
+      method: init.method ?? "GET",
+      headers: (init.headers as Record<string, string>) ?? {},
+      body: typeof init.body === "string" ? init.body : null,
+    }),
+  });
+  if (!r.ok) return new Response(await r.text().catch(() => ""), { status: r.status });
+  const data = await r.json().catch(() => ({})) as { status?: number; content_type?: string; body?: string };
+  return new Response(data.body ?? "", { status: Number(data.status) || 502, headers: { "content-type": data.content_type || "application/json" } });
+}
 let robotaWorkingAuth = 0;
 async function robotaFetch(url: string, init: RequestInit = {}): Promise<Response> {
   let variants = robotaAuthVariants();
@@ -110,7 +129,7 @@ async function robotaFetch(url: string, init: RequestInit = {}): Promise<Respons
   for (const i of order) {
     const v = variants[i];
     if (!v) continue;
-    const res = await fetch(url, { ...init, headers: { ...baseHeaders, ...v } });
+    const res = await edgeFetch(url, { ...init, headers: { ...baseHeaders, ...v } });
     if (res.status !== 401 && res.status !== 403) { robotaWorkingAuth = i; return res; }
     last = res;
   }

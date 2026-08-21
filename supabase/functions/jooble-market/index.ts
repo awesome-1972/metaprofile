@@ -31,6 +31,27 @@ const JOOBLE_API_KEY = Deno.env.get("JOOBLE_API_KEY") ?? "";
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
+
+// Опційний релей для обходу Cloudflare-блоку серверного IP (див. relay/server.mjs).
+// Якщо задані RELAY_URL + RELAY_SECRET — зовнішні запити йдуть через релей.
+const RELAY_URL = (Deno.env.get("RELAY_URL") ?? "").replace(/\/+$/, "");
+const RELAY_SECRET = Deno.env.get("RELAY_SECRET") ?? "";
+async function relayFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (!RELAY_URL || !RELAY_SECRET) return fetch(url, init);
+  const r = await fetch(`${RELAY_URL}/fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-relay-secret": RELAY_SECRET },
+    body: JSON.stringify({
+      url,
+      method: init.method ?? "GET",
+      headers: (init.headers as Record<string, string>) ?? {},
+      body: typeof init.body === "string" ? init.body : null,
+    }),
+  });
+  if (!r.ok) return new Response(await r.text().catch(() => ""), { status: r.status });
+  const data = await r.json().catch(() => ({})) as { status?: number; content_type?: string; body?: string };
+  return new Response(data.body ?? "", { status: Number(data.status) || 502, headers: { "content-type": data.content_type || "application/json" } });
+}
 function isUuid(v: unknown): v is string { return typeof v === "string" && UUID_RE.test(v); }
 function asStr(v: unknown, max = 600): string { return typeof v === "string" ? v.trim().slice(0, max) : ""; }
 
@@ -74,7 +95,7 @@ Deno.serve(async (req) => {
 
     let res: Response;
     try {
-      res = await fetch(`https://jooble.org/api/${encodeURIComponent(JOOBLE_API_KEY)}`, {
+      res = await relayFetch(`https://jooble.org/api/${encodeURIComponent(JOOBLE_API_KEY)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords, location, page: String(page) }),

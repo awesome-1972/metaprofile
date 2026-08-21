@@ -90,8 +90,7 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
     <div className="space-y-5">
       <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
       <DjinniResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
-      {/* Jooble тимчасово прихований: jooble.org/api за Cloudflare-блоком серверного IP. */}
-      {/* <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} /> */}
+      <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} />
       <DouMarketCard vacancyId={vacancyId} canEdit={canEdit} />
       {/* <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} /> — тимчасово вимкнено (Cloudflare) */}
 
