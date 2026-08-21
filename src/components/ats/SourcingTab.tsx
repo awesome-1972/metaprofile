@@ -34,6 +34,8 @@ import { DjinniResponsesCard } from "@/components/ats/DjinniResponsesCard";
 // Proxycurl вилучено: сервіс закрито (2025, позов LinkedIn). LinkedIn-дані —
 // через PDL/Apollo. Robota.ua employer-api за Cloudflare-блоком (може віддати
 // помилку), Work.ua /resumes може списувати квоту контактів — вмикайте свідомо.
+// Robota.ua працює через релей (employer-api віддає 200 з residential IP).
+// Jooble лишається прихованим — там справжній JS-челендж навіть через релей.
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
   { id: "robotaua", label: "Robota.ua" },
   { id: "workua", label: "Work.ua" },
@@ -90,7 +92,8 @@ export function SourcingTab({ vacancyId, canEdit }: SourcingTabProps) {
     <div className="space-y-5">
       <WorkuaResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
       <DjinniResponsesCard vacancyId={vacancyId} canEdit={canEdit} />
-      <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} />
+      {/* Jooble прихований: jooble.org challeng-ить будь-який не-браузер (Cloudflare), релей не допомагає. */}
+      {/* <JoobleMarketCard vacancyId={vacancyId} canEdit={canEdit} /> */}
       <DouMarketCard vacancyId={vacancyId} canEdit={canEdit} />
       {/* <RobotaResponsesCard vacancyId={vacancyId} canEdit={canEdit} /> — тимчасово вимкнено (Cloudflare) */}
 

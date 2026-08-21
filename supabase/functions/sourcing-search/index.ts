@@ -232,19 +232,32 @@ async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
     headers: { "Content-Type": "application/json", Accept: "text/plain", ...auth },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`robotaua ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);
-  const data = await res.json() as { documents?: Array<Record<string, unknown>> };
-  return (data.documents ?? []).map((d) => ({
-    provider: "robotaua" as const,
-    external_id: String(d.resumeId ?? crypto.randomUUID()),
-    full_name: (d.fullName as string) || (d.displayName as string) || null,
-    title: (d.speciality as string) ?? null,
-    company: null,
-    location: (d.cityName as string) ?? null,
-    skills: Array.isArray(d.keywords) ? (d.keywords as string[]).slice(0, 40) : [],
-    profile_url: (d.url as string) ?? (d.resumeId ? `https://robota.ua/ua/cv/${d.resumeId}` : null),
-    raw: d,
-  }));
+  const rawText = await res.text().catch(() => "");
+  if (!res.ok) throw new Error(`robotaua ${res.status}: ${rawText.slice(0, 200)}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any = {};
+  try { data = JSON.parse(rawText); } catch { /* not json */ }
+  // Структура CvDb від robota гуляє — беремо перший масив із відомих ключів.
+  const items: Array<Record<string, unknown>> =
+    (Array.isArray(data) ? data
+      : data.documents ?? data.items ?? data.resumes ?? data.result ?? data.data ?? []) as Array<Record<string, unknown>>;
+  console.log(`robotaua parse: keys=${Object.keys(data || {}).join(",")} items=${items.length}`);
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  return items.map((d) => {
+    const id = d.resumeId ?? d.id ?? d.resume_id;
+    const name = str(d.fullName) || str(d.displayName) || [d.surname, d.name].filter(Boolean).join(" ").trim() || null;
+    return {
+      provider: "robotaua" as const,
+      external_id: String(id ?? crypto.randomUUID()),
+      full_name: name,
+      title: str(d.speciality) || str(d.position) || str(d.title),
+      company: null,
+      location: str(d.cityName) || str(d.city) || str(d.cityNameEn),
+      skills: Array.isArray(d.keywords) ? (d.keywords as string[]).slice(0, 40) : (Array.isArray(d.skills) ? (d.skills as string[]).slice(0, 40) : []),
+      profile_url: str(d.url) ?? (id ? `https://robota.ua/candidates/${id}` : null),
+      raw: d,
+    };
+  });
 }
 
 // work.ua — пошук по базі резюме (Basic Auth). Мапимо ЛИШЕ не-контактні поля

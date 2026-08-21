@@ -74,8 +74,11 @@ const server = http.createServer(async (req, res) => {
         redirect: "follow",
       });
       const text = await upstream.text();
-      const cf = upstream.headers.get("cf-ray") || /Just a moment|cloudflare|Attention Required/i.test(text.slice(0, 300));
-      console.log(`[relay] ${method} ${target.hostname} -> ${upstream.status}${cf ? " (Cloudflare-челендж!)" : ""}`);
+      // Челендж — це САМЕ інтерстиційна сторінка в тілі, а не заголовок cf-ray
+      // (він є на всіх відповідях Cloudflare, зокрема успішних).
+      const cf = /Just a moment|Attention Required|Checking your browser|challenge-platform/i.test(text.slice(0, 800));
+      const snippet = text.replace(/\s+/g, " ").slice(0, 160);
+      console.log(`[relay] ${method} ${target.hostname} -> ${upstream.status}${cf ? " (CHALLENGE)" : ""} | ${snippet}`);
       return send(res, 200, {
         status: upstream.status,
         content_type: upstream.headers.get("content-type") || "",
