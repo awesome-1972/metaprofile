@@ -162,7 +162,7 @@ async function getRobotaToken(): Promise<string | null> {
   if (!email || !password) return null;
   const now = Date.now();
   if (robotaTokenCache && robotaTokenCache.expMs - 60_000 > now) return robotaTokenCache.token;
-  const res = await fetch("https://auth-api.robota.ua/Login", {
+  const res = await edgeFetch("https://auth-api.robota.ua/Login", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/plain" },
     body: JSON.stringify({ username: email, password }),
@@ -184,6 +184,26 @@ async function getRobotaToken(): Promise<string | null> {
 function asciiHeader(v: string): string {
   // eslint-disable-next-line no-control-regex
   return v.replace(/[^\x20-\x7E]/g, "").trim();
+}
+
+// Опційний релей для обходу Cloudflare-блоку серверного IP (relay/server.mjs).
+const RELAY_URL = (Deno.env.get("RELAY_URL") ?? "").replace(/\/+$/, "");
+const RELAY_SECRET = Deno.env.get("RELAY_SECRET") ?? "";
+async function edgeFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (!RELAY_URL || !RELAY_SECRET) return fetch(url, init);
+  const r = await fetch(`${RELAY_URL}/fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-relay-secret": RELAY_SECRET },
+    body: JSON.stringify({
+      url,
+      method: init.method ?? "GET",
+      headers: (init.headers as Record<string, string>) ?? {},
+      body: typeof init.body === "string" ? init.body : null,
+    }),
+  });
+  if (!r.ok) return new Response(await r.text().catch(() => ""), { status: r.status });
+  const data = await r.json().catch(() => ({})) as { status?: number; content_type?: string; body?: string };
+  return new Response(data.body ?? "", { status: Number(data.status) || 502, headers: { "content-type": data.content_type || "application/json" } });
 }
 async function robotaAuthHeaders(): Promise<Record<string, string> | null> {
   const apiKey = Deno.env.get("ROBOTAUA_API_KEY");
@@ -207,7 +227,7 @@ async function searchRobotaUa(q: RoleQuery): Promise<NormProfile[]> {
     sort: "Score",
     keyWords: keyWords || undefined,
   };
-  const res = await fetch("https://employer-api.robota.ua/cvdb/resumes", {
+  const res = await edgeFetch("https://employer-api.robota.ua/cvdb/resumes", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/plain", ...auth },
     body: JSON.stringify(body),
@@ -238,8 +258,9 @@ async function searchWorkUa(q: RoleQuery): Promise<NormProfile[]> {
   const search = [q.keywords, ...q.titles.slice(0, 1), ...q.skills.slice(0, 4)].filter(Boolean).join(" ").trim();
   const params = new URLSearchParams();
   if (search) params.set("search", search);
-  params.set("limit", String(Math.max(10, PER_PROVIDER_LIMIT)));
-  params.set("page", "0");
+  params.set("limit", String(Math.min(100, Math.max(10, PER_PROVIDER_LIMIT))));
+  params.set("page", "1");
+  params.set("sort", "1");
   const res = await fetch(`https://api.work.ua/resumes?${params}`, {
     headers: {
       Authorization: `Basic ${btoa(`${email}:${password}`)}`,

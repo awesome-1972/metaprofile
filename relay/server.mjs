@@ -50,7 +50,10 @@ function send(res, status, obj) {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/health") return send(res, 200, { ok: true });
   if (req.method !== "POST" || !req.url.startsWith("/fetch")) return send(res, 404, { error: "not_found" });
-  if ((req.headers["x-relay-secret"] || "") !== SECRET) return send(res, 401, { error: "unauthorized" });
+  if ((req.headers["x-relay-secret"] || "") !== SECRET) {
+    console.log(`[relay] ВІДХИЛЕНО: невірний або відсутній x-relay-secret`);
+    return send(res, 401, { error: "unauthorized" });
+  }
 
   let raw = "";
   req.on("data", (c) => { raw += c; if (raw.length > 2_000_000) req.destroy(); });
@@ -71,6 +74,8 @@ const server = http.createServer(async (req, res) => {
         redirect: "follow",
       });
       const text = await upstream.text();
+      const cf = upstream.headers.get("cf-ray") || /Just a moment|cloudflare|Attention Required/i.test(text.slice(0, 300));
+      console.log(`[relay] ${method} ${target.hostname} -> ${upstream.status}${cf ? " (Cloudflare-челендж!)" : ""}`);
       return send(res, 200, {
         status: upstream.status,
         content_type: upstream.headers.get("content-type") || "",
