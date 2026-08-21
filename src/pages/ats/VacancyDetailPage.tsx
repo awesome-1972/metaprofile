@@ -1153,6 +1153,51 @@ const VacancyDetailPage = () => {
                         </div>
                       );
                     })}
+
+                  {/* Колонка «Відхилені» — знято з воронки (відмови / самовідкликання) */}
+                  {(() => {
+                    const rejected = Object.values(applicationsByStage)
+                      .flat()
+                      .filter((a) => a.status === "rejected" || a.status === "withdrawn");
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <div
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5"
+                          style={{ backgroundColor: "#ef444418", borderLeft: "3px solid #ef4444" }}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-red-500" />
+                          <span className="text-xs font-semibold text-red-700">Відхилені</span>
+                          <Badge variant="outline" className="text-[10px]">{rejected.length}</Badge>
+                        </div>
+                        <div className="flex gap-4">
+                          <div className="w-72 flex-shrink-0 space-y-2 min-h-[120px] max-h-[62vh] overflow-y-auto rounded-lg p-2 bg-muted/30">
+                            {rejected.length === 0 ? (
+                              <div className="text-xs text-muted-foreground text-center py-4">Порожньо</div>
+                            ) : (
+                              rejected.map((application) => (
+                                <Card key={application.id} className="shadow-sm opacity-80">
+                                  <CardContent className="p-3 space-y-1">
+                                    <Link
+                                      to={`/ats/candidates/${application.candidate_id}`}
+                                      className="font-medium text-sm hover:underline block truncate"
+                                    >
+                                      {application.candidate?.full_name ?? "Без імені"}
+                                    </Link>
+                                    <div className="text-xs text-muted-foreground">
+                                      {application.candidate?.source?.name ?? "Джерело невідоме"}
+                                    </div>
+                                    <Badge className="text-[10px] bg-red-100 text-red-700">
+                                      {application.status === "withdrawn" ? "Самовідкликання" : "Відхилено"}
+                                    </Badge>
+                                  </CardContent>
+                                </Card>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               </div>
