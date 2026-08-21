@@ -29,6 +29,7 @@ import {
   useUpdateCompetency,
   useDeleteCompetency,
   useSeedCompetencyTemplate,
+  useRemoveDuplicateCompetencies,
   toStringList,
   toRubric,
   STANDARD_COMPETENCY_GROUPS,
@@ -90,6 +91,7 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   const updateCompetency = useUpdateCompetency();
   const deleteCompetency = useDeleteCompetency();
   const seedTemplate = useSeedCompetencyTemplate();
+  const removeDuplicates = useRemoveDuplicateCompetencies();
   const seedGroups = useSeedCompetencyGroups();
   const { data: customTemplates } = useCustomCompetencyTemplates();
   const saveTemplate = useSaveCompetencyTemplate();
@@ -135,6 +137,8 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   };
   const aiCount = aiGroups?.reduce((s, g) => s + g.competencies.length, 0) ?? 0;
   const hasMatrix = (competencies ?? []).length > 0;
+  const uniqueCount = groups.reduce((s, g) => s + g.competencies.length, 0);
+  const duplicateCount = (competencies ?? []).length - uniqueCount;
 
   const groups = useMemo(() => groupCompetencies(competencies ?? []), [competencies]);
 
@@ -312,6 +316,18 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
             <Button variant="outline" size="sm" onClick={handleSeedStandard}>
               <Sparkles className="h-4 w-4 mr-2" />
               Стандартна структура
+            </Button>
+          )}
+          {duplicateCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-amber-700 border-amber-300"
+              disabled={removeDuplicates.isPending}
+              onClick={() => removeDuplicates.mutate({ vacancyId })}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Прибрати дублікати ({duplicateCount})
             </Button>
           )}
           {hasMatrix && (

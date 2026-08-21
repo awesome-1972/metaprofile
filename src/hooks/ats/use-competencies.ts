@@ -85,10 +85,23 @@ export function useVacancyCompetencies(vacancyId: string | undefined) {
   });
 }
 
-/** Ті самі компетенції, згруповані по group_name — зручно для редактора матриці й для scoring-діалогу. */
+/** Ключ дедуплікації компетенції (група + назва укр/англ, регістронезалежно). */
+function competencyDedupeKey(c: VacancyCompetency): string {
+  return `${c.group_name}::${(c.name || "").trim().toLowerCase()}::${(c.name_en || "").trim().toLowerCase()}`;
+}
+
+/**
+ * Ті самі компетенції, згруповані по group_name — зручно для редактора матриці й
+ * для scoring/порівняння. Дедуплікуємо повтори (застосували шаблон/AI-генерацію
+ * поверх наявних) — по одній на (група + назва).
+ */
 export function groupCompetencies(competencies: VacancyCompetency[]): CompetencyGroup[] {
   const byGroup = new Map<string, CompetencyGroup>();
+  const seen = new Set<string>();
   for (const c of competencies) {
+    const key = competencyDedupeKey(c);
+    if (seen.has(key)) continue;
+    seen.add(key);
     const existing = byGroup.get(c.group_name);
     if (existing) {
       existing.competencies.push(c);
@@ -192,6 +205,38 @@ export function useDeleteCompetency() {
     onError: (error: { code?: string; message?: string }) => {
       toast.error(toFriendlyMessage(error));
     },
+  });
+}
+
+/** Прибрати дублікати компетенцій у базі (лишає перший по позиції на групу+назву). */
+export function useRemoveDuplicateCompetencies() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ vacancyId }: { vacancyId: string }): Promise<number> => {
+      const { data, error } = await supabase
+        .from("vacancy_competencies")
+        .select("id, group_name, name, name_en, position")
+        .eq("vacancy_id", vacancyId)
+        .order("position", { ascending: true });
+      if (error) throw error;
+      const seen = new Set<string>();
+      const dupeIds: string[] = [];
+      for (const c of (data ?? []) as Array<{ id: string; group_name: string; name: string; name_en: string | null }>) {
+        const key = `${c.group_name}::${(c.name || "").trim().toLowerCase()}::${(c.name_en || "").trim().toLowerCase()}`;
+        if (seen.has(key)) dupeIds.push(c.id);
+        else seen.add(key);
+      }
+      if (dupeIds.length) {
+        const { error: delErr } = await supabase.from("vacancy_competencies").delete().in("id", dupeIds);
+        if (delErr) throw delErr;
+      }
+      return dupeIds.length;
+    },
+    onSuccess: (count, variables) => {
+      qc.invalidateQueries({ queryKey: competenciesByVacancyKey(variables.vacancyId) });
+      toast.success(count > 0 ? `Прибрано дублікатів: ${count}` : "Дублікатів не знайдено");
+    },
+    onError: (error: { code?: string; message?: string }) => toast.error(toFriendlyMessage(error)),
   });
 }
 
