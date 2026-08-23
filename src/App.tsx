@@ -7,6 +7,7 @@ import PublicBriefPage from "./pages/PublicBriefPage";
 import PublicJobsPage from "./pages/PublicJobsPage";
 import PublicReportPage from "./pages/PublicReportPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
+import SsoLandingPage from "./pages/SsoLandingPage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PricingPage from "./pages/PricingPage";
@@ -99,6 +100,7 @@ const App = () => (
           {/* Публічний звіт по кандидату за посиланням. */}
           <Route path="/report/:token" element={<PublicReportPage />} />
           <Route path="/client/:token" element={<ClientPortalPage />} />
+          <Route path="/sso" element={<SsoLandingPage />} />
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />

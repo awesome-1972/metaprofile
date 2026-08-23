@@ -34,10 +34,11 @@ import { DjinniResponsesCard } from "@/components/ats/DjinniResponsesCard";
 // Proxycurl вилучено: сервіс закрито (2025, позов LinkedIn). LinkedIn-дані —
 // через PDL/Apollo. Robota.ua employer-api за Cloudflare-блоком (може віддати
 // помилку), Work.ua /resumes може списувати квоту контактів — вмикайте свідомо.
-// Robota.ua працює через релей (employer-api віддає 200 з residential IP).
-// Jooble лишається прихованим — там справжній JS-челендж навіть через релей.
+// Robota.ua/Jooble прибрані: їх Cloudflare інтермітентно челенджить будь-який
+// не-браузер навіть через релей на residential IP (robota зрідка 200, переважно
+// 403; jooble завжди 403). Ненадійно для продакшену. Код лишено — якщо джерело
+// дасть whitelist/серверний доступ, повертається одним рядком.
 const PROVIDERS: { id: SourcingProvider; label: string }[] = [
-  { id: "robotaua", label: "Robota.ua" },
   { id: "workua", label: "Work.ua" },
   { id: "github", label: "GitHub" },
   { id: "pdl", label: "People Data Labs" },
