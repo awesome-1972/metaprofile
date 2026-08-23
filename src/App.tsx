@@ -78,7 +78,9 @@ const DemoGate = ({ children }: { children: React.ReactNode }) => {
     !location.pathname.startsWith("/ats") &&
     !location.pathname.startsWith("/brief") &&
     !location.pathname.startsWith("/jobs") &&
-    !location.pathname.startsWith("/report")
+    !location.pathname.startsWith("/report") &&
+    !location.pathname.startsWith("/client") &&
+    !location.pathname.startsWith("/sso")
   ) {
     return <Navigate to="/demo" replace />;
   }
