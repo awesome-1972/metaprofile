@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Metaprofile ATS — чек-лист тестувальника</title>
+<style>
+  :root { --indigo:#210061; --orange:#FF6600; --line:#e6e7eb; --muted:#6b7280; }
+  * { box-sizing:border-box; }
+  body { font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#211e2a; margin:0; background:#f6f7f9; }
+  .wrap { max-width:860px; margin:0 auto; padding:24px; }
+  header { border-bottom:3px solid var(--orange); padding-bottom:12px; margin-bottom:18px; }
+  h1 { color:var(--indigo); margin:0 0 4px; font-size:24px; }
+  .sub { color:var(--muted); font-size:14px; }
+  .meta { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0 6px; }
+  .meta label { font-size:13px; color:var(--muted); display:flex; flex-direction:column; gap:4px; }
+  input[type=text], select, textarea { border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; background:#fff; }
+  textarea { width:100%; min-height:52px; resize:vertical; }
+  .stage { background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:12px 0; }
+  .stage h3 { margin:0 0 8px; font-size:16px; color:var(--indigo); display:flex; align-items:center; gap:8px; }
+  .num { background:var(--orange); color:#fff; width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex:0 0 auto; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .row .field { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  .checks { display:flex; gap:14px; flex-wrap:wrap; font-size:14px; color:#211e2a; }
+  .checks label { display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .overall { background:#fff; border:2px solid var(--indigo); border-radius:12px; padding:16px; margin:18px 0; }
+  .overall h2 { color:var(--indigo); margin:0 0 10px; font-size:18px; }
+  .bar { position:sticky; top:0; background:#f6f7f9; padding:10px 0; display:flex; gap:10px; z-index:5; }
+  button { font:inherit; border:0; border-radius:8px; padding:10px 16px; cursor:pointer; }
+  .primary { background:var(--orange); color:#fff; }
+  .ghost { background:#fff; border:1px solid var(--line); color:#211e2a; }
+  .hint { color:var(--muted); font-size:12px; margin-top:4px; }
+  @media print { .bar,.noprint{display:none} body{background:#fff} .stage,.overall{break-inside:avoid} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Metaprofile ATS — чек-лист тестувальника</h1>
+    <div class="sub">Пройдіть увесь шлях і по кожному етапу зафіксуйте статус та зауваження. У кінці — загальна оцінка та критичні зауваження.</div>
+    <div class="meta">
+      <label>Тестувальник<input type="text" id="tester" placeholder="Ім'я"></label>
+      <label>Дата<input type="text" id="date" placeholder="дд.мм.рррр"></label>
+      <label>Роль у системі<input type="text" id="role" placeholder="напр. рекрутер"></label>
+    </div>
+  </header>
+
+  <div class="bar noprint">
+    <button class="primary" onclick="submitFeedback()">Надіслати результат</button>
+    <button class="ghost" onclick="window.print()">Друк / зберегти PDF</button>
+    <button class="ghost" onclick="copySummary()">Скопіювати підсумок</button>
+    <span class="hint" id="copied"></span>
+  </div>
+
+  <div id="stages"></div>
+
+  <div class="overall">
+    <h2>Загальна оцінка шляху</h2>
+    <div class="row">
+      <div class="field">Наскільки шлях зрозумілий і зручний?
+        <select id="overall_score">
+          <option value="">— оберіть —</option>
+          <option>5 — відмінно</option><option>4 — добре</option><option>3 — прийнятно</option>
+          <option>2 — погано</option><option>1 — не працює</option>
+        </select>
+      </div>
+      <div class="field">Чи готово до показу клієнтам?
+        <select id="ready"><option value="">— оберіть —</option><option>Так</option><option>Так, після дрібних правок</option><option>Ні</option></select>
+      </div>
+    </div>
+    <label class="field" style="width:100%">Критичні зауваження (що блокує роботу / помилки):
+      <textarea id="critical" placeholder="Опишіть найважливіше, що треба виправити в першу чергу…"></textarea>
+    </label>
+    <label class="field" style="width:100%; margin-top:8px">Що сподобалось / що покращити:
+      <textarea id="likes" placeholder="Загальні враження, ідеї покращень…"></textarea>
+    </label>
+  </div>
+</div>
+
+<script>
+  // ── Куди зберігати відповіді (єдина таблиця через Edge metaprofile) ──
+  // FB_KEY — публічний anon/publishable ключ проекту metaprofile (Supabase → Settings → API).
+  var FB_URL = "https://mnpcevhzqgcrllymdmil.supabase.co/functions/v1/tester-feedback";
+  var FB_KEY = "sb_publishable_1AzzY5OU8wtetrDFsVRVCw_CZGGT-EB";
+
+  var STAGES = [
+    "Вхід та доступ","Дашборд","Клієнти","Проект найму","Вакансія та бріф",
+    "Матриця компетенцій","Воронка (етапи пошуку)","Імпорт/експорт лонг-листа (Excel)",
+    "Сорсинг (зовнішні джерела)","Оцінка компетенцій кандидата","Порівняння / шортліст",
+    "Кандидати (Talent CRM)","Призначення зустрічей / співбесід","Звіти клієнту","Масова розсилка"
+  ];
+  var host = document.getElementById('stages');
+  STAGES.forEach(function(name, i){
+    var el = document.createElement('div'); el.className='stage';
+    el.innerHTML =
+      '<h3><span class="num">'+i+'</span>'+name+'</h3>'+
+      '<div class="row">'+
+        '<div class="field">Статус'+
+          '<select data-k="status_'+i+'">'+
+            '<option value="">— оберіть —</option>'+
+            '<option>Працює</option>'+
+            '<option>Працює з зауваженнями</option>'+
+            '<option>Не працює</option>'+
+            '<option>Не перевіряв</option>'+
+          '</select>'+
+        '</div>'+
+        '<div class="checks">'+
+          '<label><input type="checkbox" data-k="clear_'+i+'"> Зрозуміло</label>'+
+          '<label><input type="checkbox" data-k="fast_'+i+'"> Зручно/швидко</label>'+
+          '<label><input type="checkbox" data-k="noerr_'+i+'"> Без помилок</label>'+
+        '</div>'+
+      '</div>'+
+      '<textarea data-k="note_'+i+'" placeholder="Зауваження до етапу «'+name+'»…"></textarea>';
+    host.appendChild(el);
+  });
+
+  function val(sel){ var e=document.querySelector(sel); if(!e) return ''; return e.type==='checkbox'? (e.checked?'так':'ні') : (e.value||''); }
+  function copySummary(){
+    var lines = [];
+    lines.push('Metaprofile ATS — чек-лист тестувальника');
+    lines.push('Тестувальник: '+val('#tester')+' | Дата: '+val('#date')+' | Роль: '+val('#role'));
+    lines.push('');
+    STAGES.forEach(function(name,i){
+      var status = val('[data-k=status_'+i+']');
+      var flags = [];
+      if(val('[data-k=clear_'+i+']')==='так') flags.push('зрозуміло');
+      if(val('[data-k=fast_'+i+']')==='так') flags.push('зручно');
+      if(val('[data-k=noerr_'+i+']')==='так') flags.push('без помилок');
+      var note = val('[data-k=note_'+i+']');
+      lines.push(i+'. '+name+' — '+(status||'—')+(flags.length?(' ['+flags.join(', ')+']'):'')+(note?('\n   Зауваження: '+note):''));
+    });
+    lines.push('');
+    lines.push('ЗАГАЛЬНА ОЦІНКА: '+val('#overall_score')+' | Готово до клієнтів: '+val('#ready'));
+    lines.push('КРИТИЧНІ ЗАУВАЖЕННЯ: '+val('#critical'));
+    lines.push('ВРАЖЕННЯ/ПОКРАЩЕННЯ: '+val('#likes'));
+    var text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(function(){
+      document.getElementById('copied').textContent = 'Скопійовано — вставте у лист/повідомлення.';
+      setTimeout(function(){document.getElementById('copied').textContent='';}, 4000);
+    }, function(){ prompt('Скопіюйте вручну:', text); });
+  }
+
+  function collectAnswers(){
+    var answers = {};
+    STAGES.forEach(function(name,i){
+      answers[i] = {
+        stage: name,
+        status: val('[data-k=status_'+i+']'),
+        clear: val('[data-k=clear_'+i+']')==='так',
+        fast: val('[data-k=fast_'+i+']')==='так',
+        noerr: val('[data-k=noerr_'+i+']')==='так',
+        note: val('[data-k=note_'+i+']')
+      };
+    });
+    return answers;
+  }
+
+  function submitFeedback(){
+    var hint = document.getElementById('copied');
+    if (!FB_KEY || FB_KEY === 'PASTE_METAPROFILE_ANON_KEY') {
+      hint.textContent = 'Надсилання не налаштоване (немає ключа). Скористайтесь «Друк/PDF» або «Скопіювати підсумок».';
+      return;
+    }
+    if (!val('#tester')) { hint.textContent = 'Вкажіть імʼя тестувальника.'; return; }
+    hint.textContent = 'Надсилання…';
+    var payload = {
+      tester: val('#tester'), tester_date: val('#date'), role: val('#role'),
+      overall_score: val('#overall_score'), ready: val('#ready'),
+      critical: val('#critical'), likes: val('#likes'), answers: collectAnswers()
+    };
+    fetch(FB_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'apikey': FB_KEY, 'Authorization': 'Bearer '+FB_KEY },
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json().catch(function(){return {};}); })
+      .then(function(res){
+        if (res && res.ok) { hint.textContent = 'Дякуємо! Результат збережено.'; }
+        else { hint.textContent = 'Не вдалося зберегти' + (res && res.error ? (': '+res.error) : '') + '. Скористайтесь «Друк/PDF».'; }
+      }).catch(function(e){ hint.textContent = 'Помилка мережі: '+e.message+'. Скористайтесь «Друк/PDF».'; });
+  }
+</script>
+</body>
+</html>

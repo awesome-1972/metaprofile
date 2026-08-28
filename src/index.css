@@ -20,8 +20,8 @@ All colors MUST be HSL.
     --popover: 214 31% 91%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 200 98% 39%;
-    --primary-foreground: 204 100% 97%;
+    --primary: 24 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 215 24% 26%;
     --secondary-foreground: 210 40% 98%;
@@ -29,33 +29,33 @@ All colors MUST be HSL.
     --muted: 215 20% 65%;
     --muted-foreground: 222 47% 11%;
 
-    --accent: 210 40% 98%;
-    --accent-foreground: 215 19% 34%;
+    --accent: 260 45% 95%;
+    --accent-foreground: 260 100% 22%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 85% 97%;
 
     --border: 212 26% 83%;
     --input: 212 26% 83%;
-    --ring: 200 98% 39%;
+    --ring: 24 100% 50%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 260 100% 19%;
 
-    --sidebar-foreground: 222 47% 11%;
+    --sidebar-foreground: 258 25% 78%;
 
-    --sidebar-primary: 200 98% 39%;
+    --sidebar-primary: 24 100% 50%;
 
-    --sidebar-primary-foreground: 204 100% 97%;
+    --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 215 24% 26%;
+    --sidebar-accent: 260 55% 26%;
 
-    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-accent-foreground: 0 0% 100%;
 
-    --sidebar-border: 212 26% 83%;
+    --sidebar-border: 260 45% 26%;
 
-    --sidebar-ring: 200 98% 39%;
+    --sidebar-ring: 24 100% 50%;
 
     --chart-1: 198 93% 59%;
 
@@ -67,7 +67,7 @@ All colors MUST be HSL.
 
     --chart-5: 215 19% 34%;
 
-    --sidebar: 210 40% 98%;
+    --sidebar: 260 100% 19%;
 
     --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
@@ -106,8 +106,8 @@ All colors MUST be HSL.
     --popover: 215 24% 26%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 198 93% 59%;
-    --primary-foreground: 204 80% 15%;
+    --primary: 24 100% 52%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 212 26% 83%;
     --secondary-foreground: 228 84% 4%;
@@ -115,29 +115,29 @@ All colors MUST be HSL.
     --muted: 215 16% 46%;
     --muted-foreground: 210 40% 98%;
 
-    --accent: 228 84% 4%;
-    --accent-foreground: 215 20% 65%;
+    --accent: 260 40% 22%;
+    --accent-foreground: 258 30% 90%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 85% 97%;
 
     --border: 215 19% 34%;
     --input: 215 19% 34%;
-    --ring: 198 93% 59%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 198 93% 59%;
-    --sidebar-primary-foreground: 204 80% 15%;
-    --sidebar-accent: 215 20% 65%;
-    --sidebar-accent-foreground: 228 84% 4%;
-    --sidebar-border: 215 19% 34%;
-    --sidebar-ring: 198 93% 59%;
+    --ring: 24 100% 52%;
+    --sidebar-background: 260 100% 11%;
+    --sidebar-foreground: 258 20% 76%;
+    --sidebar-primary: 24 100% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 55% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 260 40% 18%;
+    --sidebar-ring: 24 100% 52%;
     --chart-1: 199 95% 73%;
     --chart-2: 211 96% 78%;
     --chart-3: 215 20% 65%;
     --chart-4: 215 16% 46%;
     --chart-5: 215 19% 34%;
-    --sidebar: 217 32% 17%;
+    --sidebar: 260 100% 11%;
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
     --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);

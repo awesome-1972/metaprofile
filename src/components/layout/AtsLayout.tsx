@@ -50,28 +50,28 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-6 border-b border-border">
+      <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col">
+        <div className="p-6 border-b border-sidebar-border">
           <Link to="/ats/clients" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">A</span>
             </div>
             <div>
-              <span className="font-semibold text-foreground">Metaprofile</span>
-              <span className="text-xs text-muted-foreground ml-1">ATS</span>
+              <span className="font-semibold text-sidebar-accent-foreground">Metaprofile</span>
+              <span className="text-xs text-sidebar-foreground/70 ml-1">ATS</span>
             </div>
           </Link>
         </div>
 
-        <div className="px-4 py-3 border-b border-border bg-accent/50">
+        <div className="px-4 py-3 border-b border-sidebar-border bg-sidebar-accent/40">
           <div className="flex items-center gap-2 text-sm">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            <span className="text-muted-foreground">{roleLabel}</span>
+            <span className="text-sidebar-foreground">{roleLabel}</span>
           </div>
         </div>
 
         <nav className="flex-1 p-4">
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">
             Робота
           </p>
           <ul className="space-y-1">
@@ -86,7 +86,7 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
                       "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                       isActive
                         ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -98,8 +98,8 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
           </ul>
           {isAdminLike && (
             <>
-              <div className="my-3 border-t border-border" />
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div className="my-3 border-t border-sidebar-border" />
+              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">
                 Адміністрування
               </p>
               <ul className="space-y-1">
@@ -114,7 +114,7 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
                           "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                           isActive
                             ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -128,7 +128,7 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
           )}
         </nav>
 
-        <div className="p-4 border-t border-border space-y-3">
+        <div className="p-4 border-t border-sidebar-border space-y-3">
           {isLoading ? (
             <div className="flex items-center gap-3 px-3">
               <Skeleton className="h-8 w-8 rounded-full" />
@@ -142,14 +142,14 @@ export const AtsLayout = ({ children }: AtsLayoutProps) => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{profile.full_name || "Користувач"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+                  <p className="text-xs text-sidebar-foreground/70 truncate">{profile.email}</p>
                 </div>
               </div>
             )
           )}
           <button
             onClick={signOut}
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full"
           >
             <LogOut className="h-4 w-4" />
             Вийти

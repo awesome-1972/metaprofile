@@ -1,4 +1,4 @@
-project_id = "qzmjeftxpaseobkexekg"
+project_id = "mnpcevhzqgcrllymdmil"
 
 [api]
 enabled = true
@@ -107,3 +107,7 @@ verify_jwt = false
 
 [functions.send-report]
 verify_jwt = true
+
+# Публічний збір відповідей чек-листа тестувальника (запис — service_role, RLS в міграції).
+[functions.tester-feedback]
+verify_jwt = false

@@ -28,3 +28,7 @@ dist-ssr
 
 # Google SA secrets
 supabase/.secrets.env
+supabase/.temp/
+.lovable/
+vite.config.ts.timestamp-*.mjs
+*.timestamp-*.mjs

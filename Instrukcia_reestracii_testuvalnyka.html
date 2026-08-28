@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Реєстрація тестувальника — Metaprofile</title>
+<style>
+  :root{ --indigo:#210061; --orange:#FF6600; --gray:#6b7280; --line:#e5e7eb; }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2430;line-height:1.55;max-width:760px;margin:0 auto;padding:32px 24px;}
+  h1{color:var(--indigo);font-size:26px;margin:0 0 4px}
+  .sub{color:var(--gray);margin:0 0 24px}
+  h2{color:var(--indigo);font-size:19px;margin:28px 0 10px;border-bottom:2px solid var(--orange);padding-bottom:6px}
+  a.btn{display:inline-block;background:var(--orange);color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600;margin:6px 0}
+  ol{padding-left:20px} li{margin:7px 0}
+  .step b{color:var(--indigo)}
+  .note{background:#fff7f0;border-left:4px solid var(--orange);padding:12px 16px;border-radius:6px;margin:14px 0}
+  .admin{background:#f4f1fb;border-left:4px solid var(--indigo);padding:14px 18px;border-radius:6px;margin:14px 0}
+  code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:90%}
+  .muted{color:var(--gray);font-size:14px}
+</style>
+</head>
+<body>
+  <h1>Реєстрація тестувальника Metaprofile</h1>
+  <p class="sub">Коротка інструкція, як створити обліковий запис і зайти в систему.</p>
+
+  <a class="btn" href="https://metaprofile.pages.dev/v2/auth">Відкрити сторінку реєстрації →</a>
+  <p class="muted">Пряме посилання: https://metaprofile.pages.dev/v2/auth</p>
+
+  <h2>Як зареєструватися (2 хвилини)</h2>
+  <ol>
+    <li class="step">Відкрийте посилання вище та зверху перемкніться на вкладку <b>«Реєстрація»</b>.</li>
+    <li class="step">Оберіть роль <b>«Компанія»</b> (для тесту з боку замовника) або <b>«Кандидат»</b>.</li>
+    <li class="step">Заповніть <b>Повне ім'я</b>, <b>Email</b> (робочий, до якого маєте доступ) і, для компанії, <b>назву компанії</b>.</li>
+    <li class="step"><b>Пароль вигадуєте самі</b> — запам'ятайте його, він знадобиться для входу.</li>
+    <li class="step">Натисніть <b>«Зареєструватися»</b>.</li>
+    <li class="step">Далі одразу перейдіть на вкладку <b>«Вхід»</b> і зайдіть тим самим email і паролем.</li>
+  </ol>
+
+  <div class="note">
+    <b>Лист-підтвердження не потрібен.</b> Для періоду тестування підтвердження пошти вимкнено —
+    після реєстрації просто входьте своїм email і паролем. Якщо система пише, що пошту треба
+    підтвердити, напишіть адміністратору (нижче) — він активує ваш обліковий запис вручну за 1 хвилину.
+  </div>
+
+  <h2>Якщо не вдається зайти</h2>
+  <ol>
+    <li>Перевірте, що email і пароль введені без зайвих пробілів.</li>
+    <li>Спробуйте ще раз через вкладку <b>«Вхід»</b> (не «Реєстрація»).</li>
+    <li>Якщо пише «Email not confirmed» — повідомте адміністратора ваш email, він підтвердить вручну.</li>
+  </ol>
+
+  <div class="admin">
+    <b>Для адміністратора (Володимир) — одноразове налаштування, щоб прибрати тертя:</b>
+    <ol>
+      <li>Supabase → проект <code>mnpcevhzqgcrllymdmil</code> → <b>Authentication</b> → <b>Sign In / Providers</b> → <b>Email</b>.</li>
+      <li>Вимкнути перемикач <b>«Confirm email»</b> → <b>Save</b>. Після цього реєстрація дає вхід одразу, без листа.</li>
+      <li>Альтернатива (якщо підтвердження треба лишити): <b>Authentication → Users</b> → знайти тестувальника → <b>Confirm user</b> вручну. Або налаштувати власний SMTP, щоб листи реально доставлялися.</li>
+    </ol>
+    <span class="muted">Причина проблеми: стандартна пошта Supabase має жорсткі ліміти й часто не доставляє листи підтвердження на довільні адреси.</span>
+  </div>
+</body>
+</html>

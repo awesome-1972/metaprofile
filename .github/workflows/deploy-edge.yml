@@ -1,0 +1,57 @@
+name: Deploy Supabase Edge Functions
+
+# Пуш у main → деплояться ЛИШЕ змінені edge-функції (швидко).
+# Кнопка "Run workflow" (workflow_dispatch) деплоїть УСІ функції — для повного релізу.
+# Потрібен секрет репозиторію: SUPABASE_ACCESS_TOKEN (Settings → Secrets → Actions).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/deploy-edge.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: mnpcevhzqgcrllymdmil
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Визначити список функцій для деплою
+        id: pick
+        run: |
+          set -e
+          BASE='${{ github.event.before }}'
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$BASE" ] && git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            # лише функції, змінені у цьому пуші
+            FNS=$(git diff --name-only "$BASE" "${{ github.sha }}" -- 'supabase/functions/**' | cut -d/ -f3 | sort -u | grep -v '^_' || true)
+            echo "Режим: змінені функції"
+          else
+            # ручний запуск або немає бази для порівняння → усі функції
+            FNS=$(ls supabase/functions | grep -v '^_' || true)
+            echo "Режим: усі функції"
+          fi
+          echo "Список:"; echo "$FNS"
+          { echo "list<<EOF"; echo "$FNS"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Деплой функцій
+        run: |
+          set -e
+          FNS='${{ steps.pick.outputs.list }}'
+          if [ -z "$(echo "$FNS" | tr -d '[:space:]')" ]; then echo "Немає змін у функціях — нічого деплоїти."; exit 0; fi
+          for fn in $FNS; do
+            [ -d "supabase/functions/$fn" ] || { echo "пропускаю видалену: $fn"; continue; }
+            echo "::group::deploy $fn"
+            supabase functions deploy "$fn" --project-ref "$PROJECT_REF"
+            echo "::endgroup::"
+          done

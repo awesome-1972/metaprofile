@@ -21,7 +21,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, Sparkles, ShieldAlert, FileStack, Wand2, Save, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Sparkles, ShieldAlert, FileStack, Wand2, Save, Loader2, Library } from "lucide-react";
+import { MasterLibraryPicker, type MasterComp } from "@/components/ats/MasterLibraryPicker";
 import {
   useVacancyCompetencies,
   groupCompetencies,
@@ -120,6 +121,27 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
   const [tplDesc, setTplDesc] = useState("");
   // AI-прев'ю згенерованої матриці
   const [aiGroups, setAiGroups] = useState<TemplateGroup[] | null>(null);
+  // Пікер спільного довідника (майстер studio) → рядки матриці вакансії.
+  const [libOpen, setLibOpen] = useState(false);
+  const applyFromLibrary = async (selected: MasterComp[]) => {
+    let pos = (competencies ?? []).length;
+    for (const c of selected) {
+      await createCompetency.mutateAsync({
+        vacancy_id: vacancyId,
+        group_name: c.category || "Компетенції",
+        group_weight: 0.25,
+        name: c.name,
+        name_en: c.code || null,
+        questions: [],
+        probes: [],
+        red_flags: [],
+        rubric: {},
+        is_must_have: false,
+        weight: 0.2,
+        position: pos++,
+      } as never);
+    }
+  };
 
   const handleGenerate = () => {
     generate.mutate(vacancyId, { onSuccess: (groups) => setAiGroups(groups) });
@@ -135,12 +157,14 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
       { onSuccess: () => { setSaveOpen(false); setTplName(""); setTplDesc(""); } },
     );
   };
+  // ВАЖЛИВО: `groups` має бути оголошено ДО першого використання (uniqueCount нижче),
+  // інакше — TDZ «Cannot access 'groups' before initialization» під час рендеру.
+  const groups = useMemo(() => groupCompetencies(competencies ?? []), [competencies]);
+
   const aiCount = aiGroups?.reduce((s, g) => s + g.competencies.length, 0) ?? 0;
   const hasMatrix = (competencies ?? []).length > 0;
   const uniqueCount = groups.reduce((s, g) => s + g.competencies.length, 0);
   const duplicateCount = (competencies ?? []).length - uniqueCount;
-
-  const groups = useMemo(() => groupCompetencies(competencies ?? []), [competencies]);
 
   const displayGroups = useMemo(() => {
     const existingNames = new Set(groups.map((g) => g.groupName));
@@ -268,6 +292,10 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
           <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generate.isPending}>
             {generate.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
             Згенерувати з AI
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setLibOpen(true)}>
+            <Library className="h-4 w-4 mr-2" />
+            З бібліотеки
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -657,6 +685,8 @@ export function CompetenciesTab({ vacancyId }: CompetenciesTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MasterLibraryPicker open={libOpen} onOpenChange={setLibOpen} onApply={applyFromLibrary} />
     </div>
   );
 }

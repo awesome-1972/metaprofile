@@ -176,7 +176,7 @@ const UsersPage = () => {
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="name@yodezeen.com"
+                placeholder="email@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

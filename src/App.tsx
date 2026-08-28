@@ -43,6 +43,11 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import AuthPageV2 from "./pages/v2/AuthPage";
  import DemoRegistrationPage from "./pages/v2/DemoRegistrationPage";
  import CompanyDashboardV2 from "./pages/v2/CompanyDashboard";
+ import CompanyProjectsPage from "./pages/v2/company/CompanyProjectsPage";
+ import CompanyCasesPage from "./pages/v2/company/CompanyCasesPage";
+ import CompanyCandidatesPage from "./pages/v2/company/CompanyCandidatesPage";
+ import CompanyReportsPage from "./pages/v2/company/CompanyReportsPage";
+ import CompanySettings from "./pages/v2/company/CompanySettings";
  import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
  import CaseWorkPage from "./pages/v2/CaseWorkPage";
@@ -103,7 +108,10 @@ const App = () => (
           <Route path="/report/:token" element={<PublicReportPage />} />
           <Route path="/client/:token" element={<ClientPortalPage />} />
           <Route path="/sso" element={<SsoLandingPage />} />
-          <Route path="/" element={<Index />} />
+          {/* Фаза 3: корінь ATS веде одразу в застосунок (/ats), без старого демо.
+              Стару лендінг-сторінку лишено доступною за явним /home; демо — за /demo. */}
+          <Route path="/" element={<Navigate to="/ats" replace />} />
+          <Route path="/home" element={<Index />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/methodology" element={<MethodologyPage />} />
           <Route path="/uniqueness" element={<UniquenessPage />} />
@@ -149,7 +157,8 @@ const App = () => (
           <Route path="/veteran/internship" element={<VeteranDashboard />} />
           
          {/* V2 Routes */}
-          <Route path="/demo" element={<DemoRegistrationPage />} />
+          {/* Стара демо-реєстрація виведена з ужитку → на справжню реєстрацію. */}
+          <Route path="/demo" element={<Navigate to="/v2/auth" replace />} />
           <Route path="/v2/auth" element={<AuthPageV2 />} />
          <Route path="/v2/auth/callback" element={<AuthPageV2 />} />
          <Route 
@@ -158,8 +167,13 @@ const App = () => (
              <ProtectedRoute allowedRoles={["company", "admin"]}>
                <CompanyDashboardV2 />
              </ProtectedRoute>
-           } 
+           }
          />
+         <Route path="/v2/company/projects" element={<ProtectedRoute allowedRoles={["company", "admin"]}><CompanyProjectsPage /></ProtectedRoute>} />
+         <Route path="/v2/company/cases" element={<ProtectedRoute allowedRoles={["company", "admin"]}><CompanyCasesPage /></ProtectedRoute>} />
+         <Route path="/v2/company/candidates" element={<ProtectedRoute allowedRoles={["company", "admin"]}><CompanyCandidatesPage /></ProtectedRoute>} />
+         <Route path="/v2/company/reports" element={<ProtectedRoute allowedRoles={["company", "admin"]}><CompanyReportsPage /></ProtectedRoute>} />
+         <Route path="/v2/company/settings" element={<ProtectedRoute allowedRoles={["company", "admin"]}><CompanySettings /></ProtectedRoute>} />
          <Route
            path="/v2/candidate"
            element={
