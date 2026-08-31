@@ -374,7 +374,7 @@ const ProjectDetailPage = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Нова вакансія</DialogTitle>
             <DialogDescription>Для проекту: {project.name}</DialogDescription>
