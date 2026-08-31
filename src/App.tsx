@@ -49,6 +49,10 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CompanyReportsPage from "./pages/v2/company/CompanyReportsPage";
  import CompanySettings from "./pages/v2/company/CompanySettings";
  import CandidateDashboardV2 from "./pages/v2/CandidateDashboard";
+ import CandidateCasesPage from "./pages/v2/candidate/CandidateCasesPage";
+ import CandidatePortfolioPage from "./pages/v2/candidate/CandidatePortfolioPage";
+ import CandidateReportsPage from "./pages/v2/candidate/CandidateReportsPage";
+ import CandidateProfilePage from "./pages/v2/candidate/CandidateProfilePage";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
  import CaseWorkPage from "./pages/v2/CaseWorkPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
@@ -182,6 +186,10 @@ const App = () => (
              </ProtectedRoute>
            }
          />
+         <Route path="/v2/candidate/cases" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateCasesPage /></ProtectedRoute>} />
+         <Route path="/v2/candidate/portfolio" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidatePortfolioPage /></ProtectedRoute>} />
+         <Route path="/v2/candidate/reports" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateReportsPage /></ProtectedRoute>} />
+         <Route path="/v2/candidate/profile" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateProfilePage /></ProtectedRoute>} />
          <Route
            path="/v2/candidate/cases/:id"
            element={
