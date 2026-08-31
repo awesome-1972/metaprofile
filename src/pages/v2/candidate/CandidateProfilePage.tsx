@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { User, Mail, MapPin, Briefcase, Linkedin, Github, Globe, Camera } from "lucide-react";
+import { CandidateAchievements } from "@/components/candidate/CandidateAchievements";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -158,6 +159,8 @@ const CandidateProfilePage = () => {
                 <p className="text-xs text-muted-foreground">Email змінити не можна — це логін акаунта.</p>
               </CardContent>
             </Card>
+
+            <CandidateAchievements userId={user?.id} />
           </div>
         </div>
       </div>
