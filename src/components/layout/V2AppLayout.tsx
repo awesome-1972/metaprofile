@@ -12,7 +12,9 @@
    LogOut,
    Settings,
    ClipboardList,
-   FolderOpen
+   FolderOpen,
+   Target,
+   GraduationCap
  } from "lucide-react";
  import { cn } from "@/lib/utils";
  import { useAuthV2 } from "@/hooks/useAuthV2";
@@ -43,9 +45,11 @@
      color: "text-primary",
      navItems: [
        { path: "/v2/candidate", label: "Дашборд", icon: LayoutDashboard },
+       { path: "/v2/candidate/assessments", label: "Оцінювання", icon: Target },
        { path: "/v2/candidate/cases", label: "Мої кейси", icon: FileText },
-       { path: "/v2/candidate/portfolio", label: "Портфоліо", icon: FolderOpen },
+       { path: "/v2/candidate/learning", label: "Навчання", icon: GraduationCap },
        { path: "/v2/candidate/reports", label: "Результати", icon: ClipboardList },
+       { path: "/v2/candidate/portfolio", label: "Портфоліо", icon: FolderOpen },
        { path: "/v2/candidate/profile", label: "Профіль", icon: User },
      ],
    },

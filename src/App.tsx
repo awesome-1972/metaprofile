@@ -53,6 +53,8 @@ import CandidateInterviewPage from "./pages/shared/CandidateInterviewPage";
  import CandidatePortfolioPage from "./pages/v2/candidate/CandidatePortfolioPage";
  import CandidateReportsPage from "./pages/v2/candidate/CandidateReportsPage";
  import CandidateProfilePage from "./pages/v2/candidate/CandidateProfilePage";
+ import CandidateAssessments from "./pages/v2/candidate/CandidateAssessments";
+ import CandidateLearning from "./pages/v2/candidate/CandidateLearning";
  import AdminDashboardV2 from "./pages/v2/AdminDashboard";
  import CaseWorkPage from "./pages/v2/CaseWorkPage";
  import { ProtectedRoute } from "./components/v2/ProtectedRoute";
@@ -186,6 +188,8 @@ const App = () => (
              </ProtectedRoute>
            }
          />
+         <Route path="/v2/candidate/assessments" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateAssessments /></ProtectedRoute>} />
+         <Route path="/v2/candidate/learning" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateLearning /></ProtectedRoute>} />
          <Route path="/v2/candidate/cases" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateCasesPage /></ProtectedRoute>} />
          <Route path="/v2/candidate/portfolio" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidatePortfolioPage /></ProtectedRoute>} />
          <Route path="/v2/candidate/reports" element={<ProtectedRoute allowedRoles={["candidate", "admin"]}><CandidateReportsPage /></ProtectedRoute>} />
