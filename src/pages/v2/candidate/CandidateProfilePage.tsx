@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { User, Mail, MapPin, Briefcase, Linkedin, Github, Globe, Camera } from "lucide-react";
+import { User, Mail, MapPin, Briefcase, Linkedin, Github, Globe, Camera, Upload, FileText, Sparkles } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CandidateAchievements } from "@/components/candidate/CandidateAchievements";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useState, useEffect, useRef } from "react";
@@ -18,8 +19,14 @@ import { toast } from "sonner";
 const CandidateProfilePage = () => {
   const { profile, user } = useAuthV2();
   const fileRef = useRef<HTMLInputElement>(null);
+  const resumeRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState("");
+  const [resumeUp, setResumeUp] = useState(false);
+  const [parseOpen, setParseOpen] = useState(false);
+  const [resumeText, setResumeText] = useState("");
+  const [parsing, setParsing] = useState(false);
   const [f, setF] = useState({
     full_name: "", headline: "", location: "", phone: "", experience: "",
     about: "", skills: "", linkedin_url: "", github_url: "", portfolio_url: "", avatar_url: "",
@@ -38,8 +45,48 @@ const CandidateProfilePage = () => {
           linkedin_url: d.linkedin_url || "", github_url: d.github_url || "", portfolio_url: d.portfolio_url || "",
           avatar_url: d.avatar_url || "",
         });
+        setResumeUrl(d.resume_url || "");
       });
   }, [user?.id]);
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setResumeUp(true);
+    try {
+      const ext = (file.name.split(".").pop() || "pdf").toLowerCase();
+      const path = `${user.id}/resume.${ext}`;
+      const { error } = await supabase.storage.from("resumes").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("resumes").getPublicUrl(path);
+      setResumeUrl(data.publicUrl);
+      await supabase.from("profiles").update({ resume_url: data.publicUrl } as any).eq("user_id", user.id);
+      toast.success("Резюме завантажено");
+    } catch { toast.error("Не вдалось завантажити (перевірте, що міграцію застосовано)"); }
+    finally { setResumeUp(false); }
+  };
+
+  const handleParse = async () => {
+    if (!resumeText.trim()) return;
+    setParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-resume-self", { body: { resume_text: resumeText } });
+      if (error) throw error;
+      const r = (data as any) || {};
+      setF((p) => ({
+        ...p,
+        full_name: r.full_name || p.full_name,
+        headline: r.headline || p.headline,
+        location: r.location || p.location,
+        phone: r.phone || p.phone,
+        about: r.about || p.about,
+        skills: Array.isArray(r.skills) && r.skills.length ? r.skills.join(", ") : p.skills,
+      }));
+      toast.success("Профіль заповнено з резюме — перевірте й натисніть «Зберегти»");
+      setParseOpen(false); setResumeText("");
+    } catch { toast.error("Не вдалось розпізнати резюме"); }
+    finally { setParsing(false); }
+  };
 
   const initials = (f.full_name || profile?.email || "К").split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
 
@@ -147,6 +194,29 @@ const CandidateProfilePage = () => {
                 <Button onClick={handleSave} disabled={saving}>{saving ? "Збереження..." : "Зберегти профіль"}</Button>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Резюме</CardTitle>
+                <CardDescription>Завантажте класичне резюме або заповніть профіль з його тексту</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="outline" onClick={() => resumeRef.current?.click()} disabled={resumeUp} className="gap-1.5">
+                    <Upload className="h-4 w-4" />{resumeUp ? "Завантаження..." : "Завантажити резюме"}
+                  </Button>
+                  <input ref={resumeRef} type="file" accept=".pdf,.doc,.docx,.txt,.rtf" className="hidden" onChange={handleResumeUpload} />
+                  <Button variant="outline" onClick={() => setParseOpen(true)} className="gap-1.5">
+                    <Sparkles className="h-4 w-4" />Заповнити з резюме
+                  </Button>
+                </div>
+                {resumeUrl && (
+                  <a href={resumeUrl} target="_blank" rel="noreferrer" className="text-sm text-primary underline inline-flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5" />Переглянути завантажене резюме
+                  </a>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           <div className="space-y-6">
@@ -164,6 +234,31 @@ const CandidateProfilePage = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={parseOpen} onOpenChange={(o) => { if (!parsing) setParseOpen(o); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Заповнити профіль з резюме</DialogTitle>
+            <DialogDescription>
+              Вставте текст вашого резюме — AI розпізнає імʼя, посаду, локацію, навички й підсумок і заповнить поля.
+              Ви завжди зможете перевірити й відредагувати перед збереженням.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={resumeText}
+            onChange={(e) => setResumeText(e.target.value)}
+            rows={10}
+            placeholder="Вставте сюди текст резюме..."
+            disabled={parsing}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setParseOpen(false)} disabled={parsing}>Скасувати</Button>
+            <Button onClick={handleParse} disabled={parsing || resumeText.trim().length < 20} className="gap-1.5">
+              <Sparkles className="h-4 w-4" />{parsing ? "Розпізнавання..." : "Розпізнати й заповнити"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </V2AppLayout>
   );
 };

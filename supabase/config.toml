@@ -48,6 +48,9 @@ verify_jwt = true
 [functions.parse-resume]
 verify_jwt = true
 
+[functions.parse-resume-self]
+verify_jwt = true
+
 [functions.send-communication]
 verify_jwt = true
 

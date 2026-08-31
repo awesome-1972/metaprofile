@@ -7,6 +7,7 @@ import { FileText, Clock, Building2, CheckCircle2, Hourglass, CircleDot } from "
 import { Link } from "react-router-dom";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { useCandidateAssignments } from "@/hooks/useCases";
+import { CandidateRequests } from "@/components/candidate/CandidateRequests";
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 const statusLabel: Record<string, string> = {
@@ -89,6 +90,14 @@ const CandidateDashboard = () => {
               <p className="text-xs text-muted-foreground">Призначених кейсів</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Запити від компаній */}
+        <div className="mb-8">
+          <CandidateRequests
+            userId={user?.id}
+            caseInvites={assignments.filter((a) => a.status === "pending").map((a) => ({ id: a.id, title: a.case?.title || "Кейс" }))}
+          />
         </div>
 
         {/* Active cases */}
