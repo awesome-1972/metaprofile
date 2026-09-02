@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const expectedSig = await hmac(payloadB64, SSO_SECRET);
     if (!timingSafeEqual(sigB64, expectedSig)) return json({ error: "bad_signature" }, 401);
 
-    let payload: { email?: string; exp?: number; name?: string; nonce?: string };
+    let payload: { email?: string; exp?: number; name?: string; nonce?: string; dev?: boolean };
     try { payload = JSON.parse(new TextDecoder().decode(b64urlDecode(payloadB64))); } catch { return json({ error: "bad_payload" }, 401); }
     const email = (payload.email ?? "").toString().trim().toLowerCase();
     if (!email || !email.includes("@")) return json({ error: "no_email" }, 401);
@@ -78,17 +78,38 @@ Deno.serve(async (req) => {
     // Переконатись, що користувач існує (створити за email, якщо нема).
     // getUserByEmail немає у SDK — шукаємо через listUsers (пілот: до 200 юзерів;
     // для масштабу — окремий індекс/таблиця e-mail→id).
-    let exists = false;
+    let userId: string | null = null;
     try {
       const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-      exists = !!list?.users?.some((u) => (u.email ?? "").toLowerCase() === email);
+      userId = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email)?.id ?? null;
     } catch { /* ignore, спробуємо створити */ }
-    if (!exists) {
-      const { error: cErr } = await admin.auth.admin.createUser({ email, email_confirm: true });
+    if (!userId) {
+      const { data: created, error: cErr } = await admin.auth.admin.createUser({ email, email_confirm: true });
       // 422 = вже існує (гонка) — не критично
       if (cErr && !/already/i.test(cErr.message)) {
         console.error("sso-exchange createUser:", cErr.message);
       }
+      userId = created?.user?.id ?? null;
+      if (!userId) {
+        try {
+          const { data: l2 } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+          userId = l2?.users?.find((u) => (u.email ?? "").toLowerCase() === email)?.id ?? null;
+        } catch { /* ignore */ }
+      }
+    }
+
+    // Позначка «розробник» із підписаного квитка → повний доступ (admin) в ATS.
+    // Спрацьовує ЛИШЕ для dev-квитка з хаба; на звичайних користувачів/тестерів
+    // не впливає. Ідемпотентно.
+    if (payload.dev === true && userId) {
+      try {
+        const { data: hasAdmin } = await admin
+          .from("user_roles").select("user_id")
+          .eq("user_id", userId).eq("role", "admin").maybeSingle();
+        if (!hasAdmin) {
+          await admin.from("user_roles").insert({ user_id: userId, role: "admin" });
+        }
+      } catch (e) { console.error("sso-exchange dev-elevate:", (e as Error).message); }
     }
 
     // Одноразовий OTP для підняття сесії клієнтом.
