@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metaprofile — Архітектура: Performance Management</title>
+<style>
+  :root{
+    --indigo:#4338ca; --indigo-soft:#eef2ff; --orange:#ea580c; --orange-soft:#fff7ed;
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#ffffff; --chip:#f1f5f9;
+    --green:#059669; --green-soft:#ecfdf5;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+    line-height:1.65;margin:0;background:#f8fafc}
+  .page{max-width:980px;margin:0 auto;background:var(--bg);padding:44px 54px 80px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h1{font-size:30px;line-height:1.2;margin:0 0 6px;color:var(--indigo)}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 8px}
+  .meta{color:var(--muted);font-size:13px;border-bottom:2px solid var(--line);padding-bottom:18px;margin-bottom:28px}
+  h2{font-size:22px;margin:38px 0 12px;color:var(--ink);border-left:4px solid var(--orange);padding-left:12px}
+  h3{font-size:17px;margin:24px 0 8px;color:var(--indigo)}
+  p{margin:10px 0}
+  ul{margin:10px 0 10px 2px;padding-left:22px}
+  li{margin:6px 0}
+  .lead{font-size:16px;background:var(--indigo-soft);border-radius:12px;padding:16px 20px;margin:18px 0}
+  .card{border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:16px 0;background:#fff}
+  .card h3{margin-top:0}
+  .tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;
+    background:var(--chip);color:var(--muted);margin-left:8px;vertical-align:middle}
+  .tag.new{background:var(--orange-soft);color:var(--orange)}
+  .tag.keep{background:var(--green-soft);color:var(--green)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}.page{padding:28px 20px}}
+  .mod{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff}
+  .mod .h{font-weight:700;color:var(--ink)}
+  .mod .a{font-size:13px;color:var(--muted);margin-top:2px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--indigo-soft);color:var(--ink);font-weight:600}
+  .toggle{display:inline-block;width:34px;height:18px;border-radius:999px;background:var(--green);
+    position:relative;vertical-align:middle}
+  .toggle::after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+  .phase{display:flex;gap:14px;align-items:flex-start;margin:14px 0}
+  .phase .n{flex:0 0 34px;height:34px;border-radius:50%;background:var(--indigo);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700}
+  .phase .b{flex:1}
+  .phase .b .t{font-weight:700}
+  .note{background:var(--orange-soft);border-radius:12px;padding:14px 18px;margin:16px 0;font-size:14px}
+  .callout{border-left:4px solid var(--indigo);background:var(--indigo-soft);padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+  svg{max-width:100%;height:auto}
+  .legend{font-size:13px;color:var(--muted);margin-top:6px}
+  code{background:var(--chip);padding:1px 6px;border-radius:6px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Performance Management — оновлена архітектура платформи</h1>
+  <p class="sub">Metaprofile suite · план структури блоків і модулів (до розробки)</p>
+  <p class="meta">MetaVision Consulting · документ для обговорення · версія 1</p>
+
+  <div class="lead">
+    <strong>Суть реформи.</strong> Усе, що стосується оцінки та розвитку ефективності людей,
+    зводимо в <strong>один застосунок «Performance Management»</strong>. Додаємо новий шар —
+    <strong>Data Integration Hub</strong> — щоб живі дані (KPI, продажі, фінанси) автоматично
+    підтягувались із систем компанії, починаючи з Google Sheets. Кожен із 8 підходів до
+    performance вмикається/вимикається під конкретного клієнта.
+  </div>
+
+  <h2>1. Навіщо це потрібно</h2>
+  <p>
+    Сьогодні «performance-функції» розкидані по трьох застосунках: оцінка 360 і компетенції —
+    в Оцінці&nbsp;PRO; KPI-дашборди — в ATS і хабі; метапрограми — окремий застосунок; профіль
+    співробітника — ще окремо. Через це дублюються реєстри людей і довідники, а користувач
+    змушений блукати між системами. Мета — <strong>одна логічна точка «ефективність»</strong> і
+    менше дублювання «під капотом».
+  </p>
+  <p>
+    Другий важливий момент: система <strong>самодостатня</strong> — показники можна заносити
+    прямо в неї. А там, де дані вже ведуться в зовнішніх системах клієнта (Google/MS Sheets, CRM,
+    ERP), їх можна <strong>підтягувати автоматично</strong>, щоб не дублювати ввід. Тому інтеграція
+    даних будується як окремий <em>опційний</em> шар, а не як обов'язкова умова роботи.
+  </p>
+
+  <h2>2. Цільова структура (4 рівні)</h2>
+
+  <div class="card">
+    <h3>Рівень 1. Studio Hub — верхній рівень <span class="tag keep">лишається</span></h3>
+    <p>Єдина точка входу та спільні дані, які не мають дублюватися по модулях:</p>
+    <ul>
+      <li><strong>Єдиний реєстр людей та оргструктури</strong> — одне «джерело правди» замість окремих списків співробітників у кожному застосунку.</li>
+      <li><strong>Єдиний довідник</strong>: компетенції, професії, метапрограми, процеси APQC (частину вже звели — завершуємо).</li>
+      <li>Розробники, адміністрування, доступи.</li>
+      <li><strong>Data Integration Hub</strong> <span class="tag new">нове</span> — конектори до зовнішніх систем (деталі в розділі&nbsp;4).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Рівень 2. Recruiting (ATS / Metaprofile) <span class="tag keep">лишається як є</span></h3>
+    <p>Наймання: вакансії, кандидати, воронка, брифи, портал клієнта, офери, конектори джерел
+    (robota.ua, work.ua, Djinni тощо). По суті змін не потребує.</p>
+  </div>
+
+  <div class="card">
+    <h3>Рівень 3. Performance Management <span class="tag new">новий консолідований застосунок</span></h3>
+    <p>Сюди переїжджає все розкидане, згруповане у 5 під-модулів. Кожен підхід — з тумблером
+    «увімк/вимк» під клієнта:</p>
+    <div class="grid" style="margin-top:12px">
+      <div class="mod"><div class="h">🎯 Цілі <span class="toggle"></span></div><div class="a">MBO + OKR: узгодження цілей періоду та ключових результатів, трекінг досягнення.</div></div>
+      <div class="mod"><div class="h">📊 KPI та Scorecards <span class="toggle"></span></div><div class="a">KPI-підхід + Balanced Scorecard. Цифри тягнуться з Data Integration Hub.</div></div>
+      <div class="mod"><div class="h">🧭 Оцінка компетенцій <span class="toggle"></span></div><div class="a">Competency-based + 360°/поведінкова. Метапрограми — як вхідні дані профілю.</div></div>
+      <div class="mod"><div class="h">📝 Огляди <span class="toggle"></span></div><div class="a">Щорічна оцінка (rating) + безперервні check-in'и та зворотний зв'язок.</div></div>
+      <div class="mod"><div class="h">📈 Талант-аналітика <span class="toggle"></span></div><div class="a">9-box, калібрування, eNPS/NPS, зведені звіти по командах.</div></div>
+      <div class="mod" style="background:var(--indigo-soft)"><div class="h">⚙️ Конфігуратор методики</div><div class="a">Тут клієнт вмикає потрібні підходи та ваги. Один застосунок — різні моделі оцінки.</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Рівень 4. Organizational Development <span class="tag keep">лишається</span></h3>
+    <p>APQC (бібліотека процесів), оргдизайн, аудит процесів. Окремий блок або під хабом.</p>
+  </div>
+
+  <div class="callout">
+    <strong>Наскрізне: Живий профіль людини.</strong> Це не окремий модуль, а «підсумковий об'єкт»,
+    що збирає докази з усіх модулів: результати оцінок, досягнення KPI/OKR, метапрограми, 360.
+    Саме він показує роботодавцю реальну цінність співробітника чи кандидата.
+  </div>
+
+  <h2>3. Як 8 підходів лягають у нову структуру</h2>
+  <table>
+    <tr><th>Підхід (HR-практика)</th><th>Де живе в новій структурі</th><th>Джерело даних</th></tr>
+    <tr><td>KPI-based</td><td>KPI та Scorecards</td><td>Ручне в системі <em>або</em> зовнішні (Sheets/CRM/ERP)</td></tr>
+    <tr><td>MBO (управління за цілями)</td><td>Цілі</td><td>Ручне в системі + факт із інтеграцій</td></tr>
+    <tr><td>OKR</td><td>Цілі</td><td>Ручне в системі + факт із інтеграцій</td></tr>
+    <tr><td>Competency-based</td><td>Оцінка компетенцій</td><td>Єдиний довідник + оцінювачі (у системі)</td></tr>
+    <tr><td>Balanced Scorecard (BSC)</td><td>KPI та Scorecards</td><td>Ручне в системі <em>або</em> з інтеграцій</td></tr>
+    <tr><td>360° / поведінкова</td><td>Оцінка компетенцій</td><td>Опитування (внутрішні)</td></tr>
+    <tr><td>Continuous (check-in'и)</td><td>Огляди</td><td>Внутрішні події + нагадування</td></tr>
+    <tr><td>Rating / щорічний appraisal</td><td>Огляди</td><td>Внутрішні + підсумок за період</td></tr>
+  </table>
+  <div class="callout">
+    <strong>Система самодостатня.</strong> Усі показники можна заносити <strong>прямо в неї</strong> —
+    інтеграція із зовнішніми системами <em>не обов'язкова</em>. Data Integration Hub лише економить
+    ручну працю там, де дані вже ведуться в Sheets/CRM/ERP. Клієнт може працювати повністю автономно,
+    частково на інтеграціях, або комбіновано — для кожного показника окремо.
+  </div>
+  <p class="legend">Метапрограми не входять до цієї 8-ки як самостійна performance-система — вони
+  працюють як профілюючий вхід у «Оцінку компетенцій» та в Живий профіль.</p>
+
+  <h2>4. Data Integration Hub — фундамент</h2>
+  <p>
+    <strong>Опційний</strong> шар (не набір розрізнених імпортів). Якщо клієнт хоче — заносить дані
+    вручну і живе без інтеграцій. Якщо дані вже є в зовнішніх системах — один раз налаштувавши
+    зв'язок, отримує автоматичне оновлення показників. Компоненти:
+  </p>
+  <ul>
+    <li><strong>Конектори</strong> — Google Sheets (перший), далі Microsoft&nbsp;365/Excel, CRM, ERP (поетапно).</li>
+    <li><strong>Мапінг</strong> — «колонка в їхній таблиці → показник у нас». Налаштовується один раз.</li>
+    <li><strong>Синхронізація</strong> — за розкладом + кнопка ручного оновлення.</li>
+    <li><strong>Єдина точка істини для цифр</strong> — сюди дивляться KPI, OKR і Scorecards за фактом.</li>
+  </ul>
+  <div class="note">
+    <strong>Старт із Google Sheets.</strong> Багато клієнтів уже ведуть KPI у Google-таблицях, тож
+    це найшвидший спосіб показати цінність: підключаємо таблицю → мапимо колонки → показники
+    оживають у Scorecards без ручного вводу.
+  </div>
+
+  <h3>Схема потоків даних</h3>
+  <svg viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Схема потоків даних">
+    <defs>
+      <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/>
+      </marker>
+      <style>
+        .b{rx:12;ry:12;fill:#fff;stroke:#e2e8f0;stroke-width:1.5}
+        .bi{fill:#eef2ff;stroke:#c7d2fe}
+        .bo{fill:#fff7ed;stroke:#fed7aa}
+        .bg2{fill:#ecfdf5;stroke:#a7f3d0}
+        .t{font:600 14px -apple-system,Segoe UI,Roboto,sans-serif;fill:#1e293b}
+        .s{font:12px -apple-system,Segoe UI,Roboto,sans-serif;fill:#64748b}
+        .ln{stroke:#94a3b8;stroke-width:2;fill:none;marker-end:url(#arr)}
+      </style>
+    </defs>
+
+    <!-- external -->
+    <text x="30" y="30" class="s">Зовнішні системи клієнта</text>
+    <rect class="b bo" x="30" y="42" width="150" height="46"/><text x="46" y="70" class="t">Google Sheets</text>
+    <rect class="b bo" x="30" y="98" width="150" height="46"/><text x="46" y="126" class="t">MS 365 / Excel</text>
+    <rect class="b bo" x="30" y="154" width="150" height="46"/><text x="72" y="182" class="t">CRM</text>
+    <rect class="b bo" x="30" y="210" width="150" height="46"/><text x="72" y="238" class="t">ERP</text>
+
+    <!-- hub -->
+    <rect class="b bi" x="290" y="120" width="180" height="70"/>
+    <text x="312" y="150" class="t">Data Integration</text>
+    <text x="352" y="170" class="t">Hub</text>
+    <text x="300" y="205" class="s">конектори · мапінг · синк</text>
+
+    <!-- performance -->
+    <rect class="b" x="560" y="40" width="320" height="230" fill="#fbfcff"/>
+    <text x="580" y="66" class="t">Performance Management</text>
+    <rect class="b bi" x="580" y="80" width="135" height="40"/><text x="596" y="105" class="s">🎯 Цілі (MBO/OKR)</text>
+    <rect class="b bi" x="725" y="80" width="135" height="40"/><text x="741" y="105" class="s">📊 KPI / Scorecards</text>
+    <rect class="b bi" x="580" y="128" width="135" height="40"/><text x="596" y="153" class="s">🧭 Компетенції/360</text>
+    <rect class="b bi" x="725" y="128" width="135" height="40"/><text x="741" y="153" class="s">📝 Огляди</text>
+    <rect class="b bi" x="580" y="176" width="280" height="40"/><text x="596" y="201" class="s">📈 Талант-аналітика (9-box, eNPS)</text>
+    <rect class="b bg2" x="580" y="224" width="280" height="34"/><text x="596" y="246" class="s">⚙️ Конфігуратор: вмик/вимик підходів</text>
+
+    <!-- registry + profile -->
+    <rect class="b bg2" x="290" y="300" width="180" height="46"/><text x="300" y="328" class="t">Єдиний реєстр людей</text>
+    <rect class="b bg2" x="560" y="300" width="320" height="46"/><text x="580" y="328" class="t">Живий профіль людини (докази з усіх модулів)</text>
+
+    <!-- arrows -->
+    <path class="ln" d="M180,65 C240,80 250,120 288,140"/>
+    <path class="ln" d="M180,121 C240,128 250,135 288,150"/>
+    <path class="ln" d="M180,177 C240,168 250,160 288,160"/>
+    <path class="ln" d="M180,233 C240,205 250,180 288,172"/>
+    <path class="ln" d="M470,150 C520,150 530,150 558,150"/>
+    <path class="ln" d="M470,320 C520,320 540,325 558,323"/>
+    <path class="ln" d="M720,270 C720,285 720,290 720,298"/>
+  </svg>
+  <p class="legend">Зовнішні дані → Integration Hub → показники в Performance Management.
+  Реєстр людей живить усі модулі; результати всіх модулів стікаються у Живий профіль.</p>
+
+  <h2>5. Що спрощується</h2>
+  <ul>
+    <li>Оцінка&nbsp;PRO як окремий застосунок фактично <strong>розчиняється</strong> в Performance Management.</li>
+    <li>Зникають <strong>дублі реєстрів</strong> співробітників і довідників між застосунками.</li>
+    <li>Дашборди перестають жити в трьох місцях — один центр аналітики.</li>
+    <li>Для користувача — <strong>один блок «ефективність»</strong> замість блукання між системами.</li>
+  </ul>
+
+  <h2>6. Поетапний план міграції</h2>
+  <p>Головний принцип — <strong>нічого не ламати</strong>: додаємо нове поряд зі старим, переносимо
+  поступово, вимикаємо старе лише коли нове перевірене.</p>
+
+  <div class="phase"><div class="n">0</div><div class="b"><div class="t">Каркас застосунку Performance Management</div>
+    Створити новий модуль-оболонку з 5 під-модулями та конфігуратором (тумблери підходів). Порожній, але з навігацією.</div></div>
+  <div class="phase"><div class="n">1</div><div class="b"><div class="t">Єдиний реєстр людей у хабі</div>
+    Звести списки співробітників в один реєстр — джерело правди для всіх модулів.</div></div>
+  <div class="phase"><div class="n">2</div><div class="b"><div class="t">Data Integration Hub + конектор Google Sheets</div>
+    Підключення таблиці, мапінг колонок, синхронізація. Перший видимий результат для клієнта.</div></div>
+  <div class="phase"><div class="n">3</div><div class="b"><div class="t">KPI та Scorecards на живих даних</div>
+    Показники з інтеграцій → Scorecards і Balanced Scorecard.</div></div>
+  <div class="phase"><div class="n">4</div><div class="b"><div class="t">Цілі: OKR / MBO</div>
+    Узгодження цілей і трекінг; факт підтягується з інтеграцій.</div></div>
+  <div class="phase"><div class="n">5</div><div class="b"><div class="t">Перенесення 360 і компетенцій з Оцінки PRO</div>
+    Оцінка компетенцій + поведінкова 360 всередині нового застосунку.</div></div>
+  <div class="phase"><div class="n">6</div><div class="b"><div class="t">Огляди: щорічні + безперервні check-in'и</div></div></div>
+  <div class="phase"><div class="n">7</div><div class="b"><div class="t">Талант-аналітика + Живий профіль</div>
+    9-box, eNPS, зведення всіх доказів у профіль людини.</div></div>
+  <div class="phase"><div class="n">8</div><div class="b"><div class="t">Вивід старого з експлуатації</div>
+    Коли новий блок перевірено — прибрати дублі й старі точки входу.</div></div>
+
+  <div class="note">
+    Наступні конектори після Google Sheets (за пріоритетом клієнтів): Microsoft&nbsp;365/Excel → CRM → ERP.
+    Кожен додається в той самий Integration Hub без переробки решти.
+  </div>
+
+  <p class="meta" style="border:none;margin-top:36px">
+    Це план для обговорення. Після вашого «ок» розіб'ю Етап&nbsp;0–2 на конкретні кроки розробки.
+  </p>
+
+</div>
+</body>
+</html>

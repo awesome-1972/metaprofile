@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaVision — Повна карта платформи</title>
+<style>
+  :root{
+    --indigo:#4338ca; --indigo-soft:#eef2ff; --orange:#ea580c; --orange-soft:#fff7ed;
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#ffffff; --chip:#f1f5f9;
+    --green:#059669; --green-soft:#ecfdf5; --red:#dc2626; --red-soft:#fef2f2; --amber:#b45309; --amber-soft:#fffbeb;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);line-height:1.6;margin:0;background:#f8fafc}
+  .page{max-width:1040px;margin:0 auto;background:var(--bg);padding:44px 54px 90px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h1{font-size:30px;line-height:1.2;margin:0 0 6px;color:var(--indigo)}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 8px}
+  .meta{color:var(--muted);font-size:13px;border-bottom:2px solid var(--line);padding-bottom:18px;margin-bottom:26px}
+  h2{font-size:22px;margin:40px 0 12px;color:var(--ink);border-left:4px solid var(--orange);padding-left:12px}
+  h3{font-size:17px;margin:22px 0 8px;color:var(--indigo)}
+  p{margin:10px 0}
+  ul{margin:8px 0 8px 2px;padding-left:22px}
+  li{margin:5px 0}
+  .lead{font-size:15.5px;background:var(--indigo-soft);border-radius:12px;padding:16px 20px;margin:16px 0}
+  .card{border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin:14px 0;background:#fff}
+  .card h3{margin-top:0}
+  table{border-collapse:collapse;width:100%;margin:12px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+  th{background:var(--indigo-soft);color:var(--ink);font-weight:600}
+  code{background:var(--chip);padding:1px 6px;border-radius:6px;font-size:12.5px}
+  .tag{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 9px;border-radius:999px;background:var(--chip);color:var(--muted)}
+  .tag.ok{background:var(--green-soft);color:var(--green)}
+  .tag.warn{background:var(--amber-soft);color:var(--amber)}
+  .tag.bad{background:var(--red-soft);color:var(--red)}
+  .prob{border-left:4px solid var(--red);background:var(--red-soft);border-radius:0 10px 10px 0;padding:10px 16px;margin:10px 0}
+  .prob.med{border-left-color:var(--amber);background:var(--amber-soft)}
+  .prob .t{font-weight:700}
+  svg{max-width:100%;height:auto}
+  .legend{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .phase{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+  .phase .n{flex:0 0 30px;height:30px;border-radius:50%;background:var(--indigo);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .phase .b{flex:1}
+  .phase .b .t{font-weight:700}
+  .kv{font-size:13.5px}
+  .kv td:first-child{white-space:nowrap;color:var(--muted);width:230px}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>MetaVision — повна карта платформи</h1>
+  <p class="sub">Оглядовий документ для технічного партнера / провідного інженера</p>
+  <p class="meta">MetaVision Consulting · підготовлено для передачі · вересень 2026</p>
+
+  <div class="lead">
+    <strong>Що це.</strong> MetaVision — набір взаємоповʼязаних веб-застосунків для HR/рекрутингу та оцінки персоналу (SaaS, B2B). Складається з
+    центрального «хабу», трьох основних модулів (ATS, Оцінка&nbsp;PRO, Метапрограми) і кількох сусідніх сервісів.
+    Основний стек: <strong>React + TypeScript (Vite, shadcn/Tailwind, MUI)</strong> на <strong>Cloudflare&nbsp;Pages</strong>,
+    бекенд і дані на <strong>Supabase</strong> (Postgres + Edge Functions на Deno), AI через <strong>Anthropic Claude</strong>.
+    Історично частину зроблено на платформі <strong>Lovable</strong>. Один модуль (Метапрограми) ще має окремий
+    <strong>NestJS</strong>-бекенд на Render, який зараз мігрується в Supabase.
+  </div>
+
+  <h2>1. Карта платформи (схема)</h2>
+  <svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Карта платформи">
+    <defs>
+      <marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#94a3b8"/></marker>
+      <style>
+        .b{rx:12;ry:12;stroke-width:1.5}
+        .hub{fill:#eef2ff;stroke:#c7d2fe}
+        .mod{fill:#fff;stroke:#e2e8f0}
+        .ext{fill:#fff7ed;stroke:#fed7aa}
+        .infra{fill:#ecfdf5;stroke:#a7f3d0}
+        .t{font:600 13px -apple-system,Segoe UI,Roboto,sans-serif;fill:#1e293b}
+        .s{font:11px -apple-system,Segoe UI,Roboto,sans-serif;fill:#64748b}
+        .ln{stroke:#94a3b8;stroke-width:1.5;fill:none;marker-end:url(#a)}
+        .lnd{stroke:#cbd5e1;stroke-width:1.5;fill:none;stroke-dasharray:4 4;marker-end:url(#a)}
+      </style>
+    </defs>
+
+    <!-- Hub -->
+    <rect class="b hub" x="400" y="24" width="200" height="66"/>
+    <text x="430" y="50" class="t">Studio Hub</text>
+    <text x="415" y="70" class="s">верхній рівень · SSO · довідники</text>
+
+    <!-- Modules row -->
+    <rect class="b mod" x="40" y="150" width="200" height="72"/>
+    <text x="60" y="176" class="t">ATS / Metaprofile</text>
+    <text x="60" y="196" class="s">вакансії, кандидати,</text>
+    <text x="60" y="211" class="s">воронка, ~55 edge-функцій</text>
+
+    <rect class="b mod" x="270" y="150" width="200" height="72"/>
+    <text x="290" y="176" class="t">Оцінка PRO</text>
+    <text x="290" y="196" class="s">360°, компетенції,</text>
+    <text x="290" y="211" class="s">9-box, реєстр, APQC</text>
+
+    <rect class="b mod" x="530" y="150" width="205" height="72"/>
+    <text x="550" y="176" class="t">Метапрограми</text>
+    <text x="550" y="196" class="s">опитування, профілі,</text>
+    <text x="550" y="211" class="s">шаблони професій</text>
+
+    <rect class="b mod" x="765" y="150" width="195" height="72"/>
+    <text x="785" y="176" class="t">Аудит процесів</text>
+    <text x="785" y="196" class="s">сусідній модуль</text>
+    <text x="785" y="211" class="s">(бібліотека процесів)</text>
+
+    <!-- links hub->modules -->
+    <path class="ln" d="M470,90 C360,110 240,120 175,148"/>
+    <path class="ln" d="M490,90 C440,115 400,125 370,148"/>
+    <path class="ln" d="M520,90 C560,115 600,125 625,148"/>
+    <path class="lnd" d="M560,90 C700,110 820,120 855,148"/>
+    <text x="250" y="120" class="s">SSO (HMAC-квиток → magic-link)</text>
+
+    <!-- Data/infra layer -->
+    <rect class="b infra" x="40" y="300" width="430" height="86"/>
+    <text x="60" y="326" class="t">Supabase (4 проєкти)</text>
+    <text x="60" y="346" class="s">Postgres + Edge Functions (Deno) + Auth + Storage</text>
+    <text x="60" y="362" class="s">hub · ATS · Оцінка PRO · Metaprogram</text>
+
+    <rect class="b infra" x="490" y="300" width="230" height="86"/>
+    <text x="510" y="326" class="t">Cloudflare Pages</text>
+    <text x="510" y="346" class="s">хостинг фронтендів</text>
+    <text x="510" y="362" class="s">*.pages.dev, авто з GitHub</text>
+
+    <rect class="b ext" x="740" y="300" width="220" height="86"/>
+    <text x="760" y="326" class="t">Render</text>
+    <text x="760" y="346" class="s">NestJS-бекенд Метапрограм</text>
+    <text x="760" y="362" class="s">$25/міс · у процесі виводу</text>
+
+    <!-- modules to infra -->
+    <path class="ln" d="M140,222 L200,298"/>
+    <path class="ln" d="M370,222 L320,298"/>
+    <path class="ln" d="M630,222 C500,255 360,270 300,298"/>
+    <path class="ln" d="M700,222 C760,255 820,275 840,298"/>
+
+    <!-- external services -->
+    <rect class="b ext" x="40" y="440" width="150" height="46"/><text x="58" y="468" class="t">Anthropic Claude</text>
+    <rect class="b ext" x="210" y="440" width="120" height="46"/><text x="228" y="468" class="t">Lovable AI</text>
+    <rect class="b ext" x="350" y="440" width="120" height="46"/><text x="368" y="468" class="t">Google Gemini</text>
+    <rect class="b ext" x="490" y="440" width="120" height="46"/><text x="512" y="468" class="t">Resend (email)</text>
+    <rect class="b ext" x="630" y="440" width="150" height="46"/><text x="648" y="468" class="t">Google Drive/Meet</text>
+    <rect class="b ext" x="800" y="440" width="160" height="46"/><text x="812" y="468" class="t">Job-борди (5)</text>
+
+    <path class="lnd" d="M255,386 C200,410 150,420 120,438"/>
+    <text x="120" y="410" class="s">edge-функції викликають зовнішні сервіси</text>
+
+    <rect class="b ext" x="40" y="510" width="920" height="34"/>
+    <text x="60" y="531" class="s">Job-борди/джерела: robota.ua · work.ua · Djinni · Jooble · DOU · (план: grc.ua, OLX, Telegram)</text>
+  </svg>
+  <p class="legend">Суцільні стрілки — прямі залежності; пунктир — опційні/зовнішні виклики. «Аудит процесів» — сусідній модуль, інтеграція планується.</p>
+
+  <h2>2. Застосунки та їхнє призначення</h2>
+
+  <div class="card">
+    <h3>Studio Hub <span class="tag ok">центральний</span></h3>
+    <p>Верхній рівень і точка входу. Керує організаціями та доступами, тримає спільні довідники (компетенції, професії),
+    реєстр розробників, і запускає модулі через федеративний SSO. Тут задумано звести реєстр людей і аналітику.</p>
+  </div>
+  <div class="card">
+    <h3>ATS / Metaprofile <span class="tag">рекрутинг</span></h3>
+    <p>Найбільший модуль: вакансії, кандидати, воронка найму, брифи, клієнтський портал, офери, матчинг під бріф,
+    AI-парсинг резюме, інтеграції з job-бордами, звіти по кандидату. ~55 edge-функцій. Має дві генерації UI:
+    <strong>V1 (демо)</strong> і <strong>V2 (прод, реальна автентифікація)</strong> — співіснують.</p>
+  </div>
+  <div class="card">
+    <h3>Оцінка PRO (assess-360) <span class="tag">оцінка</span></h3>
+    <p>360°-оцінка, бібліотека компетенцій, реєстр співробітників та ієрархія, профіль співробітника (з PDF),
+    9-box/DSA/NPS, блок «Організаційний розвиток» з APQC (бібліотека бізнес-процесів, 3 рівні). Мультитенантність
+    через <code>tenants</code> + <code>tenant_admins</code>.</p>
+  </div>
+  <div class="card">
+    <h3>Метапрограми <span class="tag warn">у міграції</span></h3>
+    <p>Психометричне профілювання: опитування (ситуації/питання), підрахунок метапрограм, шаблони під професії,
+    результати. Історично окремий <strong>NestJS-бекенд на Render</strong> + власна JWT-автентифікація.
+    Триває перенесення на Supabase (дані вже перенесено; довідники й читання опитування — на edge; записи/підрахунок — у роботі).</p>
+  </div>
+  <div class="card">
+    <h3>Аудит процесів (handoff-process-audit) <span class="tag warn">сусідній</span></h3>
+    <p>Окремий застосунок для аудиту процесів; планується інтеграція у блок «Організаційний розвиток» (SSO-вхід + seed бібліотеки процесів).</p>
+  </div>
+
+  <h2>3. Усі сервіси, акаунти та проєкти</h2>
+
+  <h3>GitHub (репозиторії коду)</h3>
+  <table>
+    <tr><th>Організація</th><th>Репозиторії</th><th>Призначення</th></tr>
+    <tr><td><code>awesome-1972</code></td><td>studio-performance-hub, metaprofile, assess-360-pro</td><td>Хаб, ATS, Оцінка PRO</td></tr>
+    <tr><td><code>metavisionprofiling</code></td><td>meta-program-backend, meta-program-frontend</td><td>Метапрограми (бек+фронт)</td></tr>
+    <tr><td>—</td><td>handoff-process-audit</td><td>Аудит процесів (сусідній)</td></tr>
+  </table>
+  <p class="legend">CI: у <code>meta-program-frontend</code> налаштовано GitHub Action автодеплою edge-функцій у Supabase (потрібен секрет <code>SUPABASE_ACCESS_TOKEN</code>).</p>
+
+  <h3>Supabase (дані + бекенд) — організація «MetaVision Consulting»</h3>
+  <table>
+    <tr><th>Проєкт</th><th>Ref (ідентифікатор)</th><th>Для чого</th></tr>
+    <tr><td>studio-performance-hub</td><td><code>vpgdjffmcnkqgwqdrsyd</code></td><td>Хаб: організації, доступи, довідники, SSO-видавець</td></tr>
+    <tr><td>metaprofile (ATS)</td><td><code>mnpcevhzqgcrllymdmil</code></td><td>ATS: дані найму + ~55 edge-функцій</td></tr>
+    <tr><td>assess-360-pro</td><td><code>nzjohpabvzboddgkvwqf</code></td><td>Оцінка PRO: 360, компетенції, реєстр</td></tr>
+    <tr><td>Metaprogram</td><td><code>yymuxsvqpxplwpfxmcpm</code> (Frankfurt)</td><td>Метапрограми: перенесені дані + нові edge-функції</td></tr>
+  </table>
+  <p class="legend">Кожен проєкт: Postgres (RLS), Auth, Storage, Edge Functions (Deno). Використовуються НОВІ ключі Supabase (<code>sb_secret…</code>/<code>sb_publishable…</code>).</p>
+
+  <h3>Хостинг та інші сервіси</h3>
+  <table class="kv">
+    <tr><td>Cloudflare Pages</td><td>Хостинг усіх фронтендів (авто-збірка з GitHub): <code>studio-performance-hub.pages.dev</code>, <code>metaprofile.pages.dev</code>, <code>assess-360.pages.dev</code>, <code>meta-program-frontend.pages.dev</code></td></tr>
+    <tr><td>Render</td><td>NestJS-бекенд Метапрограм (<code>meta-program-backend.onrender.com</code>), тариф Standard ~$25/міс — <strong>плановий вивід</strong></td></tr>
+    <tr><td>Anthropic Claude</td><td>Основний AI (модель <code>claude-sonnet-4-6</code>): парсинг резюме, магічний імпорт вакансій, генерація компетенцій, звіти, стратегія пошуку, переклади APQC (<code>ANTHROPIC_API_KEY</code>)</td></tr>
+    <tr><td>Lovable AI (шлюз)</td><td>Альтернативний AI-доступ (<code>LOVABLE_API_KEY</code>); частину продукту початково зроблено на Lovable</td></tr>
+    <tr><td>Google Gemini</td><td>Використовується в окремих функціях (<code>gemini-3-flash-preview</code> / <code>gemini-2.5-flash</code>)</td></tr>
+    <tr><td>Resend</td><td>Транзакційна пошта: запрошення, сповіщення, magic-link (<code>RESEND_API_KEY</code>)</td></tr>
+    <tr><td>Google Drive / Meet</td><td>Імпорт папок/файлів у вакансію, авто-створення папок, транскрипти зустрічей</td></tr>
+    <tr><td>Job-борди / джерела</td><td>robota.ua, work.ua, Djinni, Jooble, DOU (сорсинг + публікація); план: grc.ua, OLX, Telegram</td></tr>
+  </table>
+  <div class="prob med"><span class="t">Важливо для передачі:</span> усі ключі/секрети зберігаються у Supabase Edge Secrets та змінних Render/Cloudflare. Перед передачею — ротація ключів і облік доступів (див. розділ проблем).</div>
+
+  <h2>4. Автентифікація та ролі (різні в кожному модулі)</h2>
+  <table>
+    <tr><th>Модуль</th><th>Механізм</th></tr>
+    <tr><td>Studio Hub</td><td>Supabase Auth; <code>organization</code> + <code>org_membership</code> (ролі: admin/partner/pm/employee), <code>custom_access_token_hook</code></td></tr>
+    <tr><td>ATS / Metaprofile</td><td>Supabase Auth; <code>user_roles</code> (ролі: admin/company/candidate)</td></tr>
+    <tr><td>Оцінка PRO</td><td>Supabase Auth; <code>tenants</code> + <code>tenant_admins</code> (мультитенант)</td></tr>
+    <tr><td>Метапрограми</td><td>Власний JWT (NestJS, <code>JWT_SECRET</code>) + таблиця <code>session</code>; edge тимчасово перевіряє цей же JWT</td></tr>
+    <tr><td>Між модулями</td><td>Федеративний SSO (ADR-012): хаб підписує HMAC-квиток → модуль перевіряє й піднімає сесію через magic-link</td></tr>
+  </table>
+
+  <h2>5. Проблеми та технічний борг</h2>
+  <div class="prob"><span class="t">Розкидана «ефективність».</span> Performance-функції (360, компетенції, KPI, метапрограми, профіль) розпорошені по 3 застосунках — планова консолідація в єдиний блок Performance Management.</div>
+  <div class="prob"><span class="t">Дублювання даних.</span> Реєстри співробітників і довідники компетенцій частково дублюються між модулями (частину вже зведено в хаб — не завершено).</div>
+  <div class="prob"><span class="t">Метапрограми на платному Render.</span> Окремий NestJS-бекенд ($25/міс) + окрема модель авторизації. Міграція на Supabase edge триває (читання зроблено, записи/підрахунок — попереду).</div>
+  <div class="prob med"><span class="t">Дві генерації UI в ATS.</span> V1 (демо) і V2 (прод) співіснують — джерело плутанини; потребує чистого розділення/прибирання демо.</div>
+  <div class="prob med"><span class="t">Різнорідна автентифікація.</span> 4 різні схеми ролей у 4 модулях + окремий JWT у Метапрограмах. Потрібна уніфікація (напр., усе на Supabase Auth).</div>
+  <div class="prob med"><span class="t">Права БД після міграції.</span> Перенесений дампом проєкт Metaprogram не мав стандартних грантів <code>service_role</code> — виправлено вручну; варто закріпити міграцією.</div>
+  <div class="prob med"><span class="t">Мінімум тестів і CI.</span> Автотести/пайплайни майже відсутні (є лише автодеплой edge). Немає системного код-рев'ю та моніторингу помилок.</div>
+  <div class="prob med"><span class="t">Велика поверхня edge-функцій.</span> Лише в ATS ~55 функцій із дубльованою логікою (кілька parse-resume, connector-ів) — потребує рефакторингу та спільних утиліт.</div>
+  <div class="prob"><span class="t">Секрети й доступи.</span> Ключі (Anthropic, Resend, job-борди, JWT) розкидані по Supabase/Render/Cloudflare; перед передачею — інвентаризація та ротація.</div>
+
+  <h2>6. Що далі в плані розробки</h2>
+  <div class="phase"><div class="n">1</div><div class="b"><div class="t">Завершити міграцію Метапрограм з Render</div>Опитування + підрахунок → edge, авторизація → Supabase Auth, перемкнути фронтенд, вимкнути Render ($25/міс економія).</div></div>
+  <div class="phase"><div class="n">2</div><div class="b"><div class="t">Блок Performance Management (новий)</div>Звести 360/компетенції/KPI/цілі в один застосунок + опційний Data Integration Hub (Google Sheets → CRM/ERP). 8 підходів з вмикачами. (Є окремий документ-план.)</div></div>
+  <div class="phase"><div class="n">3</div><div class="b"><div class="t">Живий профіль кандидата/співробітника</div>Граф навичок + стрічка доказів + пошук роботодавцем за доказами/свіжістю.</div></div>
+  <div class="phase"><div class="n">4</div><div class="b"><div class="t">Уніфікація авторизації та прибирання V1-демо</div>Єдина модель ролей; чисте розділення прод/демо.</div></div>
+  <div class="phase"><div class="n">5</div><div class="b"><div class="t">Інтеграції та беклог</div>Аудит процесів (SSO + seed), нові джерела (grc.ua, OLX, Telegram), проброс результатів метапрограм у ATS-звіт, GDPR-докрутки, тести/CI/моніторинг.</div></div>
+
+  <h2>7. Вимоги до фахівця</h2>
+  <p>Потрібен <strong>senior full-stack інженер із досвідом SaaS B2B-продуктів</strong> (обовʼязково: мультитенантність, RBAC, SSO, робота з підписками/білінгом на рівні розуміння). Профіль — «продуктовий інженер», що вміє і стабілізувати, і будувати нове, і працювати з AI.</p>
+
+  <h3>Технічні навички</h3>
+  <ul>
+    <li><strong>Frontend:</strong> React + TypeScript, Vite, Tailwind/shadcn, MUI; SPA-архітектура, стан (TanStack Query).</li>
+    <li><strong>Backend/дані:</strong> Supabase (Postgres, RLS, Auth, Storage), SQL/міграції; Edge Functions на <strong>Deno</strong>; досвід із <strong>NestJS</strong> (для міграції Метапрограм).</li>
+    <li><strong>DevOps:</strong> Cloudflare Pages, GitHub Actions (CI/CD), керування секретами, спостережуваність (логи/моніторинг помилок).</li>
+    <li><strong>AI/LLM:</strong> інтеграція Anthropic Claude / інших LLM у продакшн (промпти, структуровані відповіді, вартість/ліміти).</li>
+    <li><strong>Безпека:</strong> модель ролей, RLS-політики, захист персональних даних (GDPR), ротація ключів.</li>
+    <li><strong>SaaS B2B:</strong> мультитенантність, ізоляція даних клієнтів, SSO/федерація, онбординг організацій.</li>
+  </ul>
+
+  <h3>Задачі, які треба виконати (пріоритезовано)</h3>
+  <ul>
+    <li>Завершити винесення Метапрограм із Render у Supabase; вимкнути Render; уніфікувати авторизацію.</li>
+    <li>Провести інвентаризацію та ротацію секретів; налаштувати моніторинг помилок і базове CI/тести.</li>
+    <li>Звести дубльовані реєстри/довідники в хаб; прибрати V1-демо з прод-потоку.</li>
+    <li>Побудувати блок Performance Management + Data Integration Hub (конектор Google Sheets → далі CRM/ERP).</li>
+    <li>Рефакторинг edge-функцій ATS (спільні утиліти, дедуплікація конекторів/парсерів).</li>
+    <li>Реалізувати «Живий профіль» і пошук роботодавцем; довести інтеграцію Аудиту процесів.</li>
+    <li>Провести security- та архітектурний рев'ю всієї платформи, скласти план стабілізації.</li>
+  </ul>
+
+  <div class="prob med" style="margin-top:22px"><span class="t">Супутні документи:</span> «Performance Management — оновлена архітектура» (план блоку) і посібники адміністратора по кожному модулю (HTML+PDF) — надаються окремо.</div>
+
+  <p class="meta" style="border:none;margin-top:32px">Документ оглядовий; технічні деталі (схеми БД, перелік edge-функцій, ENV) доступні в репозиторіях і Supabase відповідних проєктів.</p>
+
+</div>
+</body>
+</html>

@@ -32,3 +32,5 @@ supabase/.temp/
 .lovable/
 vite.config.ts.timestamp-*.mjs
 *.timestamp-*.mjs
+docs/guide/__pycache__/
+docs/guide/.fuse_hidden*

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaVision — деталізований майнд-меп платформи</title>
+<style>
+  :root{
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#fff;
+    --indigo:#4338ca; --indigoS:#eef2ff;
+    --orange:#ea580c; --orangeS:#fff7ed;
+    --green:#059669; --greenS:#ecfdf5;
+    --violet:#7c3aed; --violetS:#f5f3ff;
+    --teal:#0d9488; --tealS:#f0fdfa;
+    --rose:#e11d48; --roseS:#fff1f2;
+    --slate:#475569; --slateS:#f8fafc;
+    --amber:#b45309; --amberS:#fffbeb;
+  }
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);line-height:1.5;margin:0;background:#f1f5f9}
+  .page{max-width:1180px;margin:0 auto;background:var(--bg);padding:40px 44px 90px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h1{font-size:28px;margin:0 0 4px;color:var(--indigo)}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+  .meta{color:var(--muted);font-size:12.5px;border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:22px}
+  .legend{font-size:12.5px;color:var(--muted);margin:6px 0 20px}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:#f1f5f9;color:var(--muted);vertical-align:middle}
+  .pill.plan{background:var(--amberS);color:var(--amber)}
+  .pill.mig{background:var(--orangeS);color:var(--orange)}
+  .pill.ai{background:var(--violetS);color:var(--violet)}
+
+  h2.section{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:34px 0 10px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+
+  /* module card */
+  .mod{border:1px solid var(--line);border-radius:16px;padding:0;margin:16px 0;overflow:hidden;background:#fff;break-inside:avoid}
+  .mod > .head{padding:12px 18px;color:#fff;font-weight:700;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+  .mod > .head .desc{font-weight:400;font-size:12.5px;opacity:.92}
+  .mod > .body{padding:14px 18px 18px}
+
+  /* branch grid inside module */
+  .branches{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .branch{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--slateS)}
+  .branch > .bt{font-weight:700;font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .branch ul{margin:0;padding-left:16px}
+  .branch li{margin:3px 0;font-size:12.5px}
+  .branch li .n{color:var(--muted);font-size:11.5px}
+
+  /* color themes for module heads */
+  .c-indigo .head{background:var(--indigo)} .c-indigo .bt{color:var(--indigo)}
+  .c-orange .head{background:var(--orange)} .c-orange .bt{color:var(--orange)}
+  .c-green .head{background:var(--green)} .c-green .bt{color:var(--green)}
+  .c-violet .head{background:var(--violet)} .c-violet .bt{color:var(--violet)}
+  .c-teal .head{background:var(--teal)} .c-teal .bt{color:var(--teal)}
+  .c-rose .head{background:var(--rose)} .c-rose .bt{color:var(--rose)}
+  .c-slate .head{background:var(--slate)} .c-slate .bt{color:var(--slate)}
+  .c-amber .head{background:var(--amber)} .c-amber .bt{color:var(--amber)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>MetaVision — деталізований майнд-меп платформи</h1>
+  <p class="sub">Усі модулі та внутрішні блоки (діючі + планові)</p>
+  <p class="meta">MetaVision Consulting · для технічного партнера · вересень 2026</p>
+  <p class="legend">
+    Позначки: <span class="pill">діє</span>
+    <span class="pill mig">у міграції</span>
+    <span class="pill plan">у плані</span>
+    <span class="pill ai">AI</span> — блок використовує LLM.
+    Кожна картка — модуль; усередині «гілки» (під-розділи) з конкретними блоками.
+  </p>
+
+  <!-- ================= CORE / HUB ================= -->
+  <h2 class="section">Ядро</h2>
+
+  <div class="mod c-indigo">
+    <div class="head"><span>🏛️ Studio Hub</span><span class="desc">верхній рівень · єдина точка входу</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Організації та доступи</div><ul>
+        <li>Організації <span class="n">(organization)</span></li>
+        <li>Членство та ролі <span class="n">admin / partner / pm / employee</span></li>
+        <li>Запрошення користувачів</li>
+        <li>Хук токена <span class="n">custom_access_token_hook</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Розробники</div><ul>
+        <li>Реєстр розробників</li>
+        <li>Автоелевація доступу через SSO <span class="pill mig">перевірка</span></li>
+        <li>Запрошення / вимкнення / видалення</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Спільні довідники (майстер)</div><ul>
+        <li>Компетенції</li>
+        <li>Професії та категорії</li>
+        <li>Метапрограми</li>
+        <li>Процеси APQC</li>
+        <li>Write-back із модулів</li>
+      </ul></div>
+      <div class="branch"><div class="bt">SSO та запуск модулів</div><ul>
+        <li>SSO-видавець <span class="n">sso-issue (HMAC-квиток)</span></li>
+        <li>Рейка запуску ATS / Оцінка / Метапрограми</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Єдиний реєстр людей <span class="pill plan">план</span></div><ul>
+        <li>Джерело правди для всіх модулів</li>
+        <li>Оргструктура / ієрархія</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= ATS ================= -->
+  <h2 class="section">Діючі модулі</h2>
+
+  <div class="mod c-orange">
+    <div class="head"><span>🎯 ATS / Metaprofile</span><span class="desc">рекрутинг · ~55 edge-функцій</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Вакансії</div><ul>
+        <li>Створення / редагування</li>
+        <li>Магічний імпорт URL/текст→поля <span class="pill ai">AI</span></li>
+        <li>Багаті поля <span class="n">пріоритет, стиль, графік, гео</span></li>
+        <li>Індикатор наповнення (completeness)</li>
+        <li>Матриця компетенцій <span class="pill ai">AI-генерація</span></li>
+        <li>Стоп-лист + синхро з Google Doc</li>
+        <li>Файли вакансії (Google Drive) + авто-папки</li>
+        <li>Бриф із розмови/транскрипту <span class="pill ai">AI</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Кандидати / Talent CRM</div><ul>
+        <li>Приватний пул кандидатів</li>
+        <li>Парсинг резюме (файл/самостійно) <span class="pill ai">AI</span></li>
+        <li>Додавання з пулу у вакансію</li>
+        <li>Дедуплікація та злиття дублів</li>
+        <li>Картка кандидата</li>
+        <li>Живий профіль (докази навичок) <span class="pill plan">UI в плані</span></li>
+        <li>Видалення даних (GDPR erase)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Воронка найму</div><ul>
+        <li>Етапи / стадії (seed stages)</li>
+        <li>Матчинг під бріф + рейтинг збігу <span class="pill ai">AI</span></li>
+        <li>Таб «Рекомендовані»</li>
+        <li>Експорт етапу в Excel</li>
+        <li>Лог подій заявки</li>
+        <li>Самозатвердження заявки owner/admin</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Інтервʼю</div><ul>
+        <li>Планування інтервʼю</li>
+        <li>Проведення <span class="pill ai">AI conduct-interview</span></li>
+        <li>Транскрипт Google Meet</li>
+        <li>Чат з колегою <span class="pill ai">AI</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Звіти по кандидату</div><ul>
+        <li>Генерація звіту <span class="pill ai">AI</span></li>
+        <li>Редагування + доставка клієнту</li>
+        <li>Публічний звіт (за лінком)</li>
+        <li>Рекомендація курсів <span class="pill ai">AI</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Клієнтський портал</div><ul>
+        <li>Токен-доступ + розділи</li>
+        <li>Публічна сторінка порталу</li>
+        <li>Публічні вакансії /jobs</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Офери</div><ul>
+        <li>Статуси оферу</li>
+        <li>Умови</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Сорсинг та конектори</div><ul>
+        <li>robota.ua (CvDb + публікація)</li>
+        <li>work.ua (відгуки + публікація)</li>
+        <li>Djinni (+ webhook)</li>
+        <li>Jooble (моніторинг ринку)</li>
+        <li>DOU (моніторинг)</li>
+        <li>Стратегія пошуку <span class="pill ai">AI</span></li>
+        <li>Джерела в плані: grc.ua, OLX, Telegram <span class="pill plan">план</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Комунікації та сповіщення</div><ul>
+        <li>Чернетки/надсилання листів <span class="pill ai">AI-чернетка</span></li>
+        <li>Сповіщення email (Resend) + в застосунку</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Доступи та адмін</div><ul>
+        <li>RBAC: ролі + права</li>
+        <li>Сторінка /ats/roles</li>
+        <li>Профіль користувача/компанії</li>
+        <li>Дашборд аналітики найму</li>
+        <li>Дві генерації UI: V1 демо / V2 прод <span class="pill mig">розділити</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Кабінет кандидата (V2)</div><ul>
+        <li>Дашборд, профіль, портфоліо</li>
+        <li>Оцінки, навчання, кейси, звіти</li>
+        <li>Резюме: завантажити або створити парсингом</li>
+        <li>Стрічка запитів від компаній</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= Оцінка PRO ================= -->
+  <div class="mod c-green">
+    <div class="head"><span>🧭 Оцінка PRO (assess-360)</span><span class="desc">оцінка · мультитенант</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">360°-оцінка</div><ul>
+        <li>Опитувальники / цикли</li>
+        <li>Оцінювачі: авто + колеги</li>
+        <li>Звʼязок 360 ↔ реєстр (employee_id)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Компетенції</div><ul>
+        <li>Локальна бібліотека компетенцій</li>
+        <li>Імпорт з майстра (хаб)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Реєстр співробітників</div><ul>
+        <li>Імпорт з Excel</li>
+        <li>Ієрархія <span class="n">manager_email → manager_id</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Профіль співробітника</div><ul>
+        <li>Зведення 360</li>
+        <li>Експорт PDF</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Талант-аналітика</div><ul>
+        <li>9-box</li>
+        <li>DSA</li>
+        <li>NPS / eNPS</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Організаційний розвиток</div><ul>
+        <li>APQC: 13 функцій / 72 групи / 350 процесів</li>
+        <li>Рівні L4/L5 (дії/кроки)</li>
+        <li>AI-переклад назв <span class="pill ai">AI</span></li>
+        <li>AI-адаптація під сферу <span class="pill ai">AI</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Платформа/доступи</div><ul>
+        <li>Мультитенант: tenants + tenant_admins</li>
+        <li>SSO-приймач із хабу</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= Метапрограми ================= -->
+  <div class="mod c-teal">
+    <div class="head"><span>🧠 Метапрограми</span><span class="desc">профілювання · у міграції з Render</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Опитування</div><ul>
+        <li>Ситуації + питання</li>
+        <li>Сесія: старт / відновлення <span class="pill mig">edge у роботі</span></li>
+        <li>Відповіді (submit, 6 рангів)</li>
+        <li>Прогрес блоків</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Підрахунок (9 блоків)</div><ul>
+        <li>Класифікація, Реакція, Референції</li>
+        <li>Менталітет, Мотивація, Порівняння</li>
+        <li>Час, Рішення, Стиль мислення</li>
+        <li>Розрахунок % + збереження результатів <span class="pill mig">edge у роботі</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Шаблони</div><ul>
+        <li>Під професії/категорії</li>
+        <li>CRUD + копіювання</li>
+        <li>Ваги типів</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Результати</div><ul>
+        <li>Перегляд результатів</li>
+        <li>Проброс у вакансію ATS (share) <span class="pill plan">у ATS-звіт: план</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Довідники</div><ul>
+        <li>Категорії / професії / метапрограми</li>
+        <li>На edge <span class="pill">mp-reference: діє</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">Авторизація</div><ul>
+        <li>Власний JWT + session</li>
+        <li>Ціль: перейти на Supabase Auth <span class="pill plan">план</span></li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= Аудит ================= -->
+  <div class="mod c-slate">
+    <div class="head"><span>🗂️ Аудит процесів</span><span class="desc">сусідній модуль</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Аудит процесів</div><ul>
+        <li>Бібліотека бізнес-процесів</li>
+        <li>Аудит / оцінка процесів</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Інтеграція <span class="pill plan">план</span></div><ul>
+        <li>SSO-вхід із хабу</li>
+        <li>Seed бібліотеки в «Організаційний розвиток»</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= PLANNED ================= -->
+  <h2 class="section">Модулі у плані</h2>
+
+  <div class="mod c-violet">
+    <div class="head"><span>📊 Performance Management</span><span class="desc">консолідований блок «ефективність» · план</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Цілі <span class="pill plan">план</span></div><ul>
+        <li>MBO — управління за цілями</li>
+        <li>OKR — цілі + ключові результати</li>
+        <li>Трекінг досягнення (факт з інтеграцій)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">KPI та Scorecards <span class="pill plan">план</span></div><ul>
+        <li>KPI-показники</li>
+        <li>Balanced Scorecard (4 площини)</li>
+        <li>Джерело: ручне АБО інтеграції</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Оцінка компетенцій <span class="pill plan">план</span></div><ul>
+        <li>Competency-based</li>
+        <li>360°/поведінкова</li>
+        <li>Метапрограми як вхід</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Огляди <span class="pill plan">план</span></div><ul>
+        <li>Щорічний appraisal (рейтинг)</li>
+        <li>Безперервні check-in'и + зворотний звʼязок</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Талант-аналітика <span class="pill plan">план</span></div><ul>
+        <li>9-box, калібрування</li>
+        <li>eNPS, зведені звіти</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Конфігуратор методики <span class="pill plan">план</span></div><ul>
+        <li>Вмик/вимик кожного з 8 підходів</li>
+        <li>Ваги / налаштування під клієнта</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Data Integration Hub <span class="pill plan">план</span></div><ul>
+        <li>Конектор Google Sheets (перший)</li>
+        <li>Далі: MS 365/Excel, CRM, ERP</li>
+        <li>Мапінг колонок + синхронізація</li>
+        <li>Опційний: система самодостатня</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <div class="mod c-rose">
+    <div class="head"><span>🚀 Онбординг</span><span class="desc">нові співробітники / клієнти · план</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Онбординг співробітника <span class="pill plan">план</span></div><ul>
+        <li>Чек-листи та кроки</li>
+        <li>Призначення відповідальних</li>
+        <li>Прогрес та нагадування</li>
+        <li>Звʼязок із навчанням і цілями</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Онбординг клієнта/організації <span class="pill plan">план</span></div><ul>
+        <li>Майстер налаштування (SaaS setup)</li>
+        <li>Підключення джерел даних</li>
+        <li>Запрошення команди</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <div class="mod c-indigo">
+    <div class="head"><span>📈 Загальний дашборд</span><span class="desc">крос-модульний огляд · план</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Зведення по всіх модулях <span class="pill plan">план</span></div><ul>
+        <li>KPI найму, оцінки, ефективності</li>
+        <li>Статуси процесів і задач</li>
+        <li>Сповіщення / що потребує уваги</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Аналітика та звіти <span class="pill plan">план</span></div><ul>
+        <li>Тренди по періодах</li>
+        <li>Розрізи по командах/оргструктурі</li>
+        <li>Експорт</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <div class="mod c-amber">
+    <div class="head"><span>🎓 Навчання (Learning)</span><span class="desc">розвиток та курси · план</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Курси та контент <span class="pill plan">план</span></div><ul>
+        <li>Каталог курсів</li>
+        <li>Рекомендація курсів <span class="pill ai">AI (вже є в ATS)</span></li>
+        <li>Прогрес проходження</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Треки розвитку <span class="pill plan">план</span></div><ul>
+        <li>Індивідуальні плани розвитку</li>
+        <li>Звʼязок з компетенціями/оцінкою (розриви навичок)</li>
+        <li>Живлення «Живого профілю»</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+  <!-- ================= INFRA ================= -->
+  <h2 class="section">Спільна інфраструктура (під усіма модулями)</h2>
+  <div class="mod c-slate">
+    <div class="head"><span>⚙️ Платформа та сервіси</span><span class="desc">спільне для всіх</span></div>
+    <div class="body"><div class="branches">
+      <div class="branch"><div class="bt">Дані та бекенд</div><ul>
+        <li>Supabase × 4 проєкти (Postgres+RLS, Auth, Storage)</li>
+        <li>Edge Functions (Deno)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Хостинг / CI</div><ul>
+        <li>Cloudflare Pages (фронтенди)</li>
+        <li>GitHub + Actions (автодеплой edge)</li>
+        <li>Render (Метапрограми) <span class="pill mig">вивід</span></li>
+      </ul></div>
+      <div class="branch"><div class="bt">AI</div><ul>
+        <li>Anthropic Claude (основний)</li>
+        <li>Lovable AI-шлюз, Google Gemini</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Зовнішні сервіси</div><ul>
+        <li>Resend (пошта)</li>
+        <li>Google Drive / Meet</li>
+        <li>Job-борди (5)</li>
+      </ul></div>
+      <div class="branch"><div class="bt">Автентифікація</div><ul>
+        <li>Supabase Auth (хаб/ATS/Оцінка)</li>
+        <li>Власний JWT (Метапрограми) <span class="pill mig">уніфікувати</span></li>
+        <li>Федеративний SSO між модулями</li>
+      </ul></div>
+    </div></div>
+  </div>
+
+</div>
+</body>
+</html>

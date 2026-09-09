@@ -201,6 +201,28 @@ export function useSendPasswordReset() {
   });
 }
 
+/**
+ * Видати ТИМЧАСОВИЙ пароль (Edge: set_temp_password). Надійна альтернатива
+ * листу-скиданню (лінки одноразові й «згорають» від сканерів пошти):
+ * ставить відомий пароль, підтверджує email і знімає бан. Повертає пароль —
+ * адмін передає його користувачу; той заходить звичайним входом.
+ */
+export function useSetTempPassword() {
+  return useMutation({
+    mutationFn: async (userId: string): Promise<{ email: string; temp_password: string; login_url: string }> => {
+      const { data, error } = await supabase.functions.invoke("admin-invite-user", {
+        body: { action: "set_temp_password", user_id: userId },
+      });
+      if (error) throw error;
+      const body = data as AdminInviteUserMutationResponse & { email?: string; temp_password?: string; login_url?: string };
+      if (body?.error) throw new Error(edgeErrorMessage(body.error, body.detail));
+      return { email: body.email ?? "", temp_password: body.temp_password ?? "", login_url: body.login_url ?? "" };
+    },
+    onError: (error: { message?: string }) =>
+      toast.error(error?.message || "Не вдалося видати пароль"),
+  });
+}
+
 /** Повне видалення користувача (Edge: delete_user). Себе видалити не можна. */
 export function useDeleteUser() {
   const qc = useQueryClient();

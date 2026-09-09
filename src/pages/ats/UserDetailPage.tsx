@@ -25,7 +25,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Pencil, Check, X, Ban, CheckCircle2, ShieldCheck, Trash2, Briefcase, Send, KeyRound } from "lucide-react";
 import { useAuthV2 } from "@/hooks/useAuthV2";
 import { supabase } from "@/integrations/supabase/client";
-import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset, useDeleteUser } from "@/hooks/ats/use-users";
+import { useUsers, useUpdateUserProfile, useSetUserActive, useResendInvite, useSendPasswordReset, useSetTempPassword, useDeleteUser } from "@/hooks/ats/use-users";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { UserRoleBadges } from "@/components/ats/UserRoleBadges";
 import { UserCustomRoles } from "@/components/ats/UserCustomRoles";
 import { statusBadge } from "@/components/ats/user-role-utils";
@@ -102,6 +103,8 @@ const UserDetailPage = () => {
   const setUserActive = useSetUserActive();
   const resendInvite = useResendInvite();
   const sendReset = useSendPasswordReset();
+  const setTempPassword = useSetTempPassword();
+  const [tempPwResult, setTempPwResult] = useState<{ email: string; temp_password: string; login_url: string } | null>(null);
   const deleteUser = useDeleteUser();
 
   const { data: assignedVacancies, isLoading: vacanciesLoading } = useAssignedVacancies(id);
@@ -233,7 +236,21 @@ const UserDetailPage = () => {
                     onClick={() => sendReset.mutate(user.email!)}
                   >
                     <KeyRound className="h-4 w-4 mr-2" />
-                    {sendReset.isPending ? "Надсилання..." : "Скинути пароль"}
+                    {sendReset.isPending ? "Надсилання..." : "Скинути пароль (лист)"}
+                  </Button>
+                )}
+                {/* Надійний варіант: видати тимчасовий пароль напряму (без листа) */}
+                {user.email && !user.banned && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={setTempPassword.isPending}
+                    onClick={() =>
+                      setTempPassword.mutate(user.id, { onSuccess: (r) => setTempPwResult(r) })
+                    }
+                  >
+                    <KeyRound className="h-4 w-4 mr-2" />
+                    {setTempPassword.isPending ? "Генерація..." : "Видати пароль"}
                   </Button>
                 )}
                 <Button
@@ -392,6 +409,51 @@ const UserDetailPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Діалог із виданим тимчасовим паролем */}
+      <Dialog open={!!tempPwResult} onOpenChange={(o) => !o && setTempPwResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Тимчасовий пароль створено</DialogTitle>
+            <DialogDescription>
+              Передайте ці дані користувачу. Вхід — на сторінці входу, звичайним способом (без листа).
+              Пароль показується лише зараз.
+            </DialogDescription>
+          </DialogHeader>
+          {tempPwResult && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <div className="text-muted-foreground">Логін (email)</div>
+                <div className="font-mono select-all break-all">{tempPwResult.email}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Тимчасовий пароль</div>
+                <div className="font-mono text-lg select-all">{tempPwResult.temp_password}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Сторінка входу</div>
+                <div className="font-mono select-all break-all">{tempPwResult.login_url}</div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (tempPwResult) {
+                  navigator.clipboard?.writeText(
+                    `Логін: ${tempPwResult.email}\nПароль: ${tempPwResult.temp_password}\nВхід: ${tempPwResult.login_url}`,
+                  );
+                  toast.success("Скопійовано");
+                }
+              }}
+            >
+              Скопіювати все
+            </Button>
+            <Button onClick={() => setTempPwResult(null)}>Готово</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AtsLayout>
   );
 };

@@ -330,6 +330,42 @@ Deno.serve(async (req) => {
     }
 
     // ------------------------------------------------------------------
+    // action: set_temp_password — надійне «скидання» без крихких лінків.
+    // Ставить відомий тимчасовий пароль, підтверджує email і знімає бан.
+    // Адмін віддає пароль користувачу; той заходить звичайним входом.
+    // ------------------------------------------------------------------
+    if (action === "set_temp_password") {
+      const userId = typeof body.user_id === "string" ? body.user_id : "";
+      if (!isUuid(userId)) return json({ error: "invalid_user_id" }, 422);
+      if (userId === caller.id) return json({ error: "cannot_target_self" }, 400);
+      if (!(await sameTenant(userId))) return json({ error: "forbidden" }, 403);
+
+      // Пароль: 12 символів з великих/малих/цифр (без неоднозначних 0/O/1/l/I).
+      const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+      const rnd = new Uint32Array(12);
+      crypto.getRandomValues(rnd);
+      const tempPassword = Array.from(rnd, (n) => ALPHABET[n % ALPHABET.length]).join("");
+
+      const { data: target, error: updErr } = await supabase.auth.admin.updateUserById(userId, {
+        password: tempPassword,
+        email_confirm: true,
+        ban_duration: "none",
+      });
+      if (updErr || !target?.user) {
+        console.error("admin-invite-user set_temp_password error:", updErr?.message);
+        return json({ error: "server_error" }, 500);
+      }
+
+      return json({
+        ok: true,
+        user_id: userId,
+        email: target.user.email,
+        temp_password: tempPassword,
+        login_url: `${APP_ORIGIN}/v2/auth`,
+      });
+    }
+
+    // ------------------------------------------------------------------
     // action: list
     // ------------------------------------------------------------------
     if (action === "list") {
